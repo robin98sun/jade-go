@@ -1,0 +1,35 @@
+{
+  "selfNode": {
+    "address": "176.0.0.2",
+    "port": 8081,
+    "protocol": "http",
+    "token": "some kind of randome string token in self node"
+  },
+  "upperNode": {
+    "address": "192.168.57.5",
+    "port": 8080,
+    "protocol": "http",
+    "token": "some kind of randome string token in upper node"
+  },
+  "capacity": {
+    "cpu": 100,
+    "ram": 100,
+    "disk": 100,
+    "bandwidth": 100
+  },
+  "capabilities": [
+    {
+      "name": "location",
+      "api": ":static://NYC"
+    },{
+      "name": "accuracy",
+      "api": ":static://city"
+    },{
+      "name": "avg_temperature",
+      "api": "get:http://176.0.0.3/temperature:timespan=int"
+    },{
+      "name": "current_temperature",
+      "api": "get:http://176.0.0.3/temperature"
+    }
+  ]
+}
