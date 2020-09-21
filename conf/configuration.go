@@ -28,8 +28,8 @@ func NewConfiguration() *Conf {
 	return c
 }
 
-// ReadEnv Read configuration from environment variables
-func ReadEnv() *Conf {
+// ReadConfFromEnv Read configuration from environment variables
+func ReadConfFromEnv() *Conf {
 	c := NewConfiguration()
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)
@@ -109,8 +109,20 @@ func ReadEnv() *Conf {
 	return c
 }
 
-// ConvertJSONToEnv convert JSON file to env variables and print on stdout
-func ConvertJSONToEnv(jsonfile string) {
+// ReadConfFromJSON Read configuration from JSON string or json file
+func ReadConfFromJSON(jsonstr string, isFile bool) *Conf {
+	c := NewConfiguration()
+	if isFile {
+		file, _ := ioutil.ReadFile(jsonstr)
+		_ = json.Unmarshal([]byte(file), c)
+	} else {
+		_ = json.Unmarshal([]byte(jsonstr), c)
+	}
+	return c
+}
+
+// PrintJSONasEnv convert JSON file to env variables and print on stdout
+func PrintJSONasEnv(jsonfile string) {
 	file, _ := ioutil.ReadFile(jsonfile)
 	c := NewConfiguration()
 	_ = json.Unmarshal([]byte(file), c)
