@@ -70,6 +70,24 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Token = envValue
 			}
+		case "HOSTNAME":
+			if nameParts[1] == "UPPERNODE" {
+				c.UpperNode.Hostname = envValue
+			} else if nameParts[1] == "SELFNODE" {
+				c.SelfNode.Hostname = envValue
+			}
+		case "PODNAME":
+			if nameParts[1] == "UPPERNODE" {
+				c.UpperNode.PodName = envValue
+			} else if nameParts[1] == "SELFNODE" {
+				c.SelfNode.PodName = envValue
+			}
+		case "NAMESPACE":
+			if nameParts[1] == "UPPERNODE" {
+				c.UpperNode.Namespace = envValue
+			} else if nameParts[1] == "SELFNODE" {
+				c.SelfNode.Namespace = envValue
+			}
 		}
 
 		// for capacity
@@ -87,7 +105,7 @@ func ReadConfFromEnv() *Conf {
 					c.Capacity.Bandwidth = v
 				}
 			}
-		} else if nameParts[1] == "CAPABILITIES" && len(nameParts) == 4 {
+		} else if nameParts[1] == "CAPABILITY" && len(nameParts) == 4 {
 			i, err := strconv.Atoi(nameParts[2])
 			if err == nil {
 				if i >= len(c.Capabilities) {
@@ -131,11 +149,17 @@ func PrintJSONasEnv(jsonfile string) {
 	fmt.Printf("JADE_SELFNODE_PORT=%v\n", c.SelfNode.Port)
 	fmt.Printf("JADE_SELFNODE_PROTOCOL=%v\n", c.SelfNode.Protocol)
 	fmt.Printf("JADE_SELFNODE_TOKEN=%v\n", c.SelfNode.Token)
+	fmt.Printf("JADE_SELFNODE_HOSTNAME=%v\n", c.SelfNode.Hostname)
+	fmt.Printf("JADE_SELFNODE_NAMESPACE=%v\n", c.SelfNode.Namespace)
+	fmt.Printf("JADE_SELFNODE_PODNAME=%v\n", c.SelfNode.PodName)
 	// Print upper node
 	fmt.Printf("JADE_UPPERNODE_ADDRESS=%s\n", c.UpperNode.Address)
 	fmt.Printf("JADE_UPPERNODE_PORT=%v\n", c.UpperNode.Port)
 	fmt.Printf("JADE_UPPERNODE_PROTOCOL=%v\n", c.UpperNode.Protocol)
 	fmt.Printf("JADE_UPPERNODE_TOKEN=%v\n", c.UpperNode.Token)
+	fmt.Printf("JADE_UPPERNODE_HOSTNAME=%v\n", c.UpperNode.Hostname)
+	fmt.Printf("JADE_UPPERNODE_NAMESPACE=%v\n", c.UpperNode.Namespace)
+	fmt.Printf("JADE_UPPERNODE_PODNAME=%v\n", c.UpperNode.PodName)
 	// Print capacity
 	fmt.Printf("JADE_CAPACITY_CPU=%v\n", c.Capacity.CPU)
 	fmt.Printf("JADE_CAPACITY_RAM=%v\n", c.Capacity.RAM)

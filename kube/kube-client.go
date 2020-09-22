@@ -1,10 +1,11 @@
-package kubernetes_client
+package kube
 
 import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	// "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,9 +27,10 @@ type KubeClient struct {
 	Clientset *kubernetes.Clientset
 	Config    *rest.Config
 	Client    dynamic.Interface
+	Pod       *corev1.Pod
 }
 
-func (k *KubeClient) Init(isDynamic bool) {
+func (k *KubeClient) Init() {
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -36,61 +38,17 @@ func (k *KubeClient) Init(isDynamic bool) {
 	}
 	k.Config = config
 	// creates the clientset
-	if isDynamic {
-		client, err := dynamic.NewForConfig(config)
-		if err != nil {
-			panic(err)
-		}
-		k.Client = client
-	} else {
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
-		k.Clientset = clientset
-	}
-}
-
-// List all pods for a given namespace
-func (k *KubeClient) ListPods(namespace string) []string {
-	// get pods in all the namespaces by omitting namespace
-	// Or specify namespace to get pods in particular namespace
-	pods, err := k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}
-	result := make([]string, len(pods.Items))
-	for i := 0; i < len(pods.Items); i++ {
-		result[i] = pods.Items[i].Name
-	}
-	return result
-}
-
-func (k *KubeClient) FindPod(podname string) string {
-	// get pods in all the namespaces by omitting namespace
-	// Or specify namespace to get pods in particular namespace
-	pods, err := k.Clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	k.Clientset = clientset
+	// using dynamic
+	client, errDyna := dynamic.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		panic(errDyna.Error())
 	}
-	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
-
-	// Examples for error handling:
-	// - Use helper functions e.g. errors.IsNotFound()
-	// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
-	_, err = k.Clientset.CoreV1().Pods("default").Get(context.TODO(), podname, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		fmt.Println("Pod ", podname, " not found in default namespace")
-		return "NOT FOUND"
-	} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
-		fmt.Printf("Error getting pod %v\n", statusError.ErrStatus.Message)
-		return fmt.Sprintf("Error getting pod %v\n", statusError.ErrStatus.Message)
-	} else if err != nil {
-		panic(err.Error())
-	} else {
-		fmt.Printf("Found %v pod in default namespace\n", podname)
-		return fmt.Sprintf("Found %v pod in default namespace\n", podname)
-	}
+	k.Client = client
 }
 
 type AppSpec struct {

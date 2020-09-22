@@ -1,7 +1,7 @@
 package provisioner
 
 import (
-	kube "aces/jade-go/kubernetes_client"
+	"aces/jade-go/kube"
 	"fmt"
 )
 
@@ -27,7 +27,7 @@ func (p *Provision) ProvisionApplication() string {
 	p.Application.hasBeenProvisioned = true
 	client := kube.KubeClient{}
 	fmt.Println("provisioning app...")
-	client.Init(true)
+	client.Init()
 	return client.ProvisionStandardApp(&kube.AppSpec{
 		Namespace:      "default",
 		DeploymentName: "jade-dynamic",

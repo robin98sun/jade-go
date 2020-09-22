@@ -10,6 +10,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 
 	// Sub packages
+	"aces/jade-go/conf"
 	"aces/jade-go/interfaces"
 
 	// others
@@ -40,13 +41,18 @@ func main() {
 	api.Use(rest.DefaultDevStack...)
 	router, err := rest.MakeRouter(
 		// Control path interfaces
-		rest.Post("/$jade$/registerNode", j.RegisterNode),
-		rest.Post("/$jade$/heartbeat", j.Heartbeat),
+		rest.Put("/$jade$/registerNode", j.RegisterNode),
+		rest.Put("/$jade$/heartbeat", j.Heartbeat),
 		// Data path interfaces
 		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
 		rest.Post("/$jade$/dataReceiver", j.DataReceiver),
 		// for administration
-		rest.Post("/provision_app", j.ProvisionApp),
+		rest.Post("/$jade$/provision_app", j.ProvisionApp),
+		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
+		// for query
+		rest.Get("/$jade$/jadelet", j.ShowJadelet),
+		rest.Get("/$jade$/configurations", j.ShowConfigurations),
+		rest.Get("/$jade$/pod", j.ShowPodInfo),
 	)
 	if err != nil {
 		log.Fatal(err)
