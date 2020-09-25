@@ -35,7 +35,6 @@ parser.add_argument('--env-var-file', type=str, required=False,
                       help='the file contains environment variables for the app')
 parser.add_argument('--print', action='store_true', help='print the deployment file content')
 parser.add_argument('--container-port', type=int, required=False, default=8080, help='container port of the application')
-parser.add_argument('--cluster-port', type=int, required=False, default=32517, help='cluster port of the application')
 parser.add_argument('--bypass-deploying', action='store_true', help='bypass the actual deploying step')
 args = parser.parse_args()
 
@@ -63,6 +62,7 @@ if args.env_var_file is not None:
   print("environment variables file:", args.env_var_file)
 
 podname = args.deployment_name + "-" + args.target_host
+external_service_name = podname + "-service-external"
 doc = {
   "apiVersion": "v1",
   "kind": "Pod",
@@ -124,7 +124,11 @@ self_node = [{
 }, {
   "name": "JADE_SELFNODE_NAMESPACE",
   "value": args.namespace
+}, {
+  "name": "JADE_SELFNODE_SERVICEEXTERNAL",
+  "value": external_service_name
 }]
+
 for i in self_node:
   envVariables.append(i)
 
@@ -159,48 +163,13 @@ def apply(obj, append=False):
 
 apply(doc)
 
-# Create a service to allow cluster accessing of the 
-service_name = podname + "-service-cluster"
-doc = {
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "namespace": args.namespace,
-    "name": service_name,
-    "labels": {
-      "jade-env": "local",
-      "jade-role": "jadelet",
-      "jade-owner": "jade",
-      "jade-app": args.deployment_name,
-      "jade-node": args.target_host,
-    }
-  },
-  "spec": {
-    "selector": {
-      "jade-app": args.deployment_name,
-      "jade-node": args.target_host,
-    },
-    "type": "ClusterIP",
-    "ports": [
-      {
-        "protocol": "TCP",
-        "port": args.container_port,
-        # "targetPort": args.cluster_port
-      }
-    ]
-  }
-}
-
-apply(doc, append=True)
-
 # Create a service to allow external accessing of the 
-service_name = podname + "-service-external"
 doc = {
   "apiVersion": "v1",
   "kind": "Service",
   "metadata": {
     "namespace": args.namespace,
-    "name": service_name,
+    "name": external_service_name,
     "labels": {
       "jade-env": "local",
       "jade-role": "jadelet",
@@ -219,7 +188,6 @@ doc = {
       {
         "protocol": "TCP",
         "port": args.container_port,
-        # "targetPort": args.cluster_port
       }
     ]
   }
@@ -229,6 +197,7 @@ apply(doc, append=True)
 
 # Get the runtime node port
 # batcmd='sudo kubectl get service/'+ service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}{{"\\n"}}\''
-batcmd='sudo kubectl get service/'+ service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}\''
+batcmd='sudo kubectl get service/'+ external_service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}\''
 node_port = evalcmd(batcmd)
 print("node port:", int(node_port))
+print("")

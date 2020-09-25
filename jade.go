@@ -53,6 +53,10 @@ func main() {
 		rest.Get("/$jade$/jadelet", j.ShowJadelet),
 		rest.Get("/$jade$/configurations", j.ShowConfigurations),
 		rest.Get("/$jade$/pod", j.ShowPodInfo),
+		rest.Get("/$jade$/service", j.ShowService),
+		rest.Get("/$jade$/clusterIP", j.ShowClusterIP),
+		rest.Get("/$jade$/externalIP", j.ShowExternalIP),
+		rest.Get("/$jade$/node", j.ShowNode),
 	)
 	if err != nil {
 		log.Fatal(err)

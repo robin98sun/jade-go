@@ -78,6 +78,20 @@ func (j *JADE) Init() {
 	go j.Register(0)
 }
 
+// MakeUpAddressForNode to make up empty address for a node
+func (j *JADE) MakeUpAddressForNode(n *kernel.Node) {
+	if n.Address != "" && n.Port != 0 {
+		return
+	}
+	if n.Port == 0 && n.Namespace != "" && n.ServiceExternal != "" {
+		n.Port = j.Kube.FindExternalPort(n.Namespace, n.ServiceExternal)
+	}
+	if n.Address == "" && n.Hostname != "" {
+		n.Address = j.Kube.FindExternalIP(n.Hostname)
+	}
+
+}
+
 // Register to upper node
 func (j *JADE) Register(retryCnt int) {
 	if retryCnt > 10 {
@@ -85,19 +99,22 @@ func (j *JADE) Register(retryCnt int) {
 		return
 	}
 
-	if j.Config.UpperNode == nil || j.Config.UpperNode.IsEmpty() {
-		log.Println("Upper node is empty, will retry in 30 seconds")
-		time.Sleep(time.Second * 30)
-		j.Register(retryCnt + 1)
-		return
+	if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
+		if j.Config.UpperNode != nil {
+			j.MakeUpAddressForNode(j.Config.UpperNode)
+		}
+		if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
+			log.Println("Upper node is empty, will retry in 30 seconds")
+			time.Sleep(time.Second * 30)
+			j.Register(retryCnt + 1)
+			return
+		}
+		// }
 	}
 	// Find UpperNode IP in cluster
 	un := j.Config.UpperNode
-	upperNodeIPinCluster := j.Kube.PodIP(un.Hostname, un.Namespace, un.PodName)
-	if upperNodeIPinCluster != "" {
-		un.Address = upperNodeIPinCluster
-	}
 
+	// Prepare payload of registering
 	payload := RequestPayload{
 		Token: un.Token,
 		Node:  j.Config.SelfNode,
@@ -109,6 +126,7 @@ func (j *JADE) Register(retryCnt int) {
 		log.Fatalln(msg)
 		return
 	}
+	// Send the register information to upper node
 	req, err := http.NewRequest("PUT", un.URL()+"/$jade$/registerNode", bytes.NewBuffer(reqbody))
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
@@ -120,8 +138,16 @@ func (j *JADE) Register(retryCnt int) {
 		j.RegisterStatus = msg
 		time.Sleep(time.Second * 10)
 		j.Register(retryCnt + 1)
+		return
 	}
-	defer res.Body.Close()
+
+	if res == nil || res.Body == nil {
+		msg := "Error when registering, the response is nil"
+		log.Println(msg)
+		return
+	}
+
+	// parse the response message of upper node for registering
 	var resMsg map[string]string
 	json.NewDecoder(res.Body).Decode(&resMsg)
 	if val, ok := resMsg["Error"]; ok {
@@ -131,9 +157,11 @@ func (j *JADE) Register(retryCnt int) {
 		log.Println("will retry registering in 10 seconds")
 		time.Sleep(time.Second * 10)
 		j.Register(retryCnt + 1)
+		return
 	} else {
 		log.Println("Registered in upper node: ", resMsg)
 		regMsg, _ := ioutil.ReadAll(res.Body)
 		j.RegisterStatus = string(regMsg)
 	}
+	// res.Body.Close()
 }

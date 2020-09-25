@@ -88,6 +88,12 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Namespace = envValue
 			}
+		case "SERVICEEXTERNAL":
+			if nameParts[1] == "UPPERNODE" {
+				c.UpperNode.ServiceExternal = envValue
+			} else if nameParts[1] == "SELFNODE" {
+				c.SelfNode.ServiceExternal = envValue
+			}
 		}
 
 		// for capacity
@@ -152,6 +158,7 @@ func PrintJSONasEnv(jsonfile string) {
 	fmt.Printf("JADE_SELFNODE_HOSTNAME=%v\n", c.SelfNode.Hostname)
 	fmt.Printf("JADE_SELFNODE_NAMESPACE=%v\n", c.SelfNode.Namespace)
 	fmt.Printf("JADE_SELFNODE_PODNAME=%v\n", c.SelfNode.PodName)
+	fmt.Printf("JADE_SELFNODE_SERVICEEXTERNAL=%v\n", c.SelfNode.ServiceExternal)
 	// Print upper node
 	fmt.Printf("JADE_UPPERNODE_ADDRESS=%s\n", c.UpperNode.Address)
 	fmt.Printf("JADE_UPPERNODE_PORT=%v\n", c.UpperNode.Port)
@@ -160,6 +167,7 @@ func PrintJSONasEnv(jsonfile string) {
 	fmt.Printf("JADE_UPPERNODE_HOSTNAME=%v\n", c.UpperNode.Hostname)
 	fmt.Printf("JADE_UPPERNODE_NAMESPACE=%v\n", c.UpperNode.Namespace)
 	fmt.Printf("JADE_UPPERNODE_PODNAME=%v\n", c.UpperNode.PodName)
+	fmt.Printf("JADE_UPPERNODE_SERVICEEXTERNAL=%v\n", c.UpperNode.ServiceExternal)
 	// Print capacity
 	fmt.Printf("JADE_CAPACITY_CPU=%v\n", c.Capacity.CPU)
 	fmt.Printf("JADE_CAPACITY_RAM=%v\n", c.Capacity.RAM)
