@@ -18,6 +18,8 @@ func (j *JADE) Init() {
 	j.Subnodes = make(map[string]*kernel.Node)
 	j.capabilityCache = &kernel.CapabilityCache{}
 	j.capacityCache = &kernel.CapacityCache{}
+	j.CapacityStatus = &kernel.CapacityStatus{}
+	j.taskCache = &kernel.TaskCache{}
 	// read environment variables into config
 	j.Config = kernel.ReadConfFromEnv()
 	log.Println("configurations from environment:")
@@ -35,6 +37,8 @@ func (j *JADE) Init() {
 		log.Println(c)
 	}
 	log.Println("")
+	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
+	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 	// setup k8s client instance
 	clients := kube.KubeClient{}
 	clients.Init()

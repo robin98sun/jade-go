@@ -59,7 +59,7 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*Capability) {
 }
 
 // GetNodes node Id list for that capability
-func (c *CapabilityCache) getNodes(cap *Capability) []string {
+func (c *CapabilityCache) getNodes(cap *Capability, nodefilter []string) []string {
 	if cap == nil || cap.Name == "" {
 		return nil
 	}
@@ -69,7 +69,12 @@ func (c *CapabilityCache) getNodes(cap *Capability) []string {
 	}
 	if subcache, subcacheExist := c.cache[cap.Name]; subcacheExist {
 		if item, itemExist := subcache[value]; itemExist {
-			return item.nodes
+			nodes := item.nodes
+			if nodefilter == nil {
+				return nodes
+			} else {
+				return IntersectStringArrays(nodes, nodefilter)
+			}
 		}
 	}
 	return nil
@@ -96,13 +101,13 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	return result
 }
 
-func (c *CapabilityCache) SelectNodes(capabilities []*Capability) []string {
+func (c *CapabilityCache) SelectNodesExclusively(capabilities []*Capability, nodefilter []string) []string {
 	if len(capabilities) == 0 {
 		return nil
 	}
 	var nodes []string
 	for _, cap := range capabilities {
-		tmpnodes := c.getNodes(cap)
+		tmpnodes := c.getNodes(cap, nodefilter)
 		if len(tmpnodes) == 0 {
 			return nil
 		}
@@ -113,6 +118,22 @@ func (c *CapabilityCache) SelectNodes(capabilities []*Capability) []string {
 			if len(nodes) == 0 {
 				return nil
 			}
+		}
+	}
+	return nodes
+}
+
+func (c *CapabilityCache) SelectNodesCollectively(capabilities []*Capability, nodefilter []string) []string {
+	var nodes []string
+	for _, cap := range capabilities {
+		tmpnodes := c.getNodes(cap, nodefilter)
+		if len(tmpnodes) == 0 {
+			continue
+		}
+		if nodes == nil {
+			nodes = tmpnodes
+		} else {
+			nodes = MergeStringArrays(nodes, tmpnodes)
 		}
 	}
 	return nodes

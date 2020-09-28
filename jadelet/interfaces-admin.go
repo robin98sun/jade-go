@@ -3,6 +3,7 @@ package jadelet
 import (
 	// "aces/jade-go/provisioner"
 	"aces/jade-go/kernel"
+	"aces/jade-go/provisioner"
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
 )
@@ -41,4 +42,17 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 	}
 	deleted := j.Config.DeleteCapability(nc.Name)
 	w.WriteJson(deleted)
+}
+
+// ProvisionApp interfaces
+func (j *JADE) ProvisionApp(w rest.ResponseWriter, r *rest.Request) {
+	p := provisioner.ProvisionDebug{}
+	err := r.DecodeJsonPayload(&p)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	podlist := p.ProvisionApplication()
+
+	w.WriteJson(&podlist)
 }

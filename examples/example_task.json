@@ -1,77 +1,87 @@
-[{
-  "application": {
-    "name": "temperature-stat",
-    "version": "1.0.0",
-    "owner": "skywalker",
-    "reducer": {
-      "registry": "192.168.57.8/tempstat-reducer",
-      "interfaces": {
-        "data": {
-          "port": 8080,
-          "path": "/data",
-          "method": "put",
-          "protocol": "http",
-          "parameters": [
-            {
-              "name": "data_list",
-              "type": "int[]"
+{
+  "token": "some kind of randome string token in upper node",
+  "payload": [{
+    "application": {
+        "envName": "local-test",
+        "name": "temperature-stat",
+        "version": "0.0.1",
+        "owner": "skywalker",
+        "reducer": {
+            "image": "nginx:latest",
+            "port": 80,
+            "protocol": "TCP",
+            "interfaces": {
+                "data": {
+                    "port": 80,
+                    "path": "/data",
+                    "method": "put",
+                    "protocol": "http",
+                    "parameters": [
+                        {
+                        "name": "data_list",
+                        "type": "int[]"
+                        }
+                    ]
+                }
             }
-          ]
+        },
+        "mapper": {
+            "image": "nginx:latest",
+            "port": 80,
+            "protocol": "TCP",
+            "interfaces": {}
         }
-      }
     },
-    "mapper": {
-      "registry": "192.168.57.8/tempstat-mapper",
-      "interfaces": {}
-    }
-  },
-  "requirements": {
-    "capabilities": [
-      {
-        "name": "location",
-        "value": "NYC"
-      },
-      {
-        "name": "location",
-        "value": "DAL"
-      },
-      {
-        "name": "location",
-        "value": "LA"
-      },
-      {
-        "name": "accuracy",
-        "value": "city"
-      },
-      {
-        "name": "avg_temperature"
-      }
-    ],
-    "allocations": {
-      "mapper": {
-        "mimimumCapacity": {
-          "cpu": 1,
-          "ram": 10
-        },
-        "maximumCapacity": {
-          "cpu": 2,
-          "ram": 20
+    "requirements": {
+        "collective": [
+            {
+                "name": "location",
+                "value": "NYC"
+            },
+            {
+                "name": "location",
+                "value": "DAL"
+            },
+            {
+                "name": "location",
+                "value": "LA"
+            }
+        ],
+        "exclusive": [
+            {
+                "name": "accuracy",
+                "value": "city"
+            },
+            {
+                "name": "avg_temperature"
+            }
+        ],
+        "allocations": {
+            "mapper": {
+                "minimumCapacity": {
+                    "cpu": 500,
+                    "ram": 100
+                },
+                "maximumCapacity": {
+                    "cpu": 1000,
+                    "ram": 200
+                }
+            },
+            "reducer": {
+                "minimumCapacity": {
+                    "cpu": 500,
+                    "ram": 200
+                },
+                "maximumCapacity": {
+                    "cpu": 1000,
+                    "ram": 300
+                }
+            }
         }
-      },
-      "reducer": {
-        "mimimumCapacity": {
-          "cpu": 1,
-          "ram": 50
-        },
-        "maximumCapacity": {
-          "cpu": 2,
-          "ram": 200
-        }
-      }
+    },
+    "budget": {
+        "maximumMilliseconds": 600000,
+        "price": 10
     }
-  },
-  "budget": {
-    "maximumMilliseconds": 600000,
-    "price": 10
-  }
 }]
+}

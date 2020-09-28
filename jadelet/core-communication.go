@@ -36,6 +36,11 @@ func (j *JADE) HTTPCommunicate(operationName string, method string, path string,
 		return nil, errors.New(msg)
 	}
 
+	tailstr := ""
+	if retryCnt > 0 {
+		tailstr = ", retry count: " + strconv.Itoa(retryCnt)
+	}
+	log.Println("[comm] "+operationName+" started toward target node:", targetNode.Key(), tailstr)
 	if targetNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(targetNode)
 		if targetNode.IsAddrEmpty() {
@@ -73,7 +78,7 @@ func (j *JADE) HTTPCommunicate(operationName string, method string, path string,
 		return j.retryHTTPCommunication(operationName, method, path, targetNode, payload, msg, 30, retryCnt+1, retryLimitation)
 	} else {
 		if resMsg.Status == "OK" {
-			log.Println("communication complete with target node")
+			log.Println("[comm] "+operationName+" complete with target node:", targetNode.Key())
 			return resMsg.Payload, nil
 		} else {
 			msg := "target node responded abnormal status: " + resMsg.Status + ", will retry " + operationName + " in 30 seconds"

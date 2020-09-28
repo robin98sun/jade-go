@@ -2,6 +2,7 @@ package jadelet
 
 import (
 	// "aces/jade-go/kernel"
+	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	// "net/http"
 )
@@ -9,7 +10,7 @@ import (
 // RegisterNode receive and process node registration
 func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
-	payload, err := j.ValidateUpstreamRequest(w, r)
+	_, payload, err := j.ValidateRequest(w, r)
 	if err != nil {
 		// the request has been rejected by validator
 		j.PeacefulFatalRequest(w, r, err.Error())
@@ -28,14 +29,22 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) FeedbackAcceptances(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
-	req, err := j.ValidateUpstreamRequest(w, r)
+	content, req, err := j.ValidateUpstreamRequest(w, r)
 	if err != nil {
 		// the request has been rejected by validator
 		j.PeacefulFatalRequest(w, r, err.Error())
 		return
 	}
 
-	if feedback, ok := req.Payload.(*TaskEvalResult); ok {
+	reqInst := &struct {
+		Payload *TaskEvalResult `json:"payload,omitempty"`
+	}{}
+	err = json.Unmarshal(content, reqInst)
+
+	if err != nil {
+		j.PeacefulFatalRequest(w, r, "Can not decode task evaluation result: "+err.Error())
+	} else {
+		feedback := reqInst.Payload
 		subnodeID := req.NodeID
 		subnode := j.Subnodes[subnodeID]
 		result := &TaskEvalResult{}
@@ -48,7 +57,7 @@ func (j *JADE) FeedbackAcceptances(w rest.ResponseWriter, r *rest.Request) {
 			result.AppendTask(taskID, status)
 		}
 		if !result.IsEmpty() {
-			j.forwardTaskStatus(result)
+			j.feedbackTaskStatus(result)
 		}
 	}
 	j.DoneRequest(w, r, nil)

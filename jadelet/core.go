@@ -4,10 +4,11 @@ import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
 	// "bytes"
-	// "encoding/json"
+	"encoding/json"
 	"errors"
 	"github.com/ant0ine/go-json-rest/rest"
 	// "log"
+	"io/ioutil"
 	"net/http"
 	// "time"
 )
@@ -21,6 +22,7 @@ type JADE struct {
 	capabilityCache *kernel.CapabilityCache
 	capacityCache   *kernel.CapacityCache
 	taskCache       *kernel.TaskCache
+	CapacityStatus  *kernel.CapacityStatus `json:"capacityStatus"`
 }
 
 func (j *JADE) HasUpperNode() bool {
@@ -75,7 +77,7 @@ func (j *JADE) IsRegistered() bool {
 }
 
 // UpstreamRequestPayload for all requests
-type UpstreamRequestPayload struct {
+type RequestPayload struct {
 	Payload      interface{}          `json:"payload,omitempty"`
 	Token        string               `json:"token,omitempty"`
 	Node         *kernel.Node         `json:"node,omitempty"`
@@ -91,27 +93,56 @@ type ResponsePayload struct {
 	Payload interface{} `json:"payload,omitempty"`
 }
 
-// ValidateUpstreamRequest receive and process node registration
-func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) (*UpstreamRequestPayload, error) {
-	payload := UpstreamRequestPayload{}
-	err := r.DecodeJsonPayload(&payload)
+func decodeRequestWithoutClosing(r *rest.Request, v interface{}) ([]byte, error) {
+	content, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if len(content) == 0 {
+		return nil, errors.New("JSON payload is empty")
+	}
+	err = json.Unmarshal(content, v)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+// ValidateRequest receive and process node registration
+func (j *JADE) ValidateRequest(w rest.ResponseWriter, r *rest.Request) ([]byte, *RequestPayload, error) {
+	req := &RequestPayload{}
+	content, err := decodeRequestWithoutClosing(r, req)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, err
+		return content, req, err
 	}
 	// Check token
-	if payload.Token != j.Config.SelfNode.Token {
-		err = errors.New("Invalid request")
+	if req.Token != j.Config.SelfNode.Token {
+		err := errors.New("Unauthorized request")
 		rest.Error(w, err.Error(), http.StatusForbidden)
-		return nil, err
+		return nil, req, err
 	}
+	return content, req, nil
+}
+
+// ValidateUpstreamRequest receive and process node registration
+func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) ([]byte, *RequestPayload, error) {
+	content, payload, err := j.ValidateRequest(w, r)
 	// Check node information
-	if payload.Node == nil {
+	subnodeExists := true
+	if payload.NodeID == "" {
+		subnodeExists = false
+	} else if _, exists := j.Subnodes[payload.NodeID]; !exists {
+		subnodeExists = false
+	}
+
+	if !subnodeExists {
 		err = errors.New("Unknown visitor")
 		rest.Error(w, err.Error(), http.StatusForbidden)
-		return nil, err
+		return nil, payload, err
 	}
-	return &payload, err
+	return content, payload, err
 }
 
 // DoneRequest send a message to the visitor to say everything is done
@@ -134,18 +165,17 @@ func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg 
 	})
 }
 
-// GenerateUpstreamPayloadOfControlPath generate upstream payload of control path
-func (j *JADE) GenerateUpstreamPayloadOfControlPath(thePayload interface{}, node *kernel.Node, capabilities []*kernel.Capability, capacity *kernel.Capacity) *UpstreamRequestPayload {
-	payload := UpstreamRequestPayload{
+// GeneratePayloadOfRequest generate payload of request
+func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*kernel.Capability, capacity *kernel.Capacity) *RequestPayload {
+	payload := RequestPayload{
 		Token:  j.Config.UpperNode.Token,
 		NodeID: j.Config.SelfNode.Key(),
 	}
 	if thePayload != nil {
 		payload.Payload = thePayload
 	}
-	if node != nil {
-		payload.Node = node.MiniNode()
-		payload.NodeID = node.Key()
+	if targetNode != nil {
+		payload.Token = targetNode.Token
 	}
 	if capabilities != nil && len(capabilities) > 0 {
 		for _, c := range capabilities {

@@ -9,6 +9,8 @@ import argparse
 import time
 import os
 import subprocess
+import json
+import sys
 
 def evalcmd(cmd):
   print("CMD>> ",cmd)
@@ -36,7 +38,41 @@ parser.add_argument('--env-var-file', type=str, required=False,
 parser.add_argument('--print', action='store_true', help='print the deployment file content')
 parser.add_argument('--container-port', type=int, required=False, default=8080, help='container port of the application')
 parser.add_argument('--bypass-deploying', action='store_true', help='bypass the actual deploying step')
+parser.add_argument('--apply-json', type=str, required=False, help='using a JSON file for kubectl apply -f')
 args = parser.parse_args()
+
+# Apply the deployment
+def apply(obj, append=False):
+  content = yaml.dump(obj, default_flow_style=False)
+  # preprocess the file format
+  content = content.replace("!!##@@##!!", "")
+  # content = content.replace("'", '"')
+  if args.print:
+    print("\ndeployment file content:\n")
+    print(content)
+    
+  filepath = "./tmp_jade_deployment."+ str(time.time()) +".yaml"
+  if args.deployment_file is not None:
+    filepath = args.deployment_file
+
+  flag = 'w'
+  if append: 
+    flag = 'a'
+  with open(filepath, flag) as file:
+    file.write(content)
+
+  if not args.bypass_deploying:
+    os.system('sudo kubectl apply -f '+filepath)
+  if args.deployment_file is None:
+    os.system('rm -f '+filepath)
+  
+  return filepath
+
+# Apply json file
+if args.apply_json is not None: 
+  obj = json.load(args.apply_json)
+  apply(obj)
+  sys.exit()
 
 # Get the token of the in-cluster admin user and set the context
 # not workable for now, need further study
@@ -134,32 +170,7 @@ for i in self_node:
 
 doc["spec"]["containers"][0]["env"] = envVariables
 
-# Apply the deployment
-def apply(obj, append=False):
-  content = yaml.dump(obj, default_flow_style=False)
-  # preprocess the file format
-  content = content.replace("!!##@@##!!", "")
-  # content = content.replace("'", '"')
-  if args.print:
-    print("\ndeployment file content:\n")
-    print(content)
-    
-  filepath = "./tmp_jade_deployment."+ str(time.time()) +".yaml"
-  if args.deployment_file is not None:
-    filepath = args.deployment_file
 
-  flag = 'w'
-  if append: 
-    flag = 'a'
-  with open(filepath, flag) as file:
-    file.write(content)
-
-  if not args.bypass_deploying:
-    os.system('sudo kubectl apply -f '+filepath)
-  if args.deployment_file is None:
-    os.system('rm -f '+filepath)
-  
-  return filepath
 
 apply(doc)
 

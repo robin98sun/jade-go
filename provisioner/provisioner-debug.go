@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type Provision struct {
+type ProvisionDebug struct {
 	Application struct {
 		Image              string
 		Version            string
@@ -23,7 +23,7 @@ type Provision struct {
 	Podname string
 }
 
-func (p *Provision) ProvisionApplication() string {
+func (p *ProvisionDebug) ProvisionApplication() string {
 	p.Application.hasBeenProvisioned = true
 	client := kube.KubeClient{}
 	fmt.Println("provisioning app...")
@@ -32,7 +32,7 @@ func (p *Provision) ProvisionApplication() string {
 		Namespace:      "default",
 		DeploymentName: "jade-dynamic",
 		AppName:        p.Application.Name,
-		Replicas:       2,
+		Replicas:       1,
 		ContainerName:  p.Application.Name,
 		Image:          p.Application.Image + ":" + p.Application.Version,
 		ContainerPort:  p.Application.Port,

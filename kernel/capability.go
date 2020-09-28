@@ -105,3 +105,108 @@ func (c *Capability) ParseAPI() {
 		}
 	}
 }
+
+func (c *Capability) Equal(n *Capability) bool {
+	if c.Name == n.Name {
+		if c.Value == "" && n.Value == "" {
+			return true
+		} else if c.Value == n.Value {
+			return true
+		}
+	}
+	return false
+}
+
+func FindMissingCapabilities(availableList []*Capability, requiredList []*Capability) []*Capability {
+	if len(availableList) == 0 {
+		return requiredList
+	}
+	if len(requiredList) == 0 {
+		return nil
+	}
+	cache := make(map[string]*Capability)
+	for _, avl := range availableList {
+		cache[avl.Name] = avl
+	}
+	missing := []*Capability{}
+	for _, req := range requiredList {
+		if avl, exists := cache[req.Name]; exists {
+			if !avl.Equal(req) {
+				missing = append(missing, req)
+			}
+		} else {
+			missing = append(missing, req)
+		}
+	}
+	return missing
+}
+
+func AnyCapabilityExists(availableList []*Capability, requiredList []*Capability) bool {
+	if len(availableList) == 0 {
+		return false
+	}
+	if len(requiredList) == 0 {
+		return true
+	}
+	cache := make(map[string]*Capability)
+	for _, avl := range availableList {
+		cache[avl.Name] = avl
+	}
+	for _, req := range requiredList {
+		if avl, exists := cache[req.Name]; exists {
+			if avl.Equal(req) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func AnyCapabilityMissing(availableList []*Capability, requiredList []*Capability) bool {
+	if len(availableList) == 0 {
+		return true
+	}
+	if len(requiredList) == 0 {
+		return false
+	}
+	cache := make(map[string]*Capability)
+	for _, avl := range availableList {
+		cache[avl.Name] = avl
+	}
+	for _, req := range requiredList {
+		if avl, exists := cache[req.Name]; exists {
+			if !avl.Equal(req) {
+				return true
+			}
+		} else {
+			return true
+		}
+	}
+	return false
+}
+
+// Requirements the capabilities and resources requirements
+type Requirements struct {
+	Collective  []*Capability `json:"collective,omitempty"`
+	Exclusive   []*Capability `json:"exclusive,omitempty"`
+	Allocations *struct {
+		Reducer *AllocationUnit `json:"reducer,omitempty"`
+		Mapper  *AllocationUnit `json:"mapper,omitempty"`
+	} `json:"allocations,omitempty"`
+}
+
+func (r *Requirements) valid() bool {
+	if len(r.Collective) == 0 && len(r.Exclusive) == 0 {
+		return false
+	}
+	if r.Allocations == nil {
+		return false
+	}
+	if r.Allocations.Reducer == nil {
+		return false
+	}
+	if r.Allocations.Mapper == nil {
+		return false
+	}
+	return true
+}

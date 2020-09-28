@@ -1,6 +1,6 @@
 {
   "selfNode": {
-    "address": "176.0.0.2",
+    "address": "192.168.57.6",
     "port": 8080,
     "protocol": "http",
     "token": "some kind of randome string token in self node",
@@ -18,10 +18,10 @@
     "namespace": "jade-app"
   },
   "capacity": {
-    "cpu": 100,
-    "ram": 100,
-    "disk": 100,
-    "bandwidth": 100
+    "cpu": 4000,
+    "ram": 2000,
+    "disk": 10000,
+    "bandwidth": 1000
   },
   "capabilities": [
     {

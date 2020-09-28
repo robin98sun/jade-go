@@ -2,6 +2,7 @@ package jadelet
 
 import (
 	"aces/jade-go/kernel"
+	"aces/jade-go/provisioner"
 	// "aces/jade-go/kube"
 	// "bytes"
 	// "encoding/json"
@@ -41,22 +42,42 @@ func (r *TaskEvalResult) AppendTask(taskID string, status string) {
 func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 	var directlyRejected []string
 	var directlyAccepted []string
+
+	targetNodes := make(map[string][]*kernel.Task)
+
 	for _, task := range tasklist {
 		log.Println("evaluating task:", task.Key)
 		if j.IsWorker() {
+			toReject := false
 			// to see if self-node is capable
-
+			isMissing := kernel.AnyCapabilityMissing(j.Config.Capabilities, task.Requirements.Exclusive)
+			if isMissing {
+				toReject = true
+			}
+			if !toReject {
+				isCollective := kernel.AnyCapabilityExists(j.Config.Capabilities, task.Requirements.Collective)
+				if !isCollective {
+					toReject = true
+				}
+			}
 			// to see if the task is acceptable
-			// try to provision the task
-
-			if false {
+			if !toReject {
+				if !j.CapacityStatus.RemainingCapacity.GE(task.Requirements.Allocations.Mapper.MinimumCapacity) || !j.CapacityStatus.MaximumCapacity.GE(task.Requirements.Allocations.Mapper.MaximumCapacity) {
+					toReject = true
+				}
+			}
+			// decide whether reject or provision the task
+			if toReject {
 				// if something wrong, reject the task
 				j.taskCache.Set("", task, j.Config.SelfNode, false, true, false, nil)
 				directlyRejected = append(directlyRejected, task.Key)
 			} else {
 				// if the task is acceptable in worker role, save in task cache
+				j.CapacityStatus.RemainingCapacity.Consume(task.Requirements.Allocations.Mapper.MinimumCapacity)
 				j.taskCache.Set("", task, j.Config.SelfNode, true, false, false, nil)
 				directlyAccepted = append(directlyAccepted, task.Key)
+				// Provision the task on self-node
+				go provisioner.ProvisionMapper(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Requirements.Allocations.Mapper)
 			}
 		}
 		if j.IsAggregator() {
@@ -65,7 +86,10 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 			// Check if the task already in cache
 
 			// Select sub-nodes according to capabilities
-			capableNodes := j.capabilityCache.SelectNodes(task.Requirements.Capabilities)
+			capableNodes := j.capabilityCache.SelectNodesExclusively(task.Requirements.Exclusive, nil)
+			if len(capableNodes) > 0 {
+				capableNodes = j.capabilityCache.SelectNodesCollectively(task.Requirements.Collective, capableNodes)
+			}
 			if len(capableNodes) == 0 {
 				log.Println("task", task.Key, "cannot perform on this node due to lacking suitable subnodes")
 				j.taskCache.Set("", task, j.Config.SelfNode, false, true, false, nil)
@@ -93,8 +117,11 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 				for _, nodeID := range availableNodes {
 					// cache the task to wait for sub-node's decision
 					j.taskCache.Set("", task, j.Subnodes[nodeID], false, false, false, nil)
-					// negoatiate with each sub-node to allocate the task
-
+					// forward task to each sub-node
+					if _, exists := targetNodes[nodeID]; !exists {
+						targetNodes[nodeID] = []*kernel.Task{}
+					}
+					targetNodes[nodeID] = append(targetNodes[nodeID], task)
 				}
 			}
 		}
@@ -103,14 +130,19 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 		Accepted: directlyAccepted,
 		Rejected: directlyRejected,
 	}
-	j.forwardTaskStatus(result)
+	if !result.IsEmpty() {
+		j.feedbackTaskStatus(result)
+	}
+	if len(targetNodes) > 0 {
+		for nodeID, tasks := range targetNodes {
+			j.dispatchTasks(nodeID, tasks)
+		}
+	}
 }
 
-func (j *JADE) forwardTaskStatus(evalRes *TaskEvalResult) {
-	if j.HasUpperNode() {
-		payload := j.GenerateUpstreamPayloadOfControlPath(evalRes, nil, nil, nil)
-		go j.HTTPCommunicate("feedback task acceptances", "POST", "/$jade$/taskAcceptances", j.Config.UpperNode, payload, 0, 10)
-	} else {
-		// send the result to UI
-	}
+func (j *JADE) dispatchTasks(nodeID string, tasklist []*kernel.Task) {
+	node := j.Subnodes[nodeID]
+	payload := j.GeneratePayloadOfRequest(node, tasklist, nil, nil)
+	log.Println("dispatching tasks to node", nodeID)
+	go j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", node, payload, 0, 10)
 }

@@ -130,7 +130,7 @@ func (j *JADE) SearchNodes(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	nodes := j.capabilityCache.SelectNodes(caplist)
+	nodes := j.capabilityCache.SelectNodesExclusively(caplist, nil)
 	w.WriteJson(nodes)
 }
 

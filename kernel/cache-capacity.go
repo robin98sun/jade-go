@@ -16,10 +16,8 @@ type CapacityCache struct {
 }
 
 type capacityCacheItem struct {
-	node              Node
-	maximumCapacity   *Capacity
-	remainingCapacity *Capacity
-	reservedCapacity  *Capacity
+	node   Node
+	status *CapacityStatus
 }
 
 func (c *CapacityCache) Set(nodeId string, maxcap *Capacity, remcap *Capacity) {
@@ -31,20 +29,25 @@ func (c *CapacityCache) Set(nodeId string, maxcap *Capacity, remcap *Capacity) {
 	}
 
 	if item, exists := c.cache[nodeId]; exists {
+		if item.status == nil {
+			item.status = &CapacityStatus{}
+		}
 		if maxcap != nil {
-			item.maximumCapacity = maxcap.Copy()
+			item.status.MaximumCapacity = maxcap.Copy()
 		}
 		if remcap != nil {
-			item.remainingCapacity = remcap.Copy()
+			item.status.RemainingCapacity = remcap.Copy()
 		}
 		c.cache[nodeId] = item
 	} else {
-		item = capacityCacheItem{}
+		item = capacityCacheItem{
+			status: &CapacityStatus{},
+		}
 		if maxcap != nil {
-			item.maximumCapacity = maxcap.Copy()
+			item.status.MaximumCapacity = maxcap.Copy()
 		}
 		if remcap != nil {
-			item.remainingCapacity = remcap.Copy()
+			item.status.RemainingCapacity = remcap.Copy()
 		}
 		c.cache[nodeId] = item
 	}
@@ -55,8 +58,8 @@ func (c *CapacityCache) GetMaximumCapacity(nodeId string) *Capacity {
 		return nil
 	}
 	if item, exists := c.cache[nodeId]; exists {
-		if item.maximumCapacity != nil {
-			return item.maximumCapacity
+		if item.status != nil && item.status.MaximumCapacity != nil {
+			return item.status.MaximumCapacity
 		}
 	}
 	return nil
@@ -67,8 +70,8 @@ func (c *CapacityCache) GetRemainingCapacity(nodeId string) *Capacity {
 		return nil
 	}
 	if item, exists := c.cache[nodeId]; exists {
-		if item.remainingCapacity != nil {
-			return item.remainingCapacity
+		if item.status != nil && item.status.RemainingCapacity != nil {
+			return item.status.RemainingCapacity
 		}
 	}
 	return nil
@@ -81,10 +84,10 @@ func (c *CapacityCache) SelectAvailableNodes(cap *Capacity) []string {
 	}
 	var result []string
 	for nodeID, item := range c.cache {
-		if item.remainingCapacity == nil {
+		if item.status == nil || item.status.RemainingCapacity == nil {
 			continue
 		}
-		rc := item.remainingCapacity
+		rc := item.status.RemainingCapacity
 		if rc.GE(cap) {
 			result = append(result, nodeID)
 		}
@@ -100,11 +103,11 @@ func (c *CapacityCache) FilterAvailableNodes(capableNodes []string, au *Allocati
 	var result []string
 	for _, nodeID := range capableNodes {
 		if item, exists := c.cache[nodeID]; exists {
-			if item.remainingCapacity == nil {
+			if item.status == nil || item.status.RemainingCapacity == nil {
 				continue
 			}
-			rc := item.remainingCapacity
-			mc := item.maximumCapacity
+			rc := item.status.RemainingCapacity
+			mc := item.status.MaximumCapacity
 			if rc.GE(au.MinimumCapacity) && mc.GE(au.MaximumCapacity) {
 				result = append(result, nodeID)
 			}

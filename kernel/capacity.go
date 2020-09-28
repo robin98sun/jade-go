@@ -1,10 +1,10 @@
 package kernel
 
 type Capacity struct {
-	CPU       int `json:"cpu,omitempty"`
-	RAM       int `json:"ram,omitempty"`
-	Disk      int `json:"disk,omitempty"`
-	Bandwidth int `json:"bandwidth,omitempty"`
+	CPU       int64 `json:"cpu,omitempty"`
+	RAM       int64 `json:"ram,omitempty"`
+	Disk      int64 `json:"disk,omitempty"`
+	Bandwidth int64 `json:"bandwidth,omitempty"`
 }
 
 // NewCapacity construct a new capacity instance with default values
@@ -26,20 +26,35 @@ func (c *Capacity) Copy() *Capacity {
 	}
 }
 
-func (c *Capacity) GE(cap *Capacity) bool {
-	return c.CPU >= cap.CPU && c.RAM >= cap.RAM && c.Disk >= cap.Disk && c.Bandwidth >= cap.Bandwidth
+func (c *Capacity) GE(nc *Capacity) bool {
+	if nc == nil {
+		return true
+	}
+	return c.CPU >= nc.CPU && c.RAM >= nc.RAM && c.Disk >= nc.Disk && c.Bandwidth >= nc.Bandwidth
 }
 
-func (c *Capacity) Consume(cap *Capacity) {
-	c.CPU -= cap.CPU
-	c.RAM -= cap.RAM
-	c.Disk -= cap.Disk
-	c.Bandwidth -= cap.Bandwidth
+func (c *Capacity) Consume(nc *Capacity) {
+	if nc == nil {
+		return
+	}
+	c.CPU -= nc.CPU
+	c.RAM -= nc.RAM
+	c.Disk -= nc.Disk
+	c.Bandwidth -= nc.Bandwidth
 }
 
-func (c *Capacity) Resume(cap *Capacity) {
-	c.CPU += cap.CPU
-	c.RAM += cap.RAM
-	c.Disk += cap.Disk
-	c.Bandwidth += cap.Bandwidth
+func (c *Capacity) Resume(nc *Capacity) {
+	if nc == nil {
+		return
+	}
+	c.CPU += nc.CPU
+	c.RAM += nc.RAM
+	c.Disk += nc.Disk
+	c.Bandwidth += nc.Bandwidth
+}
+
+type CapacityStatus struct {
+	MaximumCapacity   *Capacity
+	RemainingCapacity *Capacity
+	ReservedCapacity  *Capacity
 }

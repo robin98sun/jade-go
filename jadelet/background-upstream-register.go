@@ -52,7 +52,9 @@ func (j *JADE) Register(retryCnt int) {
 	}
 
 	// Prepare payload of registering
-	payload := j.GenerateUpstreamPayloadOfControlPath(nil, sn, j.Config.Capabilities, j.Config.Capacity)
+	payload := j.GeneratePayloadOfRequest(nil, nil, j.Config.Capabilities, j.Config.Capacity)
+	payload.Node = sn.MiniNode()
+	payload.NodeID = sn.Key()
 	reqbody, err := json.Marshal(payload)
 	if err != nil {
 		msg := "ERROR during encoding self-node: " + err.Error() + ", will retry in 10 seconds"
