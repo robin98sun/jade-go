@@ -1,8 +1,8 @@
-package interfaces
+package jadelet
 
 import (
-	// "aces/jade-go/conf"
 	// "fmt"
+	"aces/jade-go/kernel"
 	// "aces/jade-go/kube"
 	"github.com/ant0ine/go-json-rest/rest"
 	"log"
@@ -109,4 +109,39 @@ func (j *JADE) ShowNode(w rest.ResponseWriter, r *rest.Request) {
 	} else {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// ShowSubnodes show all subnodes registered
+func (j *JADE) ShowSubnodes(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteJson(j.Subnodes)
+}
+
+// ShowCapabilityCache will print all capabilities and their nodes
+func (j *JADE) ShowCapabilityCache(w rest.ResponseWriter, r *rest.Request) {
+	result := j.capabilityCache.AllCapabilitiesWithNodes()
+	w.WriteJson(result)
+}
+
+// SearchNodes search nodes according a list of capabilities
+func (j *JADE) SearchNodes(w rest.ResponseWriter, r *rest.Request) {
+	caplist := []*kernel.Capability{}
+	err := r.DecodeJsonPayload(&caplist)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	nodes := j.capabilityCache.SelectNodes(caplist)
+	w.WriteJson(nodes)
+}
+
+// ShowSubnodeCapacities show capacities of subnodes
+func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
+	result := make(map[string]map[string]*kernel.Capacity)
+	result["remaining"] = make(map[string]*kernel.Capacity)
+	result["maximum"] = make(map[string]*kernel.Capacity)
+	for nodeID := range j.Subnodes {
+		result["remaining"][nodeID] = j.capacityCache.GetRemainingCapacity(nodeID)
+		result["maximum"][nodeID] = j.capacityCache.GetMaximumCapacity(nodeID)
+	}
+	w.WriteJson(result)
 }

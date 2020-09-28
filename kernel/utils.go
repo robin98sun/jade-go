@@ -1,32 +1,15 @@
-package conf
+package kernel
 
 import (
-	"aces/jade-go/kernel"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
-
-// Conf configuration data structure in memory
-type Conf struct {
-	UpperNode    *kernel.Node        `json:"upperNode"`
-	SelfNode     *kernel.Node        `json:"selfNode"`
-	Capabilities []kernel.Capability `json:"capabilities"`
-	Capacity     *kernel.Capacity    `json:"capacity"`
-}
-
-// NewConfiguration construct a new configuration instance with default values
-func NewConfiguration() *Conf {
-	c := &Conf{}
-	c.UpperNode = kernel.NewNode()
-	c.SelfNode = kernel.NewNode()
-	c.Capabilities = []kernel.Capability{}
-	c.Capacity = kernel.NewCapacity()
-	return c
-}
 
 // ReadConfFromEnv Read configuration from environment variables
 func ReadConfFromEnv() *Conf {
@@ -96,7 +79,7 @@ func ReadConfFromEnv() *Conf {
 			}
 		}
 
-		// for capacity
+		// for capacity and capabilities
 		if nameParts[1] == "CAPACITY" {
 			v, err := strconv.Atoi(envValue)
 			if err == nil {
@@ -116,8 +99,8 @@ func ReadConfFromEnv() *Conf {
 			if err == nil {
 				if i >= len(c.Capabilities) {
 					for x := len(c.Capabilities); x <= i; x++ {
-						capability := *kernel.NewCapability()
-						c.Capabilities = append(c.Capabilities, capability)
+						capability := *NewCapability()
+						c.Capabilities = append(c.Capabilities, &capability)
 					}
 				}
 				switch nameParts[3] {
@@ -126,6 +109,7 @@ func ReadConfFromEnv() *Conf {
 				case "API":
 					c.Capabilities[i].API = envValue
 				}
+				c.Capabilities[i].ParseAPI()
 			}
 		}
 
@@ -141,6 +125,11 @@ func ReadConfFromJSON(jsonstr string, isFile bool) *Conf {
 		_ = json.Unmarshal([]byte(file), c)
 	} else {
 		_ = json.Unmarshal([]byte(jsonstr), c)
+	}
+	if len(c.Capabilities) > 0 {
+		for _, cap := range c.Capabilities {
+			cap.ParseAPI()
+		}
 	}
 	return c
 }
@@ -178,4 +167,42 @@ func PrintJSONasEnv(jsonfile string) {
 		fmt.Printf("JADE_CAPABILITY_%v_NAME=%v\n", i, v.Name)
 		fmt.Printf("JADE_CAPABILITY_%v_API=%v\n", i, v.API)
 	}
+}
+
+// Get a random string
+func RandomString() string {
+	result := ""
+	ts := time.Now().UnixNano()
+	result = strconv.FormatInt(ts, 16)
+
+	ts = time.Now().UnixNano()
+	s := rand.NewSource(ts)
+	r := rand.New(s)
+	ts = time.Now().UnixNano()
+	rn := r.Int63n(ts)
+	result += "." + strconv.FormatInt(rn, 16)
+
+	return result
+}
+
+func IntersectStringArrays(arr1 []string, arr2 []string) []string {
+	if len(arr1) == 0 || len(arr2) == 0 {
+		return nil
+	}
+	intersectionCache := make(map[string]bool)
+	for _, str1 := range arr1 {
+		intersectionCache[str1] = false
+	}
+	for _, str2 := range arr2 {
+		if val, ok := intersectionCache[str2]; ok && !val {
+			intersectionCache[str2] = true
+		}
+	}
+	var result []string
+	for key, val := range intersectionCache {
+		if val {
+			result = append(result, key)
+		}
+	}
+	return result
 }

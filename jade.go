@@ -1,4 +1,4 @@
-// The main interfaces of JADE
+// The main jadelet of JADE
 // This basically is a http(rest) server, routing requests to sub-packages
 package main
 
@@ -10,8 +10,8 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 
 	// Sub packages
-	"aces/jade-go/conf"
-	"aces/jade-go/interfaces"
+	"aces/jade-go/jadelet"
+	"aces/jade-go/kernel"
 
 	// others
 	"fmt"
@@ -28,35 +28,40 @@ func main() {
 	flag.Parse()
 	if *configurationFileInJSON != "" {
 		if *printConfigVariables {
-			conf.PrintJSONasEnv(*configurationFileInJSON)
+			kernel.PrintJSONasEnv(*configurationFileInJSON)
 			os.Exit(0)
 		}
 	}
 	// construt JADE RESTful API server
-	j := interfaces.JADE{}
+	j := jadelet.JADE{}
 	j.Init()
 	//
 
 	api := rest.NewApi()
 	api.Use(rest.DefaultDevStack...)
 	router, err := rest.MakeRouter(
-		// Control path interfaces
+		// Control path upstream
 		rest.Put("/$jade$/registerNode", j.RegisterNode),
-		rest.Put("/$jade$/heartbeat", j.Heartbeat),
-		// Data path interfaces
+		rest.Post("/$jade$/feedbackAcceptances", j.FeedbackAcceptances),
+		// Control path downstream
 		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
+		// Data path upstream
 		rest.Post("/$jade$/dataReceiver", j.DataReceiver),
 		// for administration
 		rest.Post("/$jade$/provision_app", j.ProvisionApp),
 		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
-		// for query
-		rest.Get("/$jade$/jadelet", j.ShowJadelet),
-		rest.Get("/$jade$/configurations", j.ShowConfigurations),
-		rest.Get("/$jade$/pod", j.ShowPodInfo),
-		rest.Get("/$jade$/service", j.ShowService),
-		rest.Get("/$jade$/clusterIP", j.ShowClusterIP),
-		rest.Get("/$jade$/externalIP", j.ShowExternalIP),
-		rest.Get("/$jade$/node", j.ShowNode),
+		// for debugging
+		rest.Get("/$jade$/debug/jadelet", j.ShowJadelet),
+		rest.Get("/$jade$/debug/configurations", j.ShowConfigurations),
+		rest.Get("/$jade$/debug/pod", j.ShowPodInfo),
+		rest.Get("/$jade$/debug/service", j.ShowService),
+		rest.Get("/$jade$/debug/clusterIP", j.ShowClusterIP),
+		rest.Get("/$jade$/debug/externalIP", j.ShowExternalIP),
+		rest.Get("/$jade$/debug/node", j.ShowNode),
+		rest.Get("/$jade$/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/$jade$/debug/capabilityCache", j.ShowCapabilityCache),
+		rest.Get("/$jade$/debug/capacityCache", j.ShowSubnodeCapacities),
+		rest.Post("/$jade$/debug/searchNodes", j.SearchNodes),
 	)
 	if err != nil {
 		log.Fatal(err)

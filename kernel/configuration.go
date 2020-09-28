@@ -1,0 +1,70 @@
+package kernel
+
+import (
+// "encoding/json"
+// "fmt"
+// "io/ioutil"
+// "os"
+// "strconv"
+// "strings"
+)
+
+// Conf configuration data structure in memory
+type Conf struct {
+	UpperNode    *Node         `json:"upperNode"`
+	SelfNode     *Node         `json:"selfNode"`
+	Capabilities []*Capability `json:"capabilities"`
+	Capacity     *Capacity     `json:"capacity"`
+}
+
+// NewConfiguration construct a new configuration instance with default values
+func NewConfiguration() *Conf {
+	c := &Conf{}
+	c.UpperNode = NewNode()
+	c.SelfNode = NewNode()
+	c.Capabilities = []*Capability{}
+	c.Capacity = NewCapacity()
+	return c
+}
+
+// FindCapability search a capability by name
+func (c *Conf) FindCapability(name string) (int, *Capability) {
+	if c.Capabilities == nil || len(c.Capabilities) == 0 || name == "" {
+		return -1, nil
+	}
+	for i, cap := range c.Capabilities {
+		if cap.Name == name {
+			return i, cap
+		}
+	}
+	return -1, nil
+}
+
+// AddOrUpdateCapability add or update a capability
+func (c *Conf) AddOrUpdateCapability(nc *Capability) *Capability {
+	if nc == nil || nc.Name == "" {
+		return nil
+	}
+	i, found := c.FindCapability(nc.Name)
+	nc.ParseAPI()
+	if found != nil {
+		c.Capabilities[i] = nc
+	} else {
+		c.Capabilities = append(c.Capabilities, nc)
+	}
+	return nc
+}
+
+// DeleteCapability delete a capability
+func (c *Conf) DeleteCapability(name string) *Capability {
+	if name == "" {
+		return nil
+	}
+	i, found := c.FindCapability(name)
+	if found == nil {
+		return nil
+	}
+	c.Capabilities[len(c.Capabilities)-1], c.Capabilities[i] = c.Capabilities[i], c.Capabilities[len(c.Capabilities)-1]
+	c.Capabilities = c.Capabilities[:len(c.Capabilities)-1]
+	return found
+}

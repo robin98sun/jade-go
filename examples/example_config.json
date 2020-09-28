@@ -1,10 +1,10 @@
 {
   "selfNode": {
     "address": "176.0.0.2",
-    "port": 8081,
+    "port": 8080,
     "protocol": "http",
     "token": "some kind of randome string token in self node",
-    "hostname": "edge-cluster-1",
+    "hostname": "raspberry02",
     "podname": "jade-local-test",
     "namespace": "jade-app"
   },
