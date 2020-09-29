@@ -17,13 +17,13 @@ func ProvisionMapper(client *kube.KubeClient, node *kernel.Node, capabilities []
 	// registry
 	// Environment variables
 	log.Println("Provisioning pod", podname)
-	realPodName, err := client.ProvisionPod(app.EnvName, app.Owner, app.Name, app.Version, podname, "k3s.io/hostname", node.Hostname, node.Namespace, app.Mapper.Image, app.Mapper.Port, allocationLimits, capabilities)
+	deploymentName, err := client.ProvisionPod(app.EnvName, app.Owner, app.Name, app.Version, podname, "k3s.io/hostname", node.Hostname, node.Namespace, app.Mapper.Image, app.Mapper.Port, allocationLimits, capabilities)
 	if err != nil {
 		log.Println("Error when provisioning pod", podname, ":", err.Error())
 		return podname, err
 	} else {
-		log.Println("Successfully provisioned pod:", realPodName)
-		return realPodName, nil
+		log.Println("Successfully provisioned pod:", deploymentName)
+		return deploymentName, nil
 	}
 }
 
