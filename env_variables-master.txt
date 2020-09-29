@@ -1,5 +1,5 @@
 JADE_SELFNODE_PROTOCOL=http
-JADE_SELFNODE_ADDRESS=192.168.57.5
+JADE_SELFNODE_ADDRESS=192.168.57.10
 JADE_SELFNODE_TOKEN=some kind of randome string token in upper node
 JADE_SELFNODE_SERVICEEXTERNAL=jade-local-test-edge-cluster-1-service-external
 JADE_SELFNODE_NAMESPACE=default
