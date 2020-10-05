@@ -9,7 +9,7 @@ elif [[ "$target" == "pods" && "$specific" != "" ]];then
 fi
 
 if [[ "$target" == "services" && "$specific" == "" ]];then
-  sudo kubectl delete service jade-local-test-edge-cluster-1-service-external && \
+  sudo kubectl delete service jade-local-test-cluster-1-service-external && \
   sudo kubectl delete service jade-local-test-raspberry01-service-external
   sudo kubectl delete service jade-local-test-raspberry02-service-external
 elif [[ "$target" == "services" && "$specific" == "" ]];then
@@ -20,7 +20,7 @@ if [[ "$target" == "" || "$target" == "services" || "$target" == "pods" ]]; then
   if [[ "$specific" == "" ]]; then
     ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
         --application-name jadelet --application-registry 192.168.57.8/jade:$version \
-        --target-host edge-cluster-1 --container-port 8080 \
+        --target-host cluster-1 --container-port 8080 \
         --env-var-file env_variables-master.txt  && \
     ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
         --application-name jadelet --application-registry 192.168.57.8/jade:$version \
@@ -30,6 +30,11 @@ if [[ "$target" == "" || "$target" == "services" || "$target" == "pods" ]]; then
         --application-name jadelet --application-registry 192.168.57.8/jade:$version \
         --target-host raspberry02 --container-port 8080 \
         --env-var-file env_variables-agent-02.txt 
+    
+    for node in cluster-1 raspberry01 raspberry02; do
+      port=`sudo kubectl get service/jade-local-test-${node}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'`
+      echo $node $port
+    done
   else 
     envfile=env_variables-master.txt
     if [[ "$specific" == "raspberry01" ]];then
@@ -41,5 +46,6 @@ if [[ "$target" == "" || "$target" == "services" || "$target" == "pods" ]]; then
         --application-name jadelet --application-registry 192.168.57.8/jade:$version \
         --target-host $specific --container-port 8080 \
         --env-var-file $envfile
+    sudo kubectl get service/jade-local-test-${specific}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'
   fi
 fi

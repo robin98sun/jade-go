@@ -3,6 +3,7 @@ module aces/jade-go
 go 1.15
 
 require (
+	github.com/Azure/go-autorest/autorest v0.11.1 // indirect
 	github.com/StephanDollberg/go-json-rest-middleware-jwt v0.0.0-20160723210644-be2a0500d9b3
 	github.com/ant0ine/go-json-rest v3.3.2+incompatible
 	github.com/ant0ine/go-json-rest-middleware-statsd v0.0.0-20160102230551-d75044bee493
@@ -19,7 +20,7 @@ require (
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	gopkg.in/tylerb/graceful.v1 v1.2.15
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	k8s.io/api v0.0.0-20200904131630-697df40f2d58
-	k8s.io/apimachinery v0.0.0-20200904051630-d8e5c2b33a59
-	k8s.io/client-go v0.0.0-20200905211905-0d9e08cf3a66
+	k8s.io/api v0.19.0
+	k8s.io/apimachinery v0.19.0
+	k8s.io/client-go v0.19.0
 )
