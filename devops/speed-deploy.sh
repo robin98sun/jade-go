@@ -1,51 +1,57 @@
 #!/usr/bin/env bash
-version=$1
-target=$2
-specific=$3
-if [[ "$target" == "pods" && "$specific" == "" ]];then
+master=$1
+agent_base=$2
+agent_count=$3
+image=$4
+target=$5
+
+if [[ "$target" == "pods" ]];then
   sudo kubectl get pods|sed '1d'|awk '{print $1}'|xargs sudo kubectl delete pods
-elif [[ "$target" == "pods" && "$specific" != "" ]];then
-  sudo kubectl get pods|sed '1d'|grep "$specific"|awk '{print $1}'|xargs sudo kubectl delete pods
 fi
 
-if [[ "$target" == "services" && "$specific" == "" ]];then
-  sudo kubectl delete service jade-local-test-cluster-1-service-external && \
-  sudo kubectl delete service jade-local-test-raspberry01-service-external
-  sudo kubectl delete service jade-local-test-raspberry02-service-external
-elif [[ "$target" == "services" && "$specific" == "" ]];then
-  sudo kubectl delete service jade-local-test-${specific}-service-external
-fi
+function master_service_name() {
+  echo jade-local-test-${master}-service-external
+}
 
-if [[ "$target" == "" || "$target" == "services" || "$target" == "pods" ]]; then
-  if [[ "$specific" == "" ]]; then
-    ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
-        --application-name jadelet --application-registry 192.168.57.8/jade:$version \
-        --target-host cluster-1 --container-port 8080 \
-        --env-var-file env_variables-master.txt  && \
-    ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
-        --application-name jadelet --application-registry 192.168.57.8/jade:$version \
-        --target-host raspberry01 --container-port 8080 \
-        --env-var-file env_variables-agent-01.txt && \
-    ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
-        --application-name jadelet --application-registry 192.168.57.8/jade:$version \
-        --target-host raspberry02 --container-port 8080 \
-        --env-var-file env_variables-agent-02.txt 
-    
-    for node in cluster-1 raspberry01 raspberry02; do
-      port=`sudo kubectl get service/jade-local-test-${node}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'`
-      echo $node $port
-    done
-  else 
-    envfile=env_variables-master.txt
-    if [[ "$specific" == "raspberry01" ]];then
-      envfile=env_variables-agent-01.txt
-    elif [[ "$specific" == "raspberry02" ]];then
-      envfile=env_variables-agent-02.txt
-    fi
-    ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
-        --application-name jadelet --application-registry 192.168.57.8/jade:$version \
-        --target-host $specific --container-port 8080 \
-        --env-var-file $envfile
-    sudo kubectl get service/jade-local-test-${specific}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'
+function agent_service_name() {
+  id=$1
+  if [[ "$id" == "" ]];then
+    id=1
   fi
+  echo jade-local-test-${agent_base}${id}-service-external
+}
+
+if [[ "$target" == "services" ]];then
+  srvName=`master_service_name`
+  sudo kubectl delete service $srvName
+
+  i=1
+  while [[ $i -le $agent_count ]];do
+    sudo kubectl delete service `agent_service_name $i`
+    i=`expr $i + 1`
+  done
 fi
+
+# Deploy master first
+./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
+    --application-name jadelet --application-image $image \
+    --target-host ${master} --container-port 8080 \
+    --env-var-file ./devops/deployments/example-env_variables-master.txt
+
+node_list=${master}
+
+# Deploy agents
+i=1
+while [[ $i -le $agent_count ]];do
+  ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
+    --application-name jadelet --application-image $image \
+    --target-host ${agent_base}${i} --container-port 8080 \
+    --env-var-file env_variables-agent-${i}.txt 
+  node_list="${node_list} ${agent_base}${i}"
+  i=`expr $i + 1`
+done
+
+for node in ${node_list}; do
+  port=`sudo kubectl get service/jade-local-test-${node}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'`
+  echo $node $port
+done
