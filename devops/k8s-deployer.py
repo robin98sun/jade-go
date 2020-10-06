@@ -24,7 +24,7 @@ parser.add_argument('--deployment-name', type=str, required=True,
                       help='the deployment name in Kubernetes cluster')
 parser.add_argument('--application-name', type=str, required=True,
                       help='the name of the application')
-parser.add_argument('--application-registry', type=str, required=True,
+parser.add_argument('--application-image', type=str, required=True,
                       help='the doker registry of the application to deploy')
 parser.add_argument('--deployment-file', type=str, required=False,
                       help='the deployment file to be used in `kubectl apply -f` command')
@@ -92,7 +92,7 @@ if args.deployment_file is not None:
 print("namespace:", args.namespace)
 print("deployment name:", args.deployment_name)
 print("application name:", args.application_name)
-print("application registry:", args.application_registry)
+print("application image:", args.application_image)
 print("target host:", args.target_host)
 if args.env_var_file is not None:
   print("environment variables file:", args.env_var_file)
@@ -116,7 +116,7 @@ doc = {
   "spec": {
     "containers": [
       {
-        "image": args.application_registry,
+        "image": args.application_image,
         "imagePullPolicy": "IfNotPresent",
         "name": args.application_name,
         "ports": [
