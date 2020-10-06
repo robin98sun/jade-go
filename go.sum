@@ -351,9 +351,11 @@ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 k8s.io/api v0.0.0-20200904131630-697df40f2d58 h1:v08CEo8hKSc/n5EzxgeIGYNqF7eSnIGc5GoODmONAVc=
 k8s.io/api v0.0.0-20200904131630-697df40f2d58/go.mod h1:l2O56Qgi29VyzuaxfR+mRk40gGVVAG/0+xY/l9yjHyU=
+k8s.io/api v0.19.0 h1:XyrFIJqTYZJ2DU7FBE/bSPz7b1HvbVBuBf07oeo6eTc=
 k8s.io/api v0.19.0/go.mod h1:I1K45XlvTrDjmj5LoM5LuP/KYrhWbjUKT/SoPG0qTjw=
 k8s.io/apimachinery v0.0.0-20200904051630-d8e5c2b33a59 h1:sARB0hinZh3mccmqgW+T+cRAkoTaqzyPdrxZoKxWo44=
 k8s.io/apimachinery v0.0.0-20200904051630-d8e5c2b33a59/go.mod h1:DnPGDnARWFvYa3pMHgSxtbZb7gpzzAZ1pTfaUNDVlmA=
+k8s.io/apimachinery v0.19.0 h1:gjKnAda/HZp5k4xQYjL0K/Yb66IvNqjthCb03QlKpaQ=
 k8s.io/apimachinery v0.19.0/go.mod h1:DnPGDnARWFvYa3pMHgSxtbZb7gpzzAZ1pTfaUNDVlmA=
 k8s.io/apimachinery v0.19.2 h1:5Gy9vQpAGTKHPVOh5c4plE274X8D/6cuEiTO2zve7tc=
 k8s.io/client-go v0.0.0-20200905211905-0d9e08cf3a66 h1:im86JOdGAfv0Susf0fjt/5JK9D8w+eeuZX8mqJ+0h6s=

@@ -36,7 +36,7 @@ fi
 ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
     --application-name jadelet --application-image $image \
     --target-host ${master} --container-port 8080 \
-    --env-var-file ./devops/deployments/example-env_variables-master.txt
+    --env-var-file ./devops/deployments/local-test/env_variables-master.txt
 
 node_list=${master}
 
@@ -46,7 +46,7 @@ while [[ $i -le $agent_count ]];do
   ./devops/k8s-deployer.py --print --namespace default --deployment-name jade-local-test \
     --application-name jadelet --application-image $image \
     --target-host ${agent_base}${i} --container-port 8080 \
-    --env-var-file env_variables-agent-${i}.txt 
+    --env-var-file ./devops/deployments/local-test/env_variables-agent-${i}.txt 
   node_list="${node_list} ${agent_base}${i}"
   i=`expr $i + 1`
 done
