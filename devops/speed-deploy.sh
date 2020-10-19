@@ -3,10 +3,10 @@ master=$1
 agent_base=$2
 agent_count=$3
 image=$4
-target=$5
+delete=$5
 
-if [[ "$target" == "pods" ]];then
-  sudo kubectl get pods|sed '1d'|awk '{print $1}'|xargs sudo kubectl delete pods
+if [[ "$delete" == "pods" || "$delete" == "all" ]];then
+  sudo kubectl get pods|sed '1d'|awk '{print $1}'|grep jade-local-test|xargs sudo kubectl delete pods
 fi
 
 function master_service_name() {
@@ -21,7 +21,7 @@ function agent_service_name() {
   echo jade-local-test-${agent_base}${id}-service-external
 }
 
-if [[ "$target" == "services" ]];then
+if [[ "$delete" == "services" || "$delete" == "all" ]];then
   srvName=`master_service_name`
   sudo kubectl delete service $srvName
 

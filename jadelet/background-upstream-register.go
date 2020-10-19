@@ -22,10 +22,10 @@ func (j *JADE) retryRegister(msg string, seconds int, retryCnt int) {
 
 // Register to upper node
 func (j *JADE) Register(retryCnt int) {
-	if retryCnt > 100 {
-		log.Println("Retried maximum times, will no longer register to upper node")
-		return
-	}
+	// if retryCnt > 100 {
+	// 	log.Println("Retried maximum times, will no longer register to upper node")
+	// 	return
+	// }
 
 	if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
 		if j.Config.UpperNode != nil {

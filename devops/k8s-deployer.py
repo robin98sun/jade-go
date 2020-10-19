@@ -191,6 +191,9 @@ doc = {
   },
   "spec": {
     "selector": {
+      # "jade-env": "local",
+      # "jade-role": "jadelet",
+      # "jade-owner": "jade",
       "jade-app": args.deployment_name,
       "jade-node": args.target_host,
     },
