@@ -47,39 +47,8 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 
 	for _, task := range tasklist {
 		log.Println("evaluating task:", task.Key)
-		if j.IsWorker() {
-			toReject := false
-			// to see if self-node is capable
-			isMissing := kernel.AnyCapabilityMissing(j.Config.Capabilities, task.Requirements.Exclusive)
-			if isMissing {
-				toReject = true
-			}
-			if !toReject {
-				isCollective := kernel.AnyCapabilityExists(j.Config.Capabilities, task.Requirements.Collective)
-				if !isCollective {
-					toReject = true
-				}
-			}
-			// to see if the task is acceptable
-			if !toReject {
-				if !j.CapacityStatus.RemainingCapacity.GE(task.Requirements.Allocations.Mapper.MinimumCapacity) || !j.CapacityStatus.MaximumCapacity.GE(task.Requirements.Allocations.Mapper.MaximumCapacity) {
-					toReject = true
-				}
-			}
-			// decide whether reject or provision the task
-			if toReject {
-				// if something wrong, reject the task
-				j.taskCache.Set("", task, j.Config.SelfNode, false, true, false, nil)
-				directlyRejected = append(directlyRejected, task.Key)
-			} else {
-				// if the task is acceptable in worker role, save in task cache
-				j.CapacityStatus.RemainingCapacity.Consume(task.Requirements.Allocations.Mapper.MinimumCapacity)
-				j.taskCache.Set("", task, j.Config.SelfNode, true, false, false, nil)
-				directlyAccepted = append(directlyAccepted, task.Key)
-				// Provision the task on self-node
-				go provisioner.ProvisionMapper(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Requirements.Allocations.Mapper)
-			}
-		}
+
+		// firstly deploy reducer
 		if j.IsAggregator() {
 			// Check if the application already in cache
 
@@ -114,15 +83,59 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 					continue
 				}
 				// if all sub-nodes can perform the task, then
-				for _, nodeID := range availableNodes {
-					// cache the task to wait for sub-node's decision
-					j.taskCache.Set("", task, j.Subnodes[nodeID], false, false, false, nil)
-					// forward task to each sub-node
-					if _, exists := targetNodes[nodeID]; !exists {
-						targetNodes[nodeID] = []*kernel.Task{}
+				// 1. deploy reducer on this node
+				podname, err := provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Application.Reducer, task.Requirements.Allocations.Reducer)
+				if err != nil {
+					// can not provision reducer, then reject the task
+					directlyRejected = append(directlyRejected, task.Key)
+				} else {
+					// prepare the reducer information: address and port
+					// 2. dispatch to sub-nodes
+					for _, nodeID := range availableNodes {
+						// cache the task to wait for sub-node's decision
+						j.taskCache.Set("", task, j.Subnodes[nodeID], false, false, false, nil)
+						// forward task to each sub-node
+						if _, exists := targetNodes[nodeID]; !exists {
+							targetNodes[nodeID] = []*kernel.Task{}
+						}
+						targetNodes[nodeID] = append(targetNodes[nodeID], task)
 					}
-					targetNodes[nodeID] = append(targetNodes[nodeID], task)
 				}
+			}
+		}
+		// then deploy mapper
+		// notice, the aggregator could also be a worker
+		if j.IsWorker() {
+			toReject := false
+			// to see if self-node is capable
+			isMissing := kernel.AnyCapabilityMissing(j.Config.Capabilities, task.Requirements.Exclusive)
+			if isMissing {
+				toReject = true
+			}
+			if !toReject {
+				isCollective := kernel.AnyCapabilityExists(j.Config.Capabilities, task.Requirements.Collective)
+				if !isCollective {
+					toReject = true
+				}
+			}
+			// to see if the task is acceptable
+			if !toReject {
+				if !j.CapacityStatus.RemainingCapacity.GE(task.Requirements.Allocations.Mapper.MinimumCapacity) || !j.CapacityStatus.MaximumCapacity.GE(task.Requirements.Allocations.Mapper.MaximumCapacity) {
+					toReject = true
+				}
+			}
+			// decide whether reject or provision the task
+			if toReject {
+				// if something wrong, reject the task
+				j.taskCache.Set("", task, j.Config.SelfNode, false, true, false, nil)
+				directlyRejected = append(directlyRejected, task.Key)
+			} else {
+				// if the task is acceptable in worker role, save in task cache
+				j.CapacityStatus.RemainingCapacity.Consume(task.Requirements.Allocations.Mapper.MinimumCapacity)
+				j.taskCache.Set("", task, j.Config.SelfNode, true, false, false, nil)
+				directlyAccepted = append(directlyAccepted, task.Key)
+				// Provision the task on self-node
+				go provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Application.Mapper, task.Requirements.Allocations.Mapper)
 			}
 		}
 	}

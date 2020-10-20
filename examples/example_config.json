@@ -36,6 +36,9 @@
     },{
       "name": "current_temperature",
       "api": "get:http://176.0.0.3/temperature"
+    },{
+      "name": "video_stream_url",
+      "api": "get:http://176.0.0.1:8888/video_stream"
     }
   ]
 }

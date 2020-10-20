@@ -16,3 +16,5 @@ JADE_CAPABILITY_2_NAME=avg_temperature
 JADE_CAPABILITY_2_API=get:http://176.0.0.3/temperature:timespan=int
 JADE_CAPABILITY_3_NAME=current_temperature
 JADE_CAPABILITY_3_API=get:http://176.0.0.3/temperature
+JADE_CAPABILITY_4_NAME=VIDEOSTREAM_URL
+JADE_CAPABILITY_4_API=get:http://176.0.0.1:8888/video_stream

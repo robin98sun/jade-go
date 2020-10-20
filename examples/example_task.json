@@ -3,11 +3,11 @@
   "payload": [{
     "application": {
         "envName": "local-test",
-        "name": "temperature-stat",
+        "name": "video-detection",
         "version": "0.0.1",
         "owner": "skywalker",
         "reducer": {
-            "image": "nginx:latest",
+            "image": "192.168.57.8/video-comb-reducer:0.0.1",
             "port": 80,
             "protocol": "TCP",
             "interfaces": {
@@ -26,8 +26,8 @@
             }
         },
         "mapper": {
-            "image": "nginx:latest",
-            "port": 80,
+            "image": "192.168.57.8/video-comb-mapper:0.0.1",
+            "port": 8080,
             "protocol": "TCP",
             "interfaces": {}
         }

@@ -10,14 +10,14 @@ import (
 type Provisioner struct {
 }
 
-func ProvisionMapper(client *kube.KubeClient, node *kernel.Node, capabilities []*kernel.Capability, app *kernel.Application, allocationLimits *kernel.AllocationUnit) (string, error) {
+func ProvisionTask(client *kube.KubeClient, node *kernel.Node, capabilities []*kernel.Capability, app *kernel.Application, container *kernel.Container, allocationLimits *kernel.AllocationUnit) (string, error) {
 	// podname
 	podname := purifyString(node.Hostname) + "-" + purifyString(app.Owner)
 	podname += "-" + purifyString(app.Name) + "-" + purifyString(kernel.RandomString())
 	// registry
 	// Environment variables
 	log.Println("Provisioning pod", podname)
-	deploymentName, err := client.ProvisionPod(app.EnvName, app.Owner, app.Name, app.Version, podname, "k3s.io/hostname", node.Hostname, node.Namespace, app.Mapper.Image, app.Mapper.Port, allocationLimits, capabilities)
+	deploymentName, err := client.ProvisionPod(app.EnvName, app.Owner, app.Name, app.Version, podname, "k3s.io/hostname", node.Hostname, node.Namespace, container.Image, container.Port, allocationLimits, capabilities)
 	if err != nil {
 		log.Println("Error when provisioning pod", podname, ":", err.Error())
 		return podname, err
