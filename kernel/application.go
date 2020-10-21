@@ -38,6 +38,7 @@ type Container struct {
 	Image      string                    `json:"image,omitempty"`
 	Port       int                       `json:"port,omitempty"`
 	Protocol   string                    `json:"protocol,omitempty"`
+	Addr       string                    `json:"addr,omitempty"`
 	Interfaces map[string]*RESTInterface `json:"interfaces,omitempty"`
 }
 

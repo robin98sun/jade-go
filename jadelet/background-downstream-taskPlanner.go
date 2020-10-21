@@ -9,6 +9,7 @@ import (
 	// "errors"
 	// "github.com/ant0ine/go-json-rest/rest"
 	"log"
+	"strconv"
 	// "net/http"
 	// "time"
 )
@@ -47,7 +48,29 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 
 	for _, task := range tasklist {
 		log.Println("evaluating task:", task.Key)
-
+		// prepare environments
+		envVars := []map[string]string{
+			map[string]string{
+				"name":  "JADE_REDUCERNODE_ADDR",
+				"value": task.Application.Reducer.Addr,
+			}, map[string]string{
+				"name":  "JADE_REDUCERNODE_PORT",
+				"value": strconv.Itoa(task.Application.Reducer.Port),
+			}, map[string]string{
+				"name":  "JADE_REDUCERNODE_PROTOCOL",
+				"value": task.Application.Reducer.Protocol,
+			}, map[string]string{
+				"name":  "JADE_TTL",
+				"value": strconv.Itoa(task.Budget.MaximumMilliseconds / 1000),
+			},
+		}
+		// add capabilities into environments
+		for _, c := range j.Config.Capabilities {
+			envVars = append(envVars, map[string]string{
+				"name":  c.Name,
+				"value": c.API,
+			})
+		}
 		// firstly deploy reducer
 		if j.IsAggregator() {
 			// Check if the application already in cache
@@ -83,13 +106,24 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 					continue
 				}
 				// if all sub-nodes can perform the task, then
+				envVars = append(envVars, map[string]string{
+					"name":  "JADE_MASTERNODE_ADDR",
+					"value": j.Config.SelfNode.Address,
+				}, map[string]string{
+					"name":  "JADE_MASTERNODE_PORT",
+					"value": strconv.Itoa(j.Config.SelfNode.Port),
+				}, map[string]string{
+					"name":  "JADE_MASTERNODE_PROTOCOL",
+					"value": j.Config.SelfNode.Protocol,
+				})
 				// 1. deploy reducer on this node
-				podname, err := provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Application.Reducer, task.Requirements.Allocations.Reducer)
+				_, podIP, err := provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, envVars, task.Application, task.Application.Reducer, task.Requirements.Allocations.Reducer)
 				if err != nil {
 					// can not provision reducer, then reject the task
 					directlyRejected = append(directlyRejected, task.Key)
 				} else {
 					// prepare the reducer information: address and port
+					task.Application.Reducer.Addr = podIP
 					// 2. dispatch to sub-nodes
 					for _, nodeID := range availableNodes {
 						// cache the task to wait for sub-node's decision
@@ -135,7 +169,31 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 				j.taskCache.Set("", task, j.Config.SelfNode, true, false, false, nil)
 				directlyAccepted = append(directlyAccepted, task.Key)
 				// Provision the task on self-node
-				go provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, j.Config.Capabilities, task.Application, task.Application.Mapper, task.Requirements.Allocations.Mapper)
+				if !j.Config.UpperNode.IsAddrEmpty() {
+					envVars = append(envVars, map[string]string{
+						"name":  "JADE_MASTERNODE_ADDR",
+						"value": j.Config.UpperNode.Address,
+					}, map[string]string{
+						"name":  "JADE_MASTERNODE_PORT",
+						"value": strconv.Itoa(j.Config.UpperNode.Port),
+					}, map[string]string{
+						"name":  "JADE_MASTERNODE_PROTOCOL",
+						"value": j.Config.UpperNode.Protocol,
+					})
+				} else {
+					envVars = append(envVars, map[string]string{
+						"name":  "JADE_MASTERNODE_ADDR",
+						"value": j.Config.SelfNode.Address,
+					}, map[string]string{
+						"name":  "JADE_MASTERNODE_PORT",
+						"value": strconv.Itoa(j.Config.SelfNode.Port),
+					}, map[string]string{
+						"name":  "JADE_MASTERNODE_PROTOCOL",
+						"value": j.Config.SelfNode.Protocol,
+					})
+				}
+
+				go provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, envVars, task.Application, task.Application.Mapper, task.Requirements.Allocations.Mapper)
 			}
 		}
 	}

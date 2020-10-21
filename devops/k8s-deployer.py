@@ -62,7 +62,7 @@ def apply(obj, append=False):
     file.write(content)
 
   if not args.bypass_deploying:
-    os.system('sudo kubectl apply -f '+filepath)
+    os.system('kubectl apply -f '+filepath)
   if args.deployment_file is None:
     os.system('rm -f '+filepath)
   
@@ -211,7 +211,7 @@ apply(doc, append=True)
 
 # Get the runtime node port
 # batcmd='sudo kubectl get service/'+ service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}{{"\\n"}}\''
-batcmd='sudo kubectl get service/'+ external_service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}\''
+batcmd='kubectl get service/'+ external_service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}\''
 node_port = evalcmd(batcmd)
 print("node port:", int(node_port))
 print("")

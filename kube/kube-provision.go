@@ -26,14 +26,18 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
-func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, appversion string, podname string, hostnameKey string, hostname string, namespace string, image string, port int, allocation *kernel.AllocationUnit, capabilities []*kernel.Capability) (string, error) {
+func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, appversion string, podname string, hostnameKey string, hostname string, namespace string, image string, port int, allocation *kernel.AllocationUnit, envVars []map[string]string) (string, error) {
 	environmentVariables := []map[string]string{}
-	for _, c := range capabilities {
-		environmentVariables = append(environmentVariables, map[string]string{
-			"name":  c.Name,
-			"value": c.API,
-		})
+	if envVars != nil {
+		environmentVariables = envVars
 	}
+
+	// for _, c := range capabilities {
+	// 	environmentVariables = append(environmentVariables, map[string]string{
+	// 		"name":  c.Name,
+	// 		"value": c.API,
+	// 	})
+	// }
 	labels := map[string]interface{}{
 		"jade-env":         envName,
 		"jade-role":        "application",
@@ -104,64 +108,6 @@ func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, 
 	podname = result.GetName()
 	log.Printf("Completed deploying pod %q.\n", podname)
 	return podname, nil
-
-	// labels := map[string]string{
-	// 	"jade-env":         envName,
-	// 	"jade-role":        "application",
-	// 	"jade-owner":       owner,
-	// 	"jade-app":         appname,
-	// 	"jade-node":        hostname,
-	// 	"jade-app-version": appversion,
-	// }
-
-	// deploymentsClient := k.Clientset.AppsV1().Deployments(namespace)
-	// deployment := &appsv1.Deployment{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: podname,
-	// 	},
-	// 	Spec: appsv1.DeploymentSpec{
-	// 		Replicas: int32Ptr(1),
-	// 		// Selector: &metav1.LabelSelector{
-	// 		// 	MatchLabels: labels,
-	// 		// },
-	// 		Template: apiv1.PodTemplateSpec{
-	// 			ObjectMeta: metav1.ObjectMeta{
-	// 				Labels: labels,
-	// 			},
-	// 			Spec: apiv1.PodSpec{
-	// 				NodeSelector: map[string]string{
-	// 					hostnameKey: hostname,
-	// 				},
-	// 				Containers: []apiv1.Container{
-	// 					{
-	// 						Name:  appname,
-	// 						Image: image,
-	// 						Ports: []apiv1.ContainerPort{
-	// 							{
-	// 								// Name:          "http",
-	// 								Protocol:      apiv1.ProtocolTCP,
-	// 								ContainerPort: int32(port),
-	// 							},
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
-	// deployment.Spec.Template.Spec.Containers[0].Resources.Limits[apiv1.ResourceCPU] = *resource.NewQuantity(allocation.MinimumCapacity.CPU, "")
-	// deployment.Spec.Template.Spec.Containers[0].Resources.Limits[apiv1.ResourceMemory] = *resource.NewQuantity(allocation.MinimumCapacity.RAM, "")
-	// deployment.Spec.Template.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU] = *resource.NewQuantity(allocation.MaximumCapacity.CPU, "")
-	// deployment.Spec.Template.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory] = *resource.NewQuantity(allocation.MaximumCapacity.RAM, "")
-	// log.Println("Deploying pod", podname)
-	// result, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
-	// if err != nil {
-	// 	log.Println("ERROR while depolying pod:", err.Error())
-	// 	return "", err
-	// }
-	// deploymentName := result.GetObjectMeta().GetName()
-	// log.Printf("Completed deploying pod %q.\n", deploymentName)
-	// return deploymentName, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }

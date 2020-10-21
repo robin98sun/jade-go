@@ -1,13 +1,10 @@
 package jadelet
 
 import (
-	// "aces/jade-go/conf"
 	"aces/jade-go/kernel"
-	// "aces/jade-go/kube"
 	"bytes"
 	"encoding/json"
 	"errors"
-	// "github.com/ant0ine/go-json-rest/rest"
 	"log"
 	"net/http"
 	"strconv"

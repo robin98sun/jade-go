@@ -6,7 +6,7 @@ image=$4
 delete=$5
 
 if [[ "$delete" == "pods" || "$delete" == "all" ]];then
-  sudo kubectl get pods|sed '1d'|awk '{print $1}'|grep jade-local-test|xargs sudo kubectl delete pods
+  kubectl get pods|sed '1d'|awk '{print $1}'|grep jade-local-test|xargs kubectl delete pods
 fi
 
 function master_service_name() {
@@ -23,11 +23,11 @@ function agent_service_name() {
 
 if [[ "$delete" == "services" || "$delete" == "all" ]];then
   srvName=`master_service_name`
-  sudo kubectl delete service $srvName
+  kubectl delete service $srvName
 
   i=1
   while [[ $i -le $agent_count ]];do
-    sudo kubectl delete service `agent_service_name $i`
+    kubectl delete service `agent_service_name $i`
     i=`expr $i + 1`
   done
 fi
@@ -52,6 +52,6 @@ while [[ $i -le $agent_count ]];do
 done
 
 for node in ${node_list}; do
-  port=`sudo kubectl get service/jade-local-test-${node}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'`
+  port=`kubectl get service/jade-local-test-${node}-service-external --namespace default  --template='{{(index .spec.ports 0).nodePort}}'`
   echo $node $port
 done
