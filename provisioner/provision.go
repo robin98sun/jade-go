@@ -10,21 +10,31 @@ import (
 type Provisioner struct {
 }
 
-func ProvisionTask(client *kube.KubeClient, node *kernel.Node, envVars []map[string]string, app *kernel.Application, container *kernel.Container, allocationLimits *kernel.AllocationUnit) (string, string, error) {
-	// podname
-	podname := purifyString(node.Hostname) + "-" + purifyString(app.Owner)
-	podname += "-" + purifyString(app.Name) + "-" + purifyString(kernel.RandomString())
+func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
+	envVars []map[string]string, app *kernel.Application,
+	moduleName string, container *kernel.Container,
+	allocationLimits *kernel.AllocationUnit,
+	replicas int) (string, int, error) {
+	// deploymentName
+	deploymentName := purifyString(node.Hostname) + "-" + purifyString(app.Owner)
+	deploymentName += "-" + purifyString(app.Name)
 	// registry
 	// Environment variables
-	log.Println("Provisioning pod", podname)
-	deploymentName, err := client.ProvisionPod(app.EnvName, app.Owner, app.Name, app.Version, podname, "k3s.io/hostname", node.Hostname, node.Namespace, container.Image, container.Port, allocationLimits, envVars)
+	log.Println("Provisioning pod", deploymentName)
+	deploymentName, nodePort, err := client.ProvisionDeployment(
+		app.EnvName, app.Owner,
+		app.Name, app.Version, moduleName,
+		deploymentName, "k3s.io/hostname",
+		node.Hostname, node.Namespace,
+		container.Image, container.Port,
+		allocationLimits, envVars, replicas,
+	)
 	if err != nil {
-		log.Println("Error when provisioning pod", podname, ":", err.Error())
-		return podname, "", err
+		log.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
+		return deploymentName, 0, err
 	} else {
-		log.Println("Successfully provisioned pod:", podname, ", deployment:", deploymentName)
-		ip := client.PodIP(node.Hostname, node.Namespace, podname)
-		return deploymentName, ip, nil
+		log.Println("Successfully provisioned pods, deployment:", deploymentName)
+		return deploymentName, nodePort, nil
 	}
 }
 

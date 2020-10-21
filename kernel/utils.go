@@ -185,16 +185,12 @@ func PrintJSONasEnv(jsonfile string) {
 
 // Get a random string
 func RandomString() string {
-	result := ""
 	ts := time.Now().UnixNano()
-	result = strconv.FormatInt(ts, 16)
-
-	ts = time.Now().UnixNano()
 	s := rand.NewSource(ts)
 	r := rand.New(s)
 	ts = time.Now().UnixNano()
 	rn := r.Int63n(ts)
-	result += "." + strconv.FormatInt(rn, 16)
+	result := strconv.FormatInt(rn, 16)
 
 	return result
 }

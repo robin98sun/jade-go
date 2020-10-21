@@ -3,12 +3,13 @@ package kube
 import (
 	"aces/jade-go/kernel"
 	"context"
+	"encoding/json"
 	"log"
 	"strconv"
 
 	// "k8s.io/apimachinery/pkg/api/errors"
 	// appsv1 "k8s.io/api/apps/v1"
-	// apiv1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,25 +27,33 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
-func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, appversion string, podname string, hostnameKey string, hostname string, namespace string, image string, port int, allocation *kernel.AllocationUnit, envVars []map[string]string) (string, error) {
+func (k *KubeClient) ProvisionDeployment(envName string, owner string,
+	appname string, appversion string, moduleName string,
+	deploymentBaseName string, hostnameKey string, hostname string,
+	namespace string, image string, port int,
+	allocation *kernel.AllocationUnit,
+	envVars []map[string]string,
+	replicas int) (string, int, error) {
 	environmentVariables := []map[string]string{}
 	if envVars != nil {
 		environmentVariables = envVars
 	}
 
-	// for _, c := range capabilities {
-	// 	environmentVariables = append(environmentVariables, map[string]string{
-	// 		"name":  c.Name,
-	// 		"value": c.API,
-	// 	})
-	// }
-	labels := map[string]interface{}{
+	// deploymentName can not longer than 63?
+	deploymentName := deploymentBaseName
+	if len(deploymentName) > 25 {
+		deploymentName = deploymentName[0:25]
+	}
+	deploymentName = "app-jade-" + deploymentName + "-" + kernel.RandomString()
+
+	labels := map[string]string{
 		"jade-env":         envName,
 		"jade-role":        "application",
 		"jade-owner":       owner,
 		"jade-app":         appname,
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
+		"jade-app-module":  moduleName,
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	deployment := &unstructured.Unstructured{
@@ -52,12 +61,12 @@ func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, 
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
 			"metadata": map[string]interface{}{
-				"name":      podname,
+				"name":      deploymentName,
 				"namespace": namespace,
 				"labels":    labels,
 			},
 			"spec": map[string]interface{}{
-				"replicas": 1,
+				"replicas": replicas,
 				"selector": map[string]interface{}{
 					"matchLabels": labels,
 				},
@@ -75,7 +84,6 @@ func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, 
 								"image": image,
 								"ports": []map[string]interface{}{
 									{
-										// "containerPort": "" + strconv.Itoa(port),
 										"containerPort": port,
 									},
 								},
@@ -98,16 +106,65 @@ func (k *KubeClient) ProvisionPod(envName string, owner string, appname string, 
 		},
 	}
 
-	log.Println("Deploying pod...")
-	log.Println(deployment)
+	log.Println("Deploying pods...")
 	result, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		log.Println("ERROR while depolying pod:", err.Error())
-		return "", err
+		log.Println("ERROR while depolying pods:", err.Error())
+		return "", 0, err
 	}
-	podname = result.GetName()
-	log.Printf("Completed deploying pod %q.\n", podname)
-	return podname, nil
+	resultBytes, _ := json.MarshalIndent(result, "", "  ")
+	log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
+
+	// deploy node port service for the pod
+	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
+	if err != nil {
+		log.Println("ERROR while depolying node port services for pods:", err.Error())
+		return "", 0, err
+	}
+
+	log.Printf("Completed deploying pods, deployment name: %q.\n", deploymentName)
+	return deploymentName, nodePort, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
+
+func (k *KubeClient) provisionNodePortService(
+	deploymentName string,
+	namespace string,
+	labels map[string]string,
+	containerPort int,
+) (int, error) {
+	// service name can not longer than 63
+	serviceName := "srv-" + deploymentName
+	log.Println("Deploying node port service for pods...")
+
+	// https://stackoverflow.com/questions/53874921/kubernetes-client-go-creating-services-and-enpdoints
+	result, err := k.Clientset.CoreV1().Services(namespace).Create(context.TODO(), &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: apiv1.ServiceSpec{
+			Selector: labels,
+			Type:     "NodePort",
+			Ports: []apiv1.ServicePort{
+				apiv1.ServicePort{
+					Protocol: "TCP",
+					Port:     int32(containerPort),
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+
+	if err != nil {
+		log.Println("ERROR while depolying node port service for pods:", err.Error())
+		return 0, err
+	}
+	resultBytes, _ := json.MarshalIndent(result, "", "  ")
+	log.Println("node port service deployment result:", string(resultBytes))
+	nodePort := k.FindExternalPort(namespace, serviceName)
+	log.Println("deployment:", deploymentName, ", service:", serviceName, ", node port:", nodePort)
+	log.Printf("Completed deploying node port service for pods, service name: %q, deployment: %q.\n", serviceName, deploymentName)
+	return nodePort, nil
+}

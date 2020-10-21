@@ -117,13 +117,18 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 					"value": j.Config.SelfNode.Protocol,
 				})
 				// 1. deploy reducer on this node
-				_, podIP, err := provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, envVars, task.Application, task.Application.Reducer, task.Requirements.Allocations.Reducer)
+				_, nodePort, err := provisioner.ProvisionTask(
+					j.Kube, j.Config.SelfNode, envVars, task.Application,
+					"reducer", task.Application.Reducer,
+					task.Requirements.Allocations.Reducer, 1,
+				)
 				if err != nil {
 					// can not provision reducer, then reject the task
 					directlyRejected = append(directlyRejected, task.Key)
 				} else {
 					// prepare the reducer information: address and port
-					task.Application.Reducer.Addr = podIP
+					task.Application.Reducer.Addr = j.Config.SelfNode.Address
+					task.Application.Reducer.Port = nodePort
 					// 2. dispatch to sub-nodes
 					for _, nodeID := range availableNodes {
 						// cache the task to wait for sub-node's decision
@@ -193,7 +198,11 @@ func (j *JADE) evaluateTasks(tasklist []*kernel.Task) {
 					})
 				}
 
-				go provisioner.ProvisionTask(j.Kube, j.Config.SelfNode, envVars, task.Application, task.Application.Mapper, task.Requirements.Allocations.Mapper)
+				go provisioner.ProvisionTask(
+					j.Kube, j.Config.SelfNode, envVars, task.Application,
+					"mapper", task.Application.Mapper,
+					task.Requirements.Allocations.Mapper, 1,
+				)
 			}
 		}
 	}
