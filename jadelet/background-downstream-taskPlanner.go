@@ -56,7 +56,7 @@ func (j *JADE) newEnv(task *kernel.Task, masterNode *kernel.Node) []map[string]s
 			"name":  "JADE_AGGREGATORNODE_PORT",
 			"value": strconv.Itoa(task.Application.GetModule("aggregator").Port),
 		}, map[string]string{
-			"name":  "JADE_AGGREGATORRNODE_PROTOCOL",
+			"name":  "JADE_AGGREGATORNODE_PROTOCOL",
 			"value": task.Application.GetModule("aggregator").Protocol,
 		}, map[string]string{
 			"name":  "JADE_TTL",
