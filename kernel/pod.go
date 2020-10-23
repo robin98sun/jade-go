@@ -18,6 +18,10 @@ type AllocationUnit struct {
 	MaximumCapacity *Capacity `json:"maximumCapacity,omitempty"`
 }
 
+func (a *AllocationUnit) Valid() bool {
+	return a != nil && a.MaximumCapacity != nil && a.MinimumCapacity != nil && a.MaximumCapacity.GE(a.MinimumCapacity)
+}
+
 func (p *Pod) Key() string {
 	return p.ApplicationID + ":" + p.SubtaskType
 }

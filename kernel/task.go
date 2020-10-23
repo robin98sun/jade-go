@@ -13,6 +13,17 @@ type Task struct {
 	Key          string              `json:"key,omitempty"`
 	SubtaskKey   string              `json:"subtaskKey,omitempty"`
 	Subtasks     map[string]*SubTask `json:"subtasks,omitempty"`
+	MasterNode   *Node               `json:"masterNode,omitempty"`
+}
+
+func (t *Task) CopyForSubtask() *Task {
+	newTask := &Task{
+		Application:  t.Application,
+		Requirements: t.Requirements,
+		Budget:       t.Budget.Copy(),
+		Key:          t.Key,
+	}
+	return newTask
 }
 
 func (t *Task) GetKey() string {
@@ -22,25 +33,38 @@ func (t *Task) GetKey() string {
 	return t.Key
 }
 
-// func (t *Task) NewSubtask(item interface{}) string {
-// 	if len(t.Subtasks) == 0 {
-// 		t.Subtasks = make(map[string]interface{})
-// 	}
-// 	subtaskKey := t.GetKey() + ":" + RandomString()
-// 	for _, exists := t.Subtasks[subtaskKey]; exists; _, exists = t.Subtasks[subtaskKey] {
-// 		subtaskKey = t.GetKey() + ":" + RandomString()
-// 	}
-// 	t.Subtasks[subtaskKey] = item
-// 	return subtaskKey
-// }
+func (t *Task) NewSubtask(module string) *SubTask {
+	if t == nil {
+		return nil
+	}
+	if t.Subtasks == nil {
+		t.Subtasks = make(map[string]*SubTask)
+	}
+	nst := NewSubtask(t.GetKey(), module)
+	t.Subtasks[nst.GetKey()] = nst
+	return nst
+}
 
-// func (t *Task) RemoveSubtask(key string) interface{} {
-// 	if item, exists := t.Subtasks[key]; exists {
-// 		delete(t.Subtasks, key)
-// 		return item
-// 	}
-// 	return nil
-// }
+func (t *Task) GetSubtask(subtaskKey string) *SubTask {
+	if t == nil || t.Subtasks == nil {
+		return nil
+	}
+	if st, exists := t.Subtasks[subtaskKey]; exists {
+		return st
+	}
+	return nil
+}
+
+func (t *Task) DeleteSubtask(subtaskKey string) *SubTask {
+	if t == nil || t.Subtasks == nil {
+		return nil
+	}
+	if st, exists := t.Subtasks[subtaskKey]; exists {
+		delete(t.Subtasks, subtaskKey)
+		return st
+	}
+	return nil
+}
 
 func (t *Task) Valid() bool {
 	if !t.Application.valid() {
@@ -66,4 +90,12 @@ func (b *Budget) valid() bool {
 		return false
 	}
 	return true
+}
+
+func (b *Budget) Copy() *Budget {
+	newBudget := &Budget{
+		MaximumMilliseconds: b.MaximumMilliseconds,
+		Price:               b.Price,
+	}
+	return newBudget
 }

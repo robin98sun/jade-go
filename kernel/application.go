@@ -9,12 +9,22 @@ import (
 
 // Application the application specficiations
 type Application struct {
-	EnvName string     `json:"envName,omitempty"`
-	Name    string     `json:"name,omitempty"`
-	Version string     `json:"version,omitempty"`
-	Owner   string     `json:"owner,omitempty"`
-	Reducer *Container `json:"reducer,omitempty"`
-	Mapper  *Container `json:"mapper,omitempty"`
+	EnvName string                `json:"envName,omitempty"`
+	Name    string                `json:"name,omitempty"`
+	Version string                `json:"version,omitempty"`
+	Owner   string                `json:"owner,omitempty"`
+	Modules map[string]*Container `json:"modules,omitempty"`
+}
+
+func (a *Application) GetModule(moduleName string) *Container {
+	if len(a.Modules) == 0 {
+		return nil
+	}
+	if m, exists := a.Modules[moduleName]; exists {
+		return m
+	} else {
+		return nil
+	}
 }
 
 func (a *Application) Key() string {
@@ -22,14 +32,17 @@ func (a *Application) Key() string {
 }
 
 func (a *Application) valid() bool {
-	if a.Name == "" || a.Version == "" || a.Owner == "" || a.Reducer == nil || a.Mapper == nil {
+	if a.Name == "" || a.Version == "" || a.Owner == "" || len(a.Modules) == 0 {
 		return false
 	}
-	if a.Reducer.valid() {
-		return a.Mapper.valid()
-	} else {
-		return false
+	valid := true
+	for _, m := range a.Modules {
+		if !m.valid() {
+			valid = false
+			break
+		}
 	}
+	return valid
 }
 
 // Sub-datastructures

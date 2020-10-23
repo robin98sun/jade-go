@@ -182,7 +182,7 @@ func (c *TaskCache) Delete(task *Task, node *Node) {
 	}
 }
 
-func (c *TaskCache) Set(task *Task, node *Node, subtaskID string, status TaskStatus, updates interface{}) string {
+func (c *TaskCache) Set(task *Task, node *Node, subtask *SubTask, status TaskStatus, updates interface{}) string {
 	if task == nil {
 		return "invalid"
 	}
@@ -211,23 +211,24 @@ func (c *TaskCache) Set(task *Task, node *Node, subtaskID string, status TaskSta
 		}
 		nodeItem, _ := taskItem.dispatchedNodes[node.Key()]
 
-		if subtaskID != "" {
-			if subtaskItem, subtaskExists := nodeItem.subtasks[subtaskID]; subtaskExists {
+		shouldCreateSubtask := true
+		if subtask != nil {
+			// update existing one
+			if subtaskItem, subtaskExists := nodeItem.subtasks[subtask.GetKey()]; subtaskExists {
 				subtaskItem.status = status
 				subtaskItem.updates = updates
-				result = subtaskID
-			} else {
-				result = ""
-				return result
+				result = subtask.GetKey()
+				shouldCreateSubtask = false
 			}
-		} else {
+		}
+		if shouldCreateSubtask {
 			// insert a new subtask into the node:
-			subtask := &SubTask{
-				TaskID: taskKey,
-				Budget: task.Budget,
+			newSubtask := subtask
+			if subtask == nil {
+				newSubtask = NewSubtask(taskKey, "")
 			}
-			result = subtask.GetKey()
-			nodeItem.subtasks[subtask.GetKey()] = &taskCacheSubtaskItem{
+			result = newSubtask.GetKey()
+			nodeItem.subtasks[newSubtask.GetKey()] = &taskCacheSubtaskItem{
 				subtask: subtask,
 				status:  status,
 				updates: updates,

@@ -187,26 +187,34 @@ func AnyCapabilityMissing(availableList []*Capability, requiredList []*Capabilit
 
 // Requirements the capabilities and resources requirements
 type Requirements struct {
-	Collective  []*Capability `json:"collective,omitempty"`
-	Exclusive   []*Capability `json:"exclusive,omitempty"`
-	Allocations *struct {
-		Reducer *AllocationUnit `json:"reducer,omitempty"`
-		Mapper  *AllocationUnit `json:"mapper,omitempty"`
-	} `json:"allocations,omitempty"`
+	Collective  []*Capability              `json:"collective,omitempty"`
+	Exclusive   []*Capability              `json:"exclusive,omitempty"`
+	Allocations map[string]*AllocationUnit `json:"allocations,omitempty"`
+}
+
+func (r *Requirements) GetModule(moduleName string) *AllocationUnit {
+	if r == nil || moduleName == "" {
+		return nil
+	}
+	if m, exists := r.Allocations[moduleName]; exists {
+		return m
+	}
+	return nil
 }
 
 func (r *Requirements) valid() bool {
 	if len(r.Collective) == 0 && len(r.Exclusive) == 0 {
 		return false
 	}
-	if r.Allocations == nil {
+	if len(r.Allocations) == 0 {
 		return false
 	}
-	if r.Allocations.Reducer == nil {
-		return false
+	valid := true
+	for _, m := range r.Allocations {
+		if !m.Valid() {
+			valid = false
+			break
+		}
 	}
-	if r.Allocations.Mapper == nil {
-		return false
-	}
-	return true
+	return valid
 }

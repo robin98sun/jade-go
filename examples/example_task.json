@@ -6,30 +6,32 @@
           "name": "video-detection",
           "version": "0.0.1",
           "owner": "skywalker",
-          "reducer": {
-              "image": "192.168.57.8/video-comb-reducer:0.0.1",
-              "port": 8080,
-              "protocol": "TCP",
-              "interfaces": {
-                  "data": {
-                      "port": 8080,
-                      "path": "/data",
-                      "method": "put",
-                      "protocol": "http",
-                      "parameters": [
-                          {
-                          "name": "data_list",
-                          "type": "int[]"
-                          }
-                      ]
-                  }
-              }
-          },
-          "mapper": {
-              "image": "192.168.57.8/video-comb-mapper:0.0.1",
-              "port": 8080,
-              "protocol": "TCP",
-              "interfaces": {}
+          "modules": {
+            "aggregator": {
+                "image": "192.168.57.8/video-comb-reducer:0.0.1",
+                "port": 8080,
+                "protocol": "TCP",
+                "interfaces": {
+                    "data": {
+                        "port": 8080,
+                        "path": "/data",
+                        "method": "put",
+                        "protocol": "http",
+                        "parameters": [
+                            {
+                            "name": "data_list",
+                            "type": "int[]"
+                            }
+                        ]
+                    }
+                }
+            },
+            "worker": {
+                "image": "192.168.57.8/video-comb-mapper:0.0.1",
+                "port": 8080,
+                "protocol": "TCP",
+                "interfaces": {}
+            }
           }
       },
       "requirements": {
@@ -57,7 +59,7 @@
               }
           ],
           "allocations": {
-              "mapper": {
+              "worker": {
                   "minimumCapacity": {
                       "cpu": 500,
                       "ram": 100
@@ -67,7 +69,7 @@
                       "ram": 200
                   }
               },
-              "reducer": {
+              "aggregator": {
                   "minimumCapacity": {
                       "cpu": 500,
                       "ram": 200

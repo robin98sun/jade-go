@@ -25,19 +25,24 @@ type JADE struct {
 	CapacityStatus  *kernel.CapacityStatus `json:"capacityStatus"`
 }
 
+func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {
+	if nodeID == "" || j == nil || len(j.Subnodes) == 0 {
+		return nil
+	}
+	if nodeID == j.Config.SelfNode.Key() {
+		return j.Config.SelfNode
+	} else if n, exists := j.Subnodes[nodeID]; exists {
+		return n
+	}
+	return nil
+}
+
 func (j *JADE) HasUpperNode() bool {
 	return j.Config != nil && j.Config.UpperNode != nil && !j.Config.UpperNode.IsAddrEmpty()
 }
 
 func (j *JADE) IsAggregator() bool {
 	if len(j.Subnodes) > 0 {
-		return true
-	}
-	return false
-}
-
-func (j *JADE) IsLinker() bool {
-	if len(j.Subnodes) == 1 {
 		return true
 	}
 	return false

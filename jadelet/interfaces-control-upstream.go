@@ -55,20 +55,28 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 		result := NewTaskEvalResult()
 		feedbackbytes, _ := json.MarshalIndent(feedback, "", "    ")
 		log.Printf("[acceptances collecter] content of acceptances: %v, from node: %v", string(feedbackbytes), req.NodeID)
-		for _, taskID := range feedback.Accepted {
+		for taskID, subtasks := range feedback.Accepted {
 			if task := j.taskCache.GetTask(taskID); task != nil {
-				// BIG BUG
-				status := j.taskCache.Set(task, subnode, "", kernel.TaskStatusAccepted, nil)
-				result.AppendTask(taskID, kernel.TaskStatus(status))
-				log.Printf("node[%v] accepted task [%v]", req.NodeID, taskID)
+				for _, subtaskID := range subtasks {
+					subtask := task.GetSubtask(subtaskID)
+					if subtask != nil {
+						j.taskCache.Set(task, subnode, subtask, kernel.TaskStatusAccepted, nil)
+						result.AppendTask(taskID, subtaskID, kernel.TaskStatusAccepted)
+						log.Printf("node[%v] accepted task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
+					}
+				}
 			}
 		}
-		for _, taskID := range feedback.Rejected {
+		for taskID, subtasks := range feedback.Rejected {
 			if task := j.taskCache.GetTask(taskID); task != nil {
-				// BIG BUG
-				status := j.taskCache.Set(task, subnode, "", kernel.TaskStatusRejected, nil)
-				result.AppendTask(taskID, kernel.TaskStatus(status))
-				log.Printf("node[%v] rejected task [%v]", req.NodeID, taskID)
+				for _, subtaskID := range subtasks {
+					subtask := task.GetSubtask(subtaskID)
+					if subtask != nil {
+						j.taskCache.Set(task, subnode, subtask, kernel.TaskStatusRejected, nil)
+						result.AppendTask(taskID, subtaskID, kernel.TaskStatusRejected)
+						log.Printf("node[%v] rejected task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
+					}
+				}
 			}
 		}
 		if !result.IsEmpty() {
