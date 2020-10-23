@@ -42,7 +42,7 @@ func main() {
 	router, err := rest.MakeRouter(
 		// Control path upstream
 		rest.Put("/$jade$/registerNode", j.RegisterNode),
-		rest.Post("/$jade$/feedbackAcceptances", j.FeedbackAcceptances),
+		rest.Post("/$jade$/collectAcceptances", j.CollectAcceptances),
 		// Control path downstream
 		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
 		// Data path upstream
@@ -59,6 +59,7 @@ func main() {
 		rest.Get("/$jade$/debug/externalIP", j.ShowExternalIP),
 		rest.Get("/$jade$/debug/node", j.ShowNode),
 		rest.Get("/$jade$/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/$jade$/debug/taskCache", j.ShowTaskCache),
 		rest.Get("/$jade$/debug/capabilityCache", j.ShowCapabilityCache),
 		rest.Get("/$jade$/debug/capacityCache", j.ShowSubnodeCapacities),
 		rest.Post("/$jade$/debug/searchNodes", j.SearchNodes),

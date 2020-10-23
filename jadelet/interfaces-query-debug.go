@@ -145,3 +145,7 @@ func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
 	}
 	w.WriteJson(result)
 }
+
+func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteJson(j.taskCache.Describe())
+}

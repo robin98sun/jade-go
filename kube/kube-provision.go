@@ -3,7 +3,7 @@ package kube
 import (
 	"aces/jade-go/kernel"
 	"context"
-	"encoding/json"
+	// "encoding/json"
 	"log"
 	"strconv"
 
@@ -107,13 +107,13 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	}
 
 	log.Println("Deploying pods...")
-	result, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
+	_, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
 	}
-	resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
+	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
+	// log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
 
 	// deploy node port service for the pod
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
@@ -139,7 +139,7 @@ func (k *KubeClient) provisionNodePortService(
 	log.Println("Deploying node port service for pods...")
 
 	// https://stackoverflow.com/questions/53874921/kubernetes-client-go-creating-services-and-enpdoints
-	result, err := k.Clientset.CoreV1().Services(namespace).Create(context.TODO(), &apiv1.Service{
+	_, err := k.Clientset.CoreV1().Services(namespace).Create(context.TODO(), &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
 			Namespace: namespace,
@@ -161,8 +161,8 @@ func (k *KubeClient) provisionNodePortService(
 		log.Println("ERROR while depolying node port service for pods:", err.Error())
 		return 0, err
 	}
-	resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	log.Println("node port service deployment result:", string(resultBytes))
+	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
+	// log.Println("node port service deployment result:", string(resultBytes))
 	nodePort := k.FindExternalPort(namespace, serviceName)
 	log.Println("deployment:", deploymentName, ", service:", serviceName, ", node port:", nodePort)
 	log.Printf("Completed deploying node port service for pods, service name: %q, deployment: %q.\n", serviceName, deploymentName)

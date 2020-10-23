@@ -44,5 +44,8 @@ func (j *JADE) Init() {
 	clients.Init()
 	j.Kube = &clients
 	// Register to upper node
+	if j.Config.SelfNode.IsAddrEmpty() {
+		j.MakeUpAddressForNode(j.Config.SelfNode)
+	}
 	go j.Register(0)
 }

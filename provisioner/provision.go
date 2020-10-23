@@ -20,8 +20,8 @@ func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	deploymentName += "-" + purifyString(app.Name)
 	// registry
 	// Environment variables
-	log.Println("Provisioning pod", deploymentName)
-	deploymentName, nodePort, err := client.ProvisionDeployment(
+	log.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
+	deployedName, nodePort, err := client.ProvisionDeployment(
 		app.EnvName, app.Owner,
 		app.Name, app.Version, moduleName,
 		deploymentName, "k3s.io/hostname",
@@ -33,7 +33,7 @@ func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 		log.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
 		return deploymentName, 0, err
 	} else {
-		log.Println("Successfully provisioned pods, deployment:", deploymentName)
+		log.Println("Successfully provisioned pods, deployment:", deployedName)
 		return deploymentName, nodePort, nil
 	}
 }

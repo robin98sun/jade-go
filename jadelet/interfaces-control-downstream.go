@@ -30,13 +30,10 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
-		validTasks := []*kernel.Task{}
+		validTasks := make(map[string]*kernel.Task)
 		for _, task := range taskList {
 			if task.Valid() {
-				if task.Key == "" {
-					task.GenKey()
-				}
-				validTasks = append(validTasks, task)
+				validTasks[task.GetKey()] = task
 			} else {
 				log.Println("WARN: received an invalid task")
 			}
