@@ -48,11 +48,11 @@ func (a *Application) valid() bool {
 // Sub-datastructures
 // Container specify one container of an application
 type Container struct {
-	Image      string                    `json:"image,omitempty"`
-	Port       int                       `json:"port,omitempty"`
-	Protocol   string                    `json:"protocol,omitempty"`
-	Addr       string                    `json:"addr,omitempty"`
-	Interfaces map[string]*RESTInterface `json:"interfaces,omitempty"`
+	Image    string      `json:"image,omitempty"`
+	Port     int         `json:"port,omitempty"`
+	Protocol string      `json:"protocol,omitempty"`
+	Addr     string      `json:"addr,omitempty"`
+	Input    interface{} `json:"input,omitempty"`
 }
 
 func (c *Container) valid() bool {
@@ -63,29 +63,6 @@ func (c *Container) valid() bool {
 		return false
 	}
 	if c.Protocol == "" || (strings.ToLower(c.Protocol) != "tcp" && strings.ToLower(c.Protocol) != "udp") {
-		return false
-	}
-	if c.Interfaces != nil {
-		for _, value := range c.Interfaces {
-			if !value.valid() {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// RESTInterface specify a RESTful interface
-type RESTInterface struct {
-	Port       int      `json:"port,omitempty"`
-	Path       string   `json:"path,omitempty"`
-	Method     string   `json:"method,omitempty"`
-	Protocol   string   `json:"protocol,omitempty"`
-	Parameters []*Param `json:"parameters,omitempty"`
-}
-
-func (i *RESTInterface) valid() bool {
-	if i.Port == 0 || i.Path == "" || i.Method == "" || i.Protocol == "" || (i.Protocol != "http" && i.Protocol != "https") || (i.Parameters != nil && len(i.Parameters) == 0) {
 		return false
 	}
 	return true

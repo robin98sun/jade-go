@@ -96,10 +96,6 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*kernel.Task) {
 		log.Println("evaluating task:", task.GetKey())
 		j.taskCache.Set(task, nil, nil, kernel.TaskStatusPending, nil)
 		// prepare environments
-		if !j.HasUpperNode() {
-			task.Application.GetModule("aggregator").Addr = j.Config.SelfNode.Address
-		}
-
 		accept := true
 		selfInTarget := false
 		workerTask := task
@@ -217,7 +213,7 @@ func (j *JADE) processWorker(
 		var subtask *kernel.SubTask
 		var subtaskID string
 		if existingSubtask == nil {
-			subtask = task.NewSubtask("worker")
+			subtask = task.NewSubtask("worker", j.Config.SelfNode.Key())
 			subtaskID = task.SubtaskKey
 		} else {
 			subtask = existingSubtask
@@ -228,6 +224,9 @@ func (j *JADE) processWorker(
 		envVars = append(envVars, map[string]string{
 			"name":  "JADE_SUBTASKID",
 			"value": subtaskID,
+		}, map[string]string{
+			"name":  "JADE_MODULE",
+			"value": "worker",
 		})
 		_, _, err := provisioner.ProvisionTask(
 			j.Kube, j.Config.SelfNode, envVars, task.Application,
@@ -289,7 +288,7 @@ func (j *JADE) processAggregator(
 			if _, exists := targetNodes[nodeID]; !exists {
 				targetNodes[nodeID] = []*kernel.Task{}
 			}
-			subtaskKey := j.taskCache.Set(task, j.GetNodeInControl(nodeID), task.NewSubtask("worker"), kernel.TaskStatusPending, nil)
+			subtaskKey := j.taskCache.Set(task, j.GetNodeInControl(nodeID), task.NewSubtask("worker", nodeID), kernel.TaskStatusPending, nil)
 			newTask := task.CopyForSubtask()
 			newTask.SubtaskKey = subtaskKey
 			newTask.MasterNode = j.Config.SelfNode.MiniNode()
@@ -298,7 +297,7 @@ func (j *JADE) processAggregator(
 			result[nodeID] = subtaskKey
 		}
 		// 2. actually deploy aggregator on this node
-		subtaskKey := j.taskCache.Set(task, j.Config.SelfNode, task.NewSubtask("aggregator"), kernel.TaskStatusAccepted, nil)
+		subtaskKey := j.taskCache.Set(task, j.Config.SelfNode.MiniNode(), task.NewSubtask("aggregator", j.Config.SelfNode.Key()), kernel.TaskStatusAccepted, nil)
 		aggregatorSubtaskKey := subtaskKey
 		// aggregator should derive subtaskID from upper node
 		if task.SubtaskKey != "" {
@@ -312,6 +311,9 @@ func (j *JADE) processAggregator(
 		}, map[string]string{
 			"name":  "JADE_SUBTASKID",
 			"value": aggregatorSubtaskKey,
+		}, map[string]string{
+			"name":  "JADE_MODULE",
+			"value": "aggregator",
 		})
 		_, nodePort, err := provisioner.ProvisionTask(
 			j.Kube, j.Config.SelfNode, envVars, task.Application,

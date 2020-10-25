@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"log"
+	"strings"
 	// "net/http"
 )
 
@@ -84,4 +85,37 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 		}
 	}
 	j.DoneRequest(w, r, "OK")
+}
+
+func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
+	var msg struct {
+		TaskID    string                 `json:"taskId,omitempty"`
+		SubtaskID string                 `json:"subtaskId,omitempty"`
+		Status    string                 `json:"status,omitempty"`
+		Updates   map[string]interface{} `json:"updates,omitempty"`
+	}
+	err := r.DecodeJsonPayload(msg)
+	if err == nil {
+		bs, _ := json.MarshalIndent(msg, "", "    ")
+		log.Println("Received application message:", string(bs))
+		if msg.TaskID != "" {
+			task := j.taskCache.GetTask(msg.TaskID)
+			if msg.SubtaskID != "" {
+				subtask := task.GetSubtask(msg.SubtaskID)
+				if strings.ToUpper(msg.Status) == "DONE" {
+					j.taskCache.Set(task, j.GetNodeInControl(subtask.NodeKey), subtask, kernel.TaskStatusDone, msg.Updates)
+				} else if strings.ToUpper(msg.Status) == "FAILED" {
+					j.taskCache.Set(task, j.GetNodeInControl(subtask.NodeKey), subtask, kernel.TaskStatusFailed, msg.Updates)
+				}
+				w.WriteJson(map[string]string{
+					"status":  "OK",
+					"payload": "message received",
+				})
+				return
+			}
+		}
+	}
+	w.WriteJson(map[string]string{
+		"error": "invalid message",
+	})
 }

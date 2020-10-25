@@ -8,29 +8,16 @@
           "owner": "skywalker",
           "modules": {
             "aggregator": {
-                "image": "192.168.57.8/video-comb-aggregator:0.0.3",
+                "image": "192.168.57.8/plankton:0.0.1.0",
                 "port": 8080,
                 "protocol": "TCP",
-                "interfaces": {
-                    "data": {
-                        "port": 8080,
-                        "path": "/data",
-                        "method": "put",
-                        "protocol": "http",
-                        "parameters": [
-                            {
-                            "name": "data_list",
-                            "type": "int[]"
-                            }
-                        ]
-                    }
-                }
+                "input": {}
             },
             "worker": {
-                "image": "192.168.57.8/video-comb-worker:0.0.3",
+                "image": "192.168.57.8/plankton:0.0.1.0",
                 "port": 8080,
                 "protocol": "TCP",
-                "interfaces": {}
+                "input": {}
             }
           }
       },

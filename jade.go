@@ -50,6 +50,8 @@ func main() {
 		// for administration
 		rest.Post("/$jade$/provision_app", j.ProvisionApp),
 		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
+		// for data path
+		rest.Put("/$jade$/app/listener", j.CollectAppMsg),
 		// for debugging
 		rest.Get("/$jade$/debug/jadelet", j.ShowJadelet),
 		rest.Get("/$jade$/debug/configurations", j.ShowConfigurations),

@@ -225,7 +225,7 @@ func (c *TaskCache) Set(task *Task, node *Node, subtask *SubTask, status TaskSta
 			// insert a new subtask into the node:
 			newSubtask := subtask
 			if subtask == nil {
-				newSubtask = NewSubtask(taskKey, "")
+				newSubtask = NewSubtask(taskKey, "", node.Key())
 			}
 			result = newSubtask.GetKey()
 			nodeItem.subtasks[newSubtask.GetKey()] = &taskCacheSubtaskItem{
