@@ -1,11 +1,5 @@
 package kernel
 
-import (
-// "math/rand"
-// "strconv"
-// "time"
-)
-
 type Task struct {
 	Application  *Application        `json:"application,omitempty"`
 	Requirements *Requirements       `json:"requirements,omitempty"`
@@ -33,14 +27,14 @@ func (t *Task) GetKey() string {
 	return t.Key
 }
 
-func (t *Task) NewSubtask(module string, nodeKey string) *SubTask {
+func (t *Task) NewSubtask(module string, nodeKey string, podKey string) *SubTask {
 	if t == nil {
 		return nil
 	}
 	if t.Subtasks == nil {
 		t.Subtasks = make(map[string]*SubTask)
 	}
-	nst := NewSubtask(t.GetKey(), module, nodeKey)
+	nst := NewSubtask(t.GetKey(), module, nodeKey, podKey)
 	t.Subtasks[nst.GetKey()] = nst
 	return nst
 }

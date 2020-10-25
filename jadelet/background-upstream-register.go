@@ -1,20 +1,14 @@
 package jadelet
 
 import (
-	// "aces/jade-go/conf"
-	// "aces/jade-go/kernel"
-	// "aces/jade-go/kube"
 	"bytes"
 	"encoding/json"
-	// "errors"
-	// "github.com/ant0ine/go-json-rest/rest"
-	"log"
 	"net/http"
 	"time"
 )
 
 func (j *JADE) retryRegister(msg string, seconds int, retryCnt int) {
-	log.Println(msg)
+	j.log.Println(msg)
 	j.RegisterStatus = msg
 	time.Sleep(time.Second * time.Duration(seconds))
 	j.Register(retryCnt + 1)
@@ -89,7 +83,7 @@ func (j *JADE) Register(retryCnt int) {
 	} else {
 		if val, ok := resMsg["status"]; ok && val == "OK" {
 			j.RegisterStatus = val
-			log.Println("Registered in upper node: ", resMsg)
+			j.log.Println("Registered in upper node: ", resMsg)
 		} else if ok {
 			msg := "Upper node responded abnormal message: " + val + ", will retry registering in 10 seconds"
 			j.retryRegister(msg, 10, retryCnt+1)

@@ -3,28 +3,11 @@ package kube
 import (
 	"aces/jade-go/kernel"
 	"context"
-	// "encoding/json"
-	"log"
-	"strconv"
-
-	// "k8s.io/apimachinery/pkg/api/errors"
-	// appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	// "k8s.io/client-go/dynamic"
-	// "k8s.io/client-go/kubernetes"
-	// "k8s.io/client-go/rest"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
+	"strconv"
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
@@ -106,23 +89,23 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		},
 	}
 
-	log.Println("Deploying pods...")
+	k.log.Println("Deploying pods...")
 	_, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		log.Println("ERROR while depolying pods:", err.Error())
+		k.log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
 	}
 	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	// log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
+	// k.log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
 
 	// deploy node port service for the pod
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
 	if err != nil {
-		log.Println("ERROR while depolying node port services for pods:", err.Error())
+		k.log.Println("ERROR while depolying node port services for pods:", err.Error())
 		return "", 0, err
 	}
 
-	log.Printf("Completed deploying pods, deployment name: %q.\n", deploymentName)
+	k.log.Printf("Completed deploying pods, deployment name: %q.\n", deploymentName)
 	return deploymentName, nodePort, nil
 }
 
@@ -136,7 +119,7 @@ func (k *KubeClient) provisionNodePortService(
 ) (int, error) {
 	// service name can not longer than 63
 	serviceName := "srv-" + deploymentName
-	log.Println("Deploying node port service for pods...")
+	k.log.Println("Deploying node port service for pods...")
 
 	// https://stackoverflow.com/questions/53874921/kubernetes-client-go-creating-services-and-enpdoints
 	_, err := k.Clientset.CoreV1().Services(namespace).Create(context.TODO(), &apiv1.Service{
@@ -158,13 +141,13 @@ func (k *KubeClient) provisionNodePortService(
 	}, metav1.CreateOptions{})
 
 	if err != nil {
-		log.Println("ERROR while depolying node port service for pods:", err.Error())
+		k.log.Println("ERROR while depolying node port service for pods:", err.Error())
 		return 0, err
 	}
 	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	// log.Println("node port service deployment result:", string(resultBytes))
+	// k.log.Println("node port service deployment result:", string(resultBytes))
 	nodePort := k.FindExternalPort(namespace, serviceName)
-	log.Println("deployment:", deploymentName, ", service:", serviceName, ", node port:", nodePort)
-	log.Printf("Completed deploying node port service for pods, service name: %q, deployment: %q.\n", serviceName, deploymentName)
+	k.log.Println("deployment:", deploymentName, ", service:", serviceName, ", node port:", nodePort)
+	k.log.Printf("Completed deploying node port service for pods, service name: %q, deployment: %q.\n", serviceName, deploymentName)
 	return nodePort, nil
 }

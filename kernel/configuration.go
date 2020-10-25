@@ -1,14 +1,5 @@
 package kernel
 
-import (
-// "encoding/json"
-// "fmt"
-// "io/ioutil"
-// "os"
-// "strconv"
-// "strings"
-)
-
 // Conf configuration data structure in memory
 type Conf struct {
 	UpperNode    *Node         `json:"upperNode"`

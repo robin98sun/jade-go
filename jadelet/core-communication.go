@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,7 +13,7 @@ import (
 
 func (j *JADE) retryHTTPCommunication(op string, method string, path string, targetNode *kernel.Node, payload interface{}, logMsg string, seconds int, retryCnt int, retrylimitation int) (interface{}, error) {
 	if logMsg != "" {
-		log.Println(logMsg)
+		j.log.Println(logMsg)
 	}
 	time.Sleep(time.Second * time.Duration(seconds))
 	return j.HTTPCommunicate(op, method, path, targetNode, payload, retryCnt+1, retrylimitation)
@@ -24,12 +23,12 @@ func (j *JADE) retryHTTPCommunication(op string, method string, path string, tar
 func (j *JADE) HTTPCommunicate(operationName string, method string, path string, targetNode *kernel.Node, payload interface{}, retryCnt int, retryLimitation int) (interface{}, error) {
 	if targetNode == nil || (strings.ToLower(targetNode.Protocol) != "http" && strings.ToLower(targetNode.Protocol) != "https") {
 		msg := "ERROR: invalid target node for " + operationName
-		log.Println(msg)
+		j.log.Println(msg)
 		return nil, errors.New(msg)
 	}
 	if retryCnt > retryLimitation {
 		msg := "Retried maximum times: " + strconv.Itoa(retryCnt) + ", will no longer retry " + operationName
-		log.Println(msg)
+		j.log.Println(msg)
 		return nil, errors.New(msg)
 	}
 
@@ -37,7 +36,7 @@ func (j *JADE) HTTPCommunicate(operationName string, method string, path string,
 	if retryCnt > 0 {
 		tailstr = ", retry count: " + strconv.Itoa(retryCnt)
 	}
-	log.Println("[comm] "+operationName+" started toward target node:", targetNode.Key(), tailstr)
+	j.log.Println("[comm] "+operationName+" started toward target node:", targetNode.Key(), tailstr)
 	if targetNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(targetNode)
 		if targetNode.IsAddrEmpty() {
@@ -75,7 +74,7 @@ func (j *JADE) HTTPCommunicate(operationName string, method string, path string,
 		return j.retryHTTPCommunication(operationName, method, path, targetNode, payload, msg, 30, retryCnt+1, retryLimitation)
 	} else {
 		if resMsg.Status == "OK" {
-			log.Println("[comm] "+operationName+" complete with target node:", targetNode.Key())
+			j.log.Println("[comm] "+operationName+" complete with target node:", targetNode.Key())
 			return resMsg.Payload, nil
 		} else {
 			msg := "target node responded abnormal status: " + resMsg.Status + ", will retry " + operationName + " in 30 seconds"

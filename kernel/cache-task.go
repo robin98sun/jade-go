@@ -1,9 +1,5 @@
 package kernel
 
-import (
-//
-)
-
 type TaskCache struct {
 	cache map[string]*taskCacheTaskItem
 }
@@ -73,10 +69,152 @@ func (i *taskCacheNodeItem) describe() map[string]interface{} {
 	return desc
 }
 
+func (n *taskCacheNodeItem) CheckStatus() TaskStatus {
+	var result TaskStatus
+	result = TaskStatusInvalid
+	if n == nil {
+		return result
+	}
+	if len(n.subtasks) == 0 {
+		return n.status
+	}
+	items := []*objWithTaskStatus{}
+	for _, s := range n.subtasks {
+		items = append(items, &objWithTaskStatus{status: s.status})
+	}
+	result = checkStatus(n.status, items)
+	n.status = result
+	return result
+}
+
+type taskCacheSubtaskItem struct {
+	subtask *SubTask
+	status  TaskStatus
+	updates interface{}
+}
+
+func (i *taskCacheSubtaskItem) describe() map[string]interface{} {
+	if i == nil {
+		return nil
+	}
+	desc := map[string]interface{}{
+		"subtask": i.subtask,
+		"status":  i.status,
+		"updates": i.updates,
+	}
+	return desc
+}
+
+// interfaces
+
+func (c *TaskCache) Delete(task *Task, node *Node) {
+	if c.cache == nil || task == nil {
+		return
+	}
+	if _, exists := c.cache[task.GetKey()]; !exists {
+		return
+	}
+	if node == nil {
+		delete(c.cache, task.GetKey())
+	} else {
+		item, _ := c.cache[task.GetKey()]
+		if _, nodeExists := item.dispatchedNodes[node.Key()]; nodeExists {
+			delete(item.dispatchedNodes, node.Key())
+		}
+	}
+}
+
+func (c *TaskCache) Set(task *Task, node *Node, subtask *SubTask, status TaskStatus, updates interface{}) bool {
+	if task == nil {
+		return false
+	}
+	if c.cache == nil {
+		c.cache = make(map[string]*taskCacheTaskItem)
+	}
+	taskKey := task.GetKey()
+	if _, exists := c.cache[taskKey]; !exists {
+		c.cache[taskKey] = &taskCacheTaskItem{
+			task:            task,
+			dispatchedNodes: make(map[string]*taskCacheNodeItem),
+			status:          TaskStatusPending,
+		}
+	}
+	taskItem := c.cache[taskKey]
+	result := false
+	// if node is nil, then just cache a task for future process
+	if node != nil {
+		if _, exists := taskItem.dispatchedNodes[node.Key()]; !exists {
+			newItem := &taskCacheNodeItem{
+				node:     node,
+				status:   TaskStatusPending,
+				subtasks: make(map[string]*taskCacheSubtaskItem),
+			}
+			taskItem.dispatchedNodes[node.Key()] = newItem
+		}
+		nodeItem, _ := taskItem.dispatchedNodes[node.Key()]
+
+		if subtask != nil {
+			if subtaskItem, subtaskExists := nodeItem.subtasks[subtask.GetKey()]; subtaskExists {
+				subtaskItem.status = status
+				subtaskItem.updates = updates
+			} else {
+				nodeItem.subtasks[subtask.GetKey()] = &taskCacheSubtaskItem{
+					subtask: subtask,
+					status:  status,
+					updates: updates,
+				}
+			}
+			// update task status
+			if status == TaskStatusRejected || status == TaskStatusInvalid {
+				taskItem.status = status
+				nodeItem.status = status
+			} else {
+				nodeItem.CheckStatus()
+				taskItem.CheckStatus()
+			}
+			result = true
+		}
+	} else {
+		taskItem.status = status
+	}
+
+	// Check the task integrity at everytime something changes
+	return result
+}
+
+// CheckTaskStatus check whether a task is totally accepted or rejected by all worker nodes, or totally done,
+// return accepted/rejected/waiting/invalid/done
+func (t *taskCacheTaskItem) CheckStatus() TaskStatus {
+	if t == nil {
+		return TaskStatusInvalid
+	}
+	items := []*objWithTaskStatus{}
+	for _, s := range t.dispatchedNodes {
+		items = append(items, &objWithTaskStatus{status: s.status})
+	}
+	t.status = checkStatus(t.status, items)
+	return t.status
+}
+
+// Status
+
+type TaskStatus string
+
+const (
+	TaskStatusAccepted TaskStatus = "accepted"
+	TaskStatusRejected            = "rejected"
+	TaskStatusDone                = "done"
+	TaskStatusRunning             = "running"
+	TaskStatusPending             = "pending"
+	TaskStatusFailed              = "failed"
+	TaskStatusInvalid             = "invalid"
+)
+
 type objWithTaskStatus struct {
 	status TaskStatus
 }
 
+// utils
 func checkStatus(selfStatus TaskStatus, cache []*objWithTaskStatus) TaskStatus {
 	result := selfStatus
 	if selfStatus != TaskStatusDone &&
@@ -115,152 +253,4 @@ func checkStatus(selfStatus TaskStatus, cache []*objWithTaskStatus) TaskStatus {
 		}
 	}
 	return result
-}
-
-func (n *taskCacheNodeItem) CheckStatus() TaskStatus {
-	var result TaskStatus
-	result = TaskStatusInvalid
-	if n == nil {
-		return result
-	}
-	if len(n.subtasks) == 0 {
-		return n.status
-	}
-	items := []*objWithTaskStatus{}
-	for _, s := range n.subtasks {
-		items = append(items, &objWithTaskStatus{status: s.status})
-	}
-	result = checkStatus(n.status, items)
-	n.status = result
-	return result
-}
-
-type taskCacheSubtaskItem struct {
-	subtask *SubTask
-	status  TaskStatus
-	updates interface{}
-}
-
-func (i *taskCacheSubtaskItem) describe() map[string]interface{} {
-	if i == nil {
-		return nil
-	}
-	desc := map[string]interface{}{
-		"subtask": i.subtask,
-		"status":  i.status,
-		"updates": i.updates,
-	}
-	return desc
-}
-
-type TaskStatus string
-
-const (
-	TaskStatusAccepted TaskStatus = "accepted"
-	TaskStatusRejected            = "rejected"
-	TaskStatusDone                = "done"
-	TaskStatusRunning             = "running"
-	TaskStatusPending             = "pending"
-	TaskStatusFailed              = "failed"
-	TaskStatusInvalid             = "invalid"
-)
-
-func (c *TaskCache) Delete(task *Task, node *Node) {
-	if c.cache == nil || task == nil {
-		return
-	}
-	if _, exists := c.cache[task.GetKey()]; !exists {
-		return
-	}
-	if node == nil {
-		delete(c.cache, task.GetKey())
-	} else {
-		item, _ := c.cache[task.GetKey()]
-		if _, nodeExists := item.dispatchedNodes[node.Key()]; nodeExists {
-			delete(item.dispatchedNodes, node.Key())
-		}
-	}
-}
-
-func (c *TaskCache) Set(task *Task, node *Node, subtask *SubTask, status TaskStatus, updates interface{}) string {
-	if task == nil {
-		return "invalid"
-	}
-	if c.cache == nil {
-		c.cache = make(map[string]*taskCacheTaskItem)
-	}
-	taskKey := task.GetKey()
-	if _, exists := c.cache[taskKey]; !exists {
-		c.cache[taskKey] = &taskCacheTaskItem{
-			task:            task,
-			dispatchedNodes: make(map[string]*taskCacheNodeItem),
-			status:          TaskStatusPending,
-		}
-	}
-	taskItem := c.cache[taskKey]
-	result := taskKey
-	// if node is nil, then just cache a task for future process
-	if node != nil {
-		if _, exists := taskItem.dispatchedNodes[node.Key()]; !exists {
-			newItem := &taskCacheNodeItem{
-				node:     node,
-				status:   TaskStatusPending,
-				subtasks: make(map[string]*taskCacheSubtaskItem),
-			}
-			taskItem.dispatchedNodes[node.Key()] = newItem
-		}
-		nodeItem, _ := taskItem.dispatchedNodes[node.Key()]
-
-		shouldCreateSubtask := true
-		if subtask != nil {
-			// update existing one
-			if subtaskItem, subtaskExists := nodeItem.subtasks[subtask.GetKey()]; subtaskExists {
-				subtaskItem.status = status
-				subtaskItem.updates = updates
-				result = subtask.GetKey()
-				shouldCreateSubtask = false
-			}
-		}
-		if shouldCreateSubtask {
-			// insert a new subtask into the node:
-			newSubtask := subtask
-			if subtask == nil {
-				newSubtask = NewSubtask(taskKey, "", node.Key())
-			}
-			result = newSubtask.GetKey()
-			nodeItem.subtasks[newSubtask.GetKey()] = &taskCacheSubtaskItem{
-				subtask: subtask,
-				status:  status,
-				updates: updates,
-			}
-		}
-
-		// update task status
-		if status == TaskStatusRejected || status == TaskStatusInvalid {
-			taskItem.status = status
-			nodeItem.status = status
-		} else {
-			nodeItem.CheckStatus()
-			taskItem.CheckStatus()
-		}
-	} else {
-		taskItem.status = status
-	}
-
-	// Check the task integrity at everytime something changes
-	return result
-}
-
-// CheckTaskStatus check whether a task is totally accepted or rejected by all worker nodes, or totally done,
-// return accepted/rejected/waiting/invalid/done
-func (t *taskCacheTaskItem) CheckStatus() TaskStatus {
-	if t == nil {
-		return TaskStatusInvalid
-	}
-	items := []*objWithTaskStatus{}
-	for _, s := range t.dispatchedNodes {
-		items = append(items, &objWithTaskStatus{status: s.status})
-	}
-	t.status = checkStatus(t.status, items)
-	return t.status
 }

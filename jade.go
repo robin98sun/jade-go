@@ -4,20 +4,17 @@ package main
 
 import (
 	// RESTful Server
+	"github.com/ant0ine/go-json-rest/rest"
 	"log"
 	"net/http"
-
-	"github.com/ant0ine/go-json-rest/rest"
 
 	// Sub packages
 	"aces/jade-go/jadelet"
 	"aces/jade-go/kernel"
 
 	// others
-	"fmt"
-	// "os"
-	// "sync"
 	"flag"
+	"fmt"
 	"os"
 )
 
@@ -33,8 +30,9 @@ func main() {
 		}
 	}
 	// construt JADE RESTful API server
-	j := jadelet.JADE{}
+	j := jadelet.NewJadelet()
 	j.Init()
+	j.Verbose(true)
 	//
 
 	api := rest.NewApi()
@@ -45,10 +43,7 @@ func main() {
 		rest.Post("/$jade$/collectAcceptances", j.CollectAcceptances),
 		// Control path downstream
 		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
-		// Data path upstream
-		rest.Post("/$jade$/dataReceiver", j.DataReceiver),
 		// for administration
-		rest.Post("/$jade$/provision_app", j.ProvisionApp),
 		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
 		// for data path
 		rest.Put("/$jade$/app/listener", j.CollectAppMsg),

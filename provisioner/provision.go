@@ -3,14 +3,20 @@ package provisioner
 import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
-	"log"
 	"strings"
 )
 
 type Provisioner struct {
+	log *kernel.Logger
 }
 
-func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
+func NewProvisioner(logger *kernel.Logger) *Provisioner {
+	return &Provisioner{
+		log: logger,
+	}
+}
+
+func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	envVars []map[string]string, app *kernel.Application,
 	moduleName string, container *kernel.Container,
 	allocationLimits *kernel.AllocationUnit,
@@ -20,7 +26,7 @@ func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	deploymentName += "-" + purifyString(app.Name)
 	// registry
 	// Environment variables
-	log.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
+	p.log.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
 	deployedName, nodePort, err := client.ProvisionDeployment(
 		app.EnvName, app.Owner,
 		app.Name, app.Version, moduleName,
@@ -30,10 +36,10 @@ func ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 		allocationLimits, envVars, replicas,
 	)
 	if err != nil {
-		log.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
+		p.log.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
 		return deploymentName, 0, err
 	} else {
-		log.Println("Successfully provisioned pods, deployment:", deployedName)
+		p.log.Println("Successfully provisioned pods, deployment:", deployedName)
 		return deploymentName, nodePort, nil
 	}
 }

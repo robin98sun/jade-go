@@ -3,17 +3,12 @@ package jadelet
 import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
-	// "bytes"
-	// "encoding/json"
-	// "errors"
-	// "github.com/ant0ine/go-json-rest/rest"
-	"log"
-	// "net/http"
-	// "time"
+	"aces/jade-go/provisioner"
 )
 
 // Init to do initializing work
 func (j *JADE) Init() {
+	j.log = &kernel.Logger{}
 	// Initialize caches and queues
 	j.Subnodes = make(map[string]*kernel.Node)
 	j.capabilityCache = &kernel.CapabilityCache{}
@@ -22,27 +17,13 @@ func (j *JADE) Init() {
 	j.taskCache = &kernel.TaskCache{}
 	// read environment variables into config
 	j.Config = kernel.ReadConfFromEnv()
-	log.Println("configurations from environment:")
-	log.Println("upper node:")
-	log.Println(j.Config.UpperNode)
-	log.Println("")
-	log.Println("self node:")
-	log.Println(j.Config.SelfNode)
-	log.Println("")
-	log.Println("capacity:")
-	log.Println(j.Config.Capacity)
-	log.Println("")
-	log.Println("capabilities:")
-	for _, c := range j.Config.Capabilities {
-		log.Println(c)
-	}
-	log.Println("")
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 	// setup k8s client instance
-	clients := kube.KubeClient{}
+	clients := kube.NewKubeClient(j.log)
 	clients.Init()
-	j.Kube = &clients
+	j.Kube = clients
+	j.Provisioner = provisioner.NewProvisioner(j.log)
 	// Register to upper node
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)

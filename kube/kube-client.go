@@ -1,32 +1,26 @@
 package kube
 
 import (
-	// "context"
-	// "fmt"
-
-	// "k8s.io/apimachinery/pkg/api/errors"
-	// corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	// "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
+type Logger interface {
+	Println(...interface{})
+	Printf(string, ...interface{})
+}
 type KubeClient struct {
 	Clientset *kubernetes.Clientset
 	Config    *rest.Config
 	Client    dynamic.Interface
+	log       Logger
+}
+
+func NewKubeClient(logger Logger) *KubeClient {
+	return &KubeClient{
+		log: logger,
+	}
 }
 
 func (k *KubeClient) Init() {

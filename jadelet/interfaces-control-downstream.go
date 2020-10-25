@@ -1,12 +1,9 @@
 package jadelet
 
 import (
-	// "aces/jade-go/conf"
 	"aces/jade-go/kernel"
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"log"
-	// "net/http"
 )
 
 // TaskReceiver task receiver
@@ -35,7 +32,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			if task.Valid() {
 				validTasks[task.GetKey()] = task
 			} else {
-				log.Println("WARN: received an invalid task")
+				j.log.Println("WARN: received an invalid task")
 			}
 		}
 		if len(validTasks) > 0 {

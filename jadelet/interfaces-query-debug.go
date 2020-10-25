@@ -1,11 +1,8 @@
 package jadelet
 
 import (
-	// "fmt"
 	"aces/jade-go/kernel"
-	// "aces/jade-go/kube"
 	"github.com/ant0ine/go-json-rest/rest"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -102,7 +99,7 @@ func (j *JADE) ShowNode(w rest.ResponseWriter, r *rest.Request) {
 			break
 		}
 	}
-	log.Println("querying node:", nodeName)
+	j.log.Println("querying node:", nodeName)
 	node, err := j.Kube.FindNode(nodeName)
 	if err == nil {
 		w.WriteJson(node)

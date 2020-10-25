@@ -3,26 +3,57 @@ package jadelet
 import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
-	// "bytes"
+	"aces/jade-go/provisioner"
 	"encoding/json"
 	"errors"
 	"github.com/ant0ine/go-json-rest/rest"
-	// "log"
 	"io/ioutil"
 	"net/http"
-	// "time"
 )
 
 // JADE to instantiate JADE memory structure
 type JADE struct {
-	Config          *kernel.Conf            `json:"config"`
-	Kube            *kube.KubeClient        `json:"kube"`
-	Subnodes        map[string]*kernel.Node `json:"subnodes"`
-	RegisterStatus  string                  `json:"registerStatus"`
+	Config          *kernel.Conf             `json:"config"`
+	Provisioner     *provisioner.Provisioner `json:"provisioner"`
+	Kube            *kube.KubeClient         `json:"kube"`
+	Subnodes        map[string]*kernel.Node  `json:"subnodes"`
+	RegisterStatus  string                   `json:"registerStatus"`
+	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	capabilityCache *kernel.CapabilityCache
 	capacityCache   *kernel.CapacityCache
 	taskCache       *kernel.TaskCache
-	CapacityStatus  *kernel.CapacityStatus `json:"capacityStatus"`
+	log             *kernel.Logger
+	PodQueue        *kernel.PodQueue `json:"podQueue"`
+}
+
+func NewJadelet() *JADE {
+	j := &JADE{}
+	j.Init()
+	return j
+}
+
+func (j *JADE) Verbose(on bool) {
+	j.log.Enable = on
+}
+
+func (j *JADE) PrintConfig() {
+	j.log.Println("configurations from environment:")
+	j.log.Println("upper node:")
+	j.log.Println(j.Config.UpperNode)
+	j.log.Println("")
+	j.log.Println("self node:")
+	j.log.Println(j.Config.SelfNode)
+	j.log.Println("")
+	j.log.Println("capacity:")
+	j.log.Println(j.Config.Capacity)
+	j.log.Println("")
+	j.log.Println("capabilities:")
+}
+
+func (j *JADE) PrintCapabilities() {
+	for _, c := range j.Config.Capabilities {
+		j.log.Println(c)
+	}
 }
 
 func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {

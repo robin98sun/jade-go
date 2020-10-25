@@ -2,9 +2,6 @@ package kernel
 
 import (
 	"strings"
-	// "math/rand"
-	// "strconv"
-	// "time"
 )
 
 // Application the application specficiations

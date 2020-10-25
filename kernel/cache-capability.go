@@ -1,16 +1,5 @@
 package kernel
 
-import (
-// "aces/jade-go/kube"
-// "bytes"
-// "encoding/json"
-// "errors"
-// "github.com/ant0ine/go-json-rest/rest"
-// "log"
-// "net/http"
-// "time"
-)
-
 // CapabilityCache in a two layers structure: capabilityName: capabilityValue: [ NodeID ]
 type CapabilityCache struct {
 	cache map[string]map[string]capabilityCacheItem

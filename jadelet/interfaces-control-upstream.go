@@ -4,9 +4,7 @@ import (
 	"aces/jade-go/kernel"
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"log"
 	"strings"
-	// "net/http"
 )
 
 // RegisterNode receive and process node registration
@@ -34,11 +32,11 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 	content, req, err := j.ValidateUpstreamRequest(w, r)
 	if err != nil {
 		// the request has been rejected by validator
-		log.Println("[acceptances collecter] ERROR of validating feedback of acceptances:", err.Error())
+		j.log.Println("[acceptances collecter] ERROR of validating feedback of acceptances:", err.Error())
 		j.PeacefulFatalRequest(w, r, err.Error())
 		return
 	}
-	log.Println("[acceptances collecter] Received feedback of acceptances from", req.NodeID)
+	j.log.Println("[acceptances collecter] Received feedback of acceptances from", req.NodeID)
 
 	reqInst := &struct {
 		Payload *TaskEvalResult `json:"payload,omitempty"`
@@ -47,7 +45,7 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode task evaluation result: "+err.Error())
-		log.Println("[acceptances collecter] ERROR of decoding content of acceptances:", err.Error())
+		j.log.Println("[acceptances collecter] ERROR of decoding content of acceptances:", err.Error())
 		return
 	} else {
 		feedback := reqInst.Payload
@@ -55,7 +53,7 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 		subnode := j.Subnodes[subnodeID]
 		result := NewTaskEvalResult()
 		feedbackbytes, _ := json.MarshalIndent(feedback, "", "    ")
-		log.Printf("[acceptances collecter] content of acceptances: %v, from node: %v", string(feedbackbytes), req.NodeID)
+		j.log.Printf("[acceptances collecter] content of acceptances: %v, from node: %v", string(feedbackbytes), req.NodeID)
 		for taskID, subtasks := range feedback.Accepted {
 			if task := j.taskCache.GetTask(taskID); task != nil {
 				for _, subtaskID := range subtasks {
@@ -63,7 +61,7 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 					if subtask != nil {
 						j.taskCache.Set(task, subnode, subtask, kernel.TaskStatusAccepted, nil)
 						result.AppendTask(taskID, subtaskID, kernel.TaskStatusAccepted)
-						log.Printf("node[%v] accepted task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
+						j.log.Printf("node[%v] accepted task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
 					}
 				}
 			}
@@ -75,7 +73,7 @@ func (j *JADE) CollectAcceptances(w rest.ResponseWriter, r *rest.Request) {
 					if subtask != nil {
 						j.taskCache.Set(task, subnode, subtask, kernel.TaskStatusRejected, nil)
 						result.AppendTask(taskID, subtaskID, kernel.TaskStatusRejected)
-						log.Printf("node[%v] rejected task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
+						j.log.Printf("node[%v] rejected task [%v], subtask [%v]", req.NodeID, taskID, subtaskID)
 					}
 				}
 			}
@@ -97,7 +95,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 	err := r.DecodeJsonPayload(msg)
 	if err == nil {
 		bs, _ := json.MarshalIndent(msg, "", "    ")
-		log.Println("Received application message:", string(bs))
+		j.log.Println("Received application message:", string(bs))
 		if msg.TaskID != "" {
 			task := j.taskCache.GetTask(msg.TaskID)
 			if msg.SubtaskID != "" {
