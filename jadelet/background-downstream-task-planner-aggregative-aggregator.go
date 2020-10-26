@@ -10,6 +10,15 @@ func (j *JADE) processAggregator(
 	targetNodes map[string][]*kernel.Task,
 	masterNode *kernel.Node,
 ) map[string]string {
+
+	return j.prvisionAggregator(task, targetNodes, masterNode)
+}
+
+func (j *JADE) prvisionAggregator(
+	task *kernel.Task,
+	targetNodes map[string][]*kernel.Task,
+	masterNode *kernel.Node,
+) map[string]string {
 	envVars := j.newEnv(task, masterNode)
 	// Check if the application already in cache
 

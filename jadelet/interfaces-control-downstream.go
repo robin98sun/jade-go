@@ -36,7 +36,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			}
 		}
 		if len(validTasks) > 0 {
-			go j.evaluateAggregativeTasks(validTasks)
+			go j.evaluateTasks(validTasks)
 		}
 		res := &struct {
 			ReceivedTasks int `json:"receivedTasks,omitempty"`

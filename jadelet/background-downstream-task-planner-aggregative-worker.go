@@ -9,6 +9,14 @@ func (j *JADE) processWorker(
 	existingSubtask *kernel.SubTask,
 	masterNode *kernel.Node,
 ) bool {
+	return j.provisionWorker(task, existingSubtask, masterNode)
+}
+
+func (j *JADE) provisionWorker(
+	task *kernel.Task,
+	existingSubtask *kernel.SubTask,
+	masterNode *kernel.Node,
+) bool {
 	envVars := j.newEnv(task, masterNode)
 	toReject := false
 	// to see if self-node is capable
