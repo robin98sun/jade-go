@@ -1,14 +1,15 @@
 package kernel
 
 type Task struct {
-	Application  *Application        `json:"application,omitempty"`
-	Requirements *Requirements       `json:"requirements,omitempty"`
-	Budget       *Budget             `json:"budget,omitempty"`
-	Key          string              `json:"id,omitempty"`
-	SubtaskKey   string              `json:"subtaskId,omitempty"`
-	PodKey       string              `json:"podId,omitempty"`
-	Subtasks     map[string]*SubTask `json:"subtasks,omitempty"`
-	MasterNode   *Node               `json:"masterNode,omitempty"`
+	Application                 *Application        `json:"application,omitempty"`
+	Requirements                *Requirements       `json:"requirements,omitempty"`
+	Budget                      *Budget             `json:"budget,omitempty"`
+	Key                         string              `json:"id,omitempty"`
+	SubtaskKey                  string              `json:"subtaskId,omitempty"`
+	PodKey                      string              `json:"podId,omitempty"`
+	Subtasks                    map[string]*SubTask `json:"subtasks,omitempty"`
+	MasterNode                  *Node               `json:"masterNode,omitempty"`
+	ForceUpdateNetworkStructure bool                `json:"forceUpdateNetworkStructure,omitempty"`
 }
 
 func (t *Task) CopyForSubtask() *Task {

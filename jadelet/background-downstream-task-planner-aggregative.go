@@ -2,146 +2,136 @@ package jadelet
 
 import (
 	"aces/jade-go/kernel"
+	"aces/jade-go/scheduler"
 )
 
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
-func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*kernel.Task) {
-	rejectedTasks := map[string][]string{}
-	acceptedTasks := map[string][]string{}
+func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
+	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+	// first, check or allocate itself's pod
+	// 1. if the node itself is a coordinator, then allocate an aggregator pod for it
+	goodTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+	if j.IsCoordinator() {
+		for _, taskItem := range tasklist {
+			task := taskItem.Task
+			// allocate an aggregator pod if needed
+			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
+			aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
+			if aggregatorPod == nil {
+				// provision an aggregator pod
+			}
+			if aggregatorPod == nil {
+				// reject the task
+				rejectTaskCache[task.GetKey()] = taskItem
+			} else {
+				taskItem.ReportTo = aggregatorPod
+				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), taskItem, aggregatorPod)
+				goodTaskCache[task.GetKey()] = taskItem
+			}
+		}
+	}
+	// second, downstream propagate the task
+	if len(goodTaskCache) > 0 {
+		j.downstreamDispatching(goodTaskCache)
+	}
+	// third, reject bad tasks
+	if len(rejectTaskCache) > 0 {
+		for _, taskItem := range rejectTaskCache {
+			j.feedbackProvisioning(NewTaskProvisioningResult(
+				j.Config.SelfNode.Key(),
+				taskItem.Task.GetKey(),
+				string(kernel.AppModuleAggregator),
+				nil,
+			))
+		}
+	}
+}
 
-	targetNodes := make(map[string][]*kernel.Task)
-
-	for _, task := range tasklist {
+func (j *JADE) downstreamDispatching(tasklist map[string]*scheduler.TaskDispatchingItem) {
+	tasksGoingToDispatch := make(map[string][]*scheduler.TaskDispatchingItem) // nodekey: []*TaskDispatchingItem
+	readyTaskCache := make(map[string]*scheduler.TaskDispatchingItem)         // taskkey: *TaskDispatchingItem
+	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
+	for _, taskItem := range tasklist {
+		task := taskItem.Task
 		j.log.Println("evaluating task:", task.GetKey())
-		j.taskCache.Set(task, nil, nil, kernel.TaskStatusPending, nil)
-		// Part 1: on the node which is running as an aggregator
-		//   stage 1: check capabilitis and capacities
-		//   at the very beginning, just assuming aggregator is unlimited
-		//   only check for workers
-		//   1. search all required sub-nodes
-		//   2. check if there is already a pod/pods for this kind of task on the sub-node
-		//   3. if has, pick a pod which queuing time is acceptable for the task's budget
-		//   4. 	if no acceptable queuing time for all pods, then reject the task
-		//   5. 	otherwise, collect the pod key for the node
-		//   6. if no existing pod for the task, check if the node has sufficient capacity for the task
-		//   7. 	if capacity is not sufficient, then reject the task
+		// 1. search all required sub-nodes
+		availableNodes := j.selectAvaiableNodes(task.Requirements)
+		// 2. for each available sub-nodes:
+		for _, nodekey := range availableNodes {
+			//		search pod on that node for this task
+			workerAllocation := task.Requirements.Allocations[string(kernel.AppModuleWorker)]
+			workerPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(kernel.AppModuleWorker), workerAllocation)
+			// if the node itself is also a worker, then allcate a worker pod for it
+			if j.IsSelfNode(nodekey) {
+				if workerPod == nil {
+					// allocate a worker Pod for it
+				}
+				if workerPod == nil {
+					// reject if the worker pod can not be allocated
+					rejectTaskCache[task.GetKey()] = taskItem
+				}
+			}
+			if workerPod != nil && (!task.ForceUpdateNetworkStructure || j.IsSelfNode(nodekey)) {
+				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
+				// 		 	 	and there should be a switch in the task data structure
+				//				to indicate whether wait for updates of existing pods:
+				//				for the sake of saving network overhead
+				// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
+				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, kernel.AppModuleWorker)
+				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod)
 
-		//   stage 2: just generate subtasks for the aggregator to wait for
-		//   1. generate subtasks for all selected sub-nodes
-
-		//   stage 3: get the address of aggregator
-		//   for the aggregator, by nature it is going to on the self-node
-		//   but it might change in future design
-		//   1. find out whether the aggregator's pod is there
-		//   2. if not, provision the aggregator's pod first
-		//      (real privisioning no matter it is or not on the self-node)
-		//   3. dispatch the aggregator task to that pod, using the subtasks data generated in previous stage
-		//   4. get the aggregator pod's address and port
-
-		//   stage 4: provision worker pods on sub-nodes which does not have one yet
-		//   for the workers, they are on sub-nodes by nature,
-		//   but still might including self-node, otherwise, signle-node model won't work
-		//   1. for each capable but not provisioned sub-node
-		//   2. pretend to provision a pod for the worker: just create a pod key
-		// 		  the actual provisioning of worker pod will take place in worker node
-		//      it's for concept independency, considering if the system has no backup of k8s/k3s cluster mechanism
-		//   3. collect the pod key for that node
-		//   4. dispatch the pod-provisioning commands to these sub-nodes,
-		//   5. wait for the feedbacks of provisioning from sub-nodes,
-		//   6. if some sub-node failed the provisioning, then reject the task to the upper node
-
-		//   stage 5: enqueue sub-tasks for all sub-nodes
-		//   no need to wait for all provisionings, just go ahead whenever a sub-node is ready
-		//   1. enqueue sub-task for that node's selected pod
-
-		// Part 2: Dequeue a sub-task and dispatch the task to that pod
-		//   1. when a pod is idle, which event is triggered when a pod reported to the master
-		//   2. dequeue a sub-task for that pod
-		//   3. dispatch that sub-task
-
-		// Part 3: on the node which is running as a worker
-		//   stage 1: provisioning
-		// 	 1. provision a pod according to the provisioning command
-		//   2. feedback success/failure of provisioning
-
-		// prepare environments
-		accept := true
-		selfInTarget := false
-		workerTask := task
-		nodeToSubtask := map[string]string{}
-		// firstly deploy aggregator
-		if j.IsAggregator() {
-			masterNode := task.MasterNode
-			if masterNode == nil || masterNode.IsAddrEmpty() {
-				if j.Config.UpperNode.IsAddrEmpty() {
-					masterNode = j.Config.SelfNode
+				if _, e := readyTaskCache[task.GetKey()]; !e {
+					readyTaskCache[task.GetKey()] = taskItem
+				}
+			} else if !j.IsSelfNode(nodekey) {
+				//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
+				//		c. Otherwise If no any other kind of pod in the pod-cache,
+				// 			then dispatch the task to that node, to see what kind of pod it returns,
+				//			(this is the only case that a worker node could receive the entire task,
+				// 				but, to update runtime structure changes, the task still shall be dispatched
+				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
+				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
+				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
+				if _, e := tasksGoingToDispatch[nodekey]; !e {
+					tasksGoingToDispatch[nodekey] = []*scheduler.TaskDispatchingItem{taskItem}
 				} else {
-					masterNode = j.Config.UpperNode
+					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], taskItem)
 				}
-			}
-			nodeToSubtask = j.processAggregator(task, targetNodes, masterNode)
-			if nodeToSubtask == nil {
-				accept = false
-			}
-			if tasklist, exists := targetNodes[j.Config.SelfNode.Key()]; exists {
-				for _, t := range tasklist {
-					if t.GetKey() == task.GetKey() {
-						selfInTarget = true
-						workerTask = t
-						break
-					}
+				if _, e := readyTaskCache[task.GetKey()]; e {
+					delete(readyTaskCache, task.GetKey())
 				}
+				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil)
 			}
-		}
-		// then deploy worker
-		// notice, the aggregator could also be a worker
-		if accept && j.IsWorker() || selfInTarget {
-			subtask := task.GetSubtask(nodeToSubtask[j.Config.SelfNode.Key()])
-			if !selfInTarget {
-				subtask = nil
-			}
-			masterNode := task.MasterNode
-			if masterNode == nil || masterNode.IsAddrEmpty() {
-				if selfInTarget || j.Config.UpperNode.IsAddrEmpty() {
-					masterNode = j.Config.SelfNode
-				} else {
-					masterNode = j.Config.UpperNode
-				}
-			}
-			accept = j.processWorker(workerTask, subtask, masterNode)
-		}
-		if accept && selfInTarget {
-			j.log.Println("accepted task as a worker:", task.GetKey())
-			subtask := task.GetSubtask(workerTask.SubtaskKey)
-			j.taskCache.Set(task, j.Config.SelfNode, subtask, kernel.TaskStatusAccepted, nil)
-		} else if accept && j.IsWorker() {
-			j.log.Println("accepted task as a worker:", task.GetKey())
-			acceptedTasks[task.GetKey()] = append(acceptedTasks[task.GetKey()], task.SubtaskKey)
-			j.taskCache.Set(task, nil, nil, kernel.TaskStatusAccepted, nil)
-		} else if !accept {
-			j.log.Println("rejected task:", task.GetKey())
-			rejectedTasks[task.GetKey()] = append(rejectedTasks[task.GetKey()], task.SubtaskKey)
-			j.taskCache.Set(task, nil, nil, kernel.TaskStatusRejected, nil)
+			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
+			// 				I. If any sub-node responded, the task-cache could be updated,
+			//						and a pod-queue for that sub-node could finally be decided,
+			//						but still it’s not the time to enqueue the sub-task
+			// 				II. It is until all the sub-nodes responded, the sub-tasks won’t be enqueued,
+			//						because the aggregator pod haven’t be setup, or in other words,
+			//						the aggregator pod haven’t be ready to receive feedbacks from worker sub-nodes
+			// 		e. When all the dispatched tasks to the sub-nodes have responded,
+			//				and the results are all accepted with a worker or an aggregator pod,
+			// 				I. the task could be dispatched to the reducer, including the pods on the sub-nodes
+			// 				II. The worker sub-tasks could be enqueued into corresponding pod-queues
 		}
 	}
-
-	// downstream: dispatch sub tasks
-	// in `background-downstream-task-planner.go`
-	if len(targetNodes) > 0 {
-		for nodeID, tasks := range targetNodes {
-			if nodeID != j.Config.SelfNode.Key() {
-				j.dispatchTasks(nodeID, tasks)
-			}
+	// check task status and enqueue them the task is ready
+	for _, taskItem := range readyTaskCache {
+		j.TaskCache.CheckTask(taskItem.Task.GetKey())
+	}
+	// dispatch tasks
+	for nodekey, subTasklist := range tasksGoingToDispatch {
+		j.dispatchTasks(nodekey, subTasklist)
+	}
+	// reject bad tasks
+	if len(rejectTaskCache) > 0 {
+		for _, taskItem := range rejectTaskCache {
+			j.feedbackProvisioning(NewTaskProvisioningResult(
+				j.Config.SelfNode.Key(),
+				taskItem.Task.GetKey(),
+				string(kernel.AppModuleWorker),
+				nil,
+			))
 		}
-	}
-
-	// upstream: feed back acceptances
-	// in `background-upstream-forwarder.go`
-	result := &TaskEvalReslllkkjy7t655ult{
-		Accepted: acceptedTasks,
-		Rejected: rejectedTasks,
-	}
-	if !result.IsEmpty() {
-		j.feedbackTaskAcceptances(result)
 	}
 }

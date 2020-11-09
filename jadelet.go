@@ -40,7 +40,7 @@ func main() {
 	router, err := rest.MakeRouter(
 		// Control path upstream
 		rest.Put("/$jade$/registerNode", j.RegisterNode),
-		rest.Post("/$jade$/collectAcceptances", j.CollectAcceptances),
+		rest.Post("/$jade$/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
 		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
 		// for administration

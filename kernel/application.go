@@ -64,3 +64,11 @@ func (c *Container) valid() bool {
 	}
 	return true
 }
+
+// predefined module names
+type AppModule string
+
+const (
+	AppModuleAggregator AppModule = "aggregator"
+	AppModuleWorker               = "worker"
+)

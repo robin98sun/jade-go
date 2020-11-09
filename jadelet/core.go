@@ -4,6 +4,7 @@ import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
 	"aces/jade-go/provisioner"
+	"aces/jade-go/scheduler"
 	"encoding/json"
 	"errors"
 	"github.com/ant0ine/go-json-rest/rest"
@@ -21,9 +22,9 @@ type JADE struct {
 	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	capabilityCache *kernel.CapabilityCache
 	capacityCache   *kernel.CapacityCache
-	taskCache       *kernel.TaskCache
 	log             *kernel.Logger
-	PodQueue        *kernel.PodQueue `json:"podQueue"`
+	TaskCache       *scheduler.TaskCache `json:"taskCache"`
+	PodCache        *scheduler.PodCache  `json:"podCache"`
 }
 
 func NewJadelet() *JADE {
@@ -68,25 +69,39 @@ func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {
 	return nil
 }
 
+func (j *JADE) IsSelfNode(nodeID string) bool {
+	if nodeID == j.Config.SelfNode.Key() {
+		return true
+	}
+	return false
+}
+
+func (j *JADE) SelfNodeKey() string {
+	if j == nil || j.Config == nil || j.Config.SelfNode == nil {
+		return ""
+	}
+	return j.Config.SelfNode.Key()
+}
+
 func (j *JADE) HasUpperNode() bool {
 	return j.Config != nil && j.Config.UpperNode != nil && !j.Config.UpperNode.IsAddrEmpty()
 }
 
-func (j *JADE) IsAggregator() bool {
+func (j *JADE) IsCoordinator() bool {
 	if len(j.Subnodes) > 0 {
 		return true
 	}
 	return false
 }
 
-func (j *JADE) IsMaster() bool {
+func (j *JADE) IsTopmostMaster() bool {
 	if j.Config.UpperNode.IsAddrEmpty() {
 		return true
 	}
 	return false
 }
 
-func (j *JADE) IsWorker() bool {
+func (j *JADE) IsLeaf() bool {
 	if len(j.Subnodes) == 0 {
 		return true
 	}

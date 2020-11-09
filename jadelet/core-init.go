@@ -4,6 +4,7 @@ import (
 	"aces/jade-go/kernel"
 	"aces/jade-go/kube"
 	"aces/jade-go/provisioner"
+	"aces/jade-go/scheduler"
 )
 
 // Init to do initializing work
@@ -14,7 +15,8 @@ func (j *JADE) Init() {
 	j.capabilityCache = &kernel.CapabilityCache{}
 	j.capacityCache = &kernel.CapacityCache{}
 	j.CapacityStatus = &kernel.CapacityStatus{}
-	j.taskCache = &kernel.TaskCache{}
+	j.TaskCache = scheduler.NewTaskCache()
+	j.PodCache = scheduler.NewPodCache()
 	// read environment variables into config
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()

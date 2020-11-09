@@ -1,76 +1,78 @@
 {
     "token": "some kind of randome string token in upper node",
     "payload": [{
-      "application": {
-          "envName": "local-test",
-          "name": "video-detection",
-          "version": "0.0.1",
-          "owner": "skywalker",
-          "modules": {
-            "aggregator": {
-                "image": "192.168.57.8/plankton:0.0.1.0",
-                "port": 8080,
-                "protocol": "TCP",
-                "input": {}
+        "task": {
+            "application": {
+                "envName": "local-test",
+                "name": "video-detection",
+                "version": "0.0.1",
+                "owner": "skywalker",
+                "modules": {
+                    "aggregator": {
+                        "image": "192.168.57.8/plankton:0.0.1.0",
+                        "port": 8080,
+                        "protocol": "TCP",
+                        "input": {}
+                    },
+                    "worker": {
+                        "image": "192.168.57.8/plankton:0.0.1.0",
+                        "port": 8080,
+                        "protocol": "TCP",
+                        "input": {}
+                    }
+                }
             },
-            "worker": {
-                "image": "192.168.57.8/plankton:0.0.1.0",
-                "port": 8080,
-                "protocol": "TCP",
-                "input": {}
+            "requirements": {
+                "collective": [
+                    {
+                        "name": "location",
+                        "value": "NYC"
+                    },
+                    {
+                        "name": "location",
+                        "value": "DAL"
+                    },
+                    {
+                        "name": "location",
+                        "value": "LA"
+                    }
+                ],
+                "exclusive": [
+                    {
+                        "name": "accuracy",
+                        "value": "city"
+                    },
+                    {
+                        "name": "avg_temperature"
+                    }
+                ],
+                "allocations": {
+                    "worker": {
+                        "minimumCapacity": {
+                            "cpu": 500,
+                            "ram": 100
+                        },
+                        "maximumCapacity": {
+                            "cpu": 1000,
+                            "ram": 200
+                        }
+                    },
+                    "aggregator": {
+                        "minimumCapacity": {
+                            "cpu": 500,
+                            "ram": 200
+                        },
+                        "maximumCapacity": {
+                            "cpu": 1000,
+                            "ram": 300
+                        }
+                    }
+                }
+            },
+            "budget": {
+                "maximumMilliseconds": 10000,
+                "price": 10
             }
-          }
-      },
-      "requirements": {
-          "collective": [
-              {
-                  "name": "location",
-                  "value": "NYC"
-              },
-              {
-                  "name": "location",
-                  "value": "DAL"
-              },
-              {
-                  "name": "location",
-                  "value": "LA"
-              }
-          ],
-          "exclusive": [
-              {
-                  "name": "accuracy",
-                  "value": "city"
-              },
-              {
-                  "name": "avg_temperature"
-              }
-          ],
-          "allocations": {
-              "worker": {
-                  "minimumCapacity": {
-                      "cpu": 500,
-                      "ram": 100
-                  },
-                  "maximumCapacity": {
-                      "cpu": 1000,
-                      "ram": 200
-                  }
-              },
-              "aggregator": {
-                  "minimumCapacity": {
-                      "cpu": 500,
-                      "ram": 200
-                  },
-                  "maximumCapacity": {
-                      "cpu": 1000,
-                      "ram": 300
-                  }
-              }
-          }
-      },
-      "budget": {
-          "maximumMilliseconds": 10000,
-          "price": 10
-      }
-  }]
+        }
+    }]
   }

@@ -1,7 +1,7 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
+	"aces/jade-go/scheduler"
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 )
@@ -15,7 +15,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 	}
 	// re-decode
 	reqInst := &struct {
-		Payload []*kernel.Task `json:"payload,omitempty"`
+		Payload []*scheduler.TaskDispatchingItem `json:"payload,omitempty"`
 	}{}
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
@@ -27,10 +27,10 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
-		validTasks := make(map[string]*kernel.Task)
-		for _, task := range taskList {
-			if task.Valid() {
-				validTasks[task.GetKey()] = task
+		validTasks := make(map[string]*scheduler.TaskDispatchingItem)
+		for _, taskItem := range taskList {
+			if taskItem.Task != nil && taskItem.Task.Valid() {
+				validTasks[taskItem.Task.GetKey()] = taskItem
 			} else {
 				j.log.Println("WARN: received an invalid task")
 			}
