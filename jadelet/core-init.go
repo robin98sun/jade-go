@@ -5,11 +5,13 @@ import (
 	"aces/jade-go/kube"
 	"aces/jade-go/provisioner"
 	"aces/jade-go/scheduler"
+	"sync"
 )
 
 // Init to do initializing work
 func (j *JADE) Init() {
 	j.log = &kernel.Logger{}
+	j.mutex = &sync.Mutex{}
 	// Initialize caches and queues
 	j.Subnodes = make(map[string]*kernel.Node)
 	j.capabilityCache = &kernel.CapabilityCache{}
@@ -31,4 +33,5 @@ func (j *JADE) Init() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
 	go j.Register(0)
+	go j.routimeForPodQueues()
 }

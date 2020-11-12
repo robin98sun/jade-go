@@ -47,10 +47,24 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		j.PeacefulFatalRequest(w, r, "Can not decode task provisioning result: "+err.Error())
 		j.log.Println("[provisioning collecter] ERROR of decoding content of provisioning:", err.Error())
 		return
+	}
+	feedback := reqInst.Payload
+	if feedback.Pod == nil {
+		// task is rejected by sub-node or provisioning failed
+		j.log.Printf("[provisioning collector] sub-node{%v} failed to provision pod for module{%v} of task{%v}", feedback.NodeKey, feedback.ModuleName, feedback.TaskKey)
+		// forward the rejection upword
+		j.TaskCache.RejectTask(feedback.TaskKey)
+		j.feedbackProvisioning(&TaskProvisioningResult{
+			NodeKey:    j.Config.SelfNode.Key(),
+			TaskKey:    feedback.TaskKey,
+			ModuleName: feedback.ModuleName,
+			Pod:        nil,
+		})
 	} else {
-		feedback := reqInst.Payload
 		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod)
-		j.TaskCache.CheckTask(feedback.TaskKey)
+		// check if the task is ready for dispatching
+		j.checkTaskStatus(feedback.TaskKey)
+		// if it is ready, then dispatch the task for it
 	}
 	j.DoneRequest(w, r, "OK")
 }
@@ -67,11 +81,22 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 		bs, _ := json.MarshalIndent(msg, "", "    ")
 		j.log.Println("Received application message:", string(bs))
 		if msg.TaskID != "" && msg.SubtaskID != "" {
-			j.TaskCache.SaveResultFromApp(msg.TaskID, msg.SubtaskID, msg.Status, msg.Updates)
-			w.WriteJson(map[string]string{
-				"status":  "OK",
-				"payload": "message received",
-			})
+			if msg.Status == scheduler.TaskStatusFailed {
+				j.TaskCache.FailTask(msg.TaskID)
+			}
+			subtask := j.TaskCache.SaveResultFromApp(msg.TaskID, msg.SubtaskID, msg.Status, msg.Updates)
+			if subtask != nil && subtask.Pod != nil {
+				w.WriteJson(map[string]string{
+					"status":  "OK",
+					"payload": "message received",
+				})
+				// to see if the task is done
+				j.checkTaskStatus(msg.TaskID)
+				// then dequeue or release the pod queue
+				j.PodCache.SetPodIdle(subtask.Pod)
+			} else {
+				j.PeacefulFatalRequest(w, r, "invalid subtask")
+			}
 			return
 		}
 	}

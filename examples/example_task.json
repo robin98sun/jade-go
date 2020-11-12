@@ -2,6 +2,8 @@
     "token": "some kind of randome string token in upper node",
     "payload": [{
         "task": {
+            "forceUpdateNetworkStructure": false,
+            "queuingMechanismm": "ddl",
             "application": {
                 "envName": "local-test",
                 "name": "video-detection",

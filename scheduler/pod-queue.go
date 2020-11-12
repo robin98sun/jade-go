@@ -6,13 +6,6 @@ import (
 	"time"
 )
 
-type QueueType string
-
-const (
-	QueueTypeFIFO     QueueType = "fifo"
-	QueueTypeDeadline           = "deadline"
-)
-
 type PodQueue struct {
 	Pod   *kernel.Pod
 	Queue []*PodQueueItem
@@ -34,6 +27,13 @@ func (p *PodQueue) Unlock() {
 	p.mutex.Unlock()
 }
 
+func (p *PodQueue) Length() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.Queue)
+}
+
 type PodQueueItem struct {
 	Payload     interface{}
 	ArrivalTime time.Time
@@ -41,7 +41,7 @@ type PodQueueItem struct {
 	TimeToRun   int64 // in milliseconds
 }
 
-func (q *PodQueue) Enqueue(payload interface{}, queueType QueueType, timeToRun int64) bool {
+func (q *PodQueue) Enqueue(payload interface{}, queueType kernel.TaskQueuingMechanism, timeToRun int64) bool {
 	if payload == nil {
 		return false
 	}
@@ -53,9 +53,9 @@ func (q *PodQueue) Enqueue(payload interface{}, queueType QueueType, timeToRun i
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(timeToRun) * time.Millisecond)
 	q.Lock()
 	defer q.Unlock()
-	if queueType == QueueTypeFIFO || len(q.Queue) == 0 {
+	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
 		q.Queue = append(q.Queue, newItem)
-	} else if queueType == QueueTypeDeadline {
+	} else if queueType == kernel.TaskQueuingDDL {
 		point := -1
 		for i := 0; i < len(q.Queue); i++ {
 			item := q.Queue[i]
@@ -77,10 +77,7 @@ func (q *PodQueue) Enqueue(payload interface{}, queueType QueueType, timeToRun i
 	return false
 }
 
-func (q *PodQueue) Dequeue(podKey string, queueType QueueType) interface{} {
-	if podKey == "" {
-		return nil
-	}
+func (q *PodQueue) Dequeue() interface{} {
 	q.Lock()
 	defer q.Unlock()
 	if len(q.Queue) > 0 {

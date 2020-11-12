@@ -10,6 +10,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"io/ioutil"
 	"net/http"
+	"sync"
 )
 
 // JADE to instantiate JADE memory structure
@@ -25,12 +26,21 @@ type JADE struct {
 	log             *kernel.Logger
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
 	PodCache        *scheduler.PodCache  `json:"podCache"`
+	mutex           *sync.Mutex
 }
 
 func NewJadelet() *JADE {
 	j := &JADE{}
 	j.Init()
 	return j
+}
+
+func (j *JADE) Lock() {
+	j.mutex.Lock()
+}
+
+func (j *JADE) Unlock() {
+	j.mutex.Unlock()
 }
 
 func (j *JADE) Verbose(on bool) {

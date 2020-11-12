@@ -1,15 +1,23 @@
 package kernel
 
+type TaskQueuingMechanism string
+
+const (
+	TaskQueuingFIFO TaskQueuingMechanism = "fifo"
+	TaskQueuingDDL                       = "ddl"
+)
+
 type Task struct {
-	Application                 *Application        `json:"application,omitempty"`
-	Requirements                *Requirements       `json:"requirements,omitempty"`
-	Budget                      *Budget             `json:"budget,omitempty"`
-	Key                         string              `json:"id,omitempty"`
-	SubtaskKey                  string              `json:"subtaskId,omitempty"`
-	PodKey                      string              `json:"podId,omitempty"`
-	Subtasks                    map[string]*SubTask `json:"subtasks,omitempty"`
-	MasterNode                  *Node               `json:"masterNode,omitempty"`
-	ForceUpdateNetworkStructure bool                `json:"forceUpdateNetworkStructure,omitempty"`
+	Application                 *Application         `json:"application,omitempty"`
+	Requirements                *Requirements        `json:"requirements,omitempty"`
+	Budget                      *Budget              `json:"budget,omitempty"`
+	Key                         string               `json:"id,omitempty"`
+	SubtaskKey                  string               `json:"subtaskId,omitempty"`
+	PodKey                      string               `json:"podId,omitempty"`
+	Subtasks                    map[string]*SubTask  `json:"subtasks,omitempty"`
+	MasterNode                  *Node                `json:"masterNode,omitempty"`
+	ForceUpdateNetworkStructure bool                 `json:"forceUpdateNetworkStructure,omitempty"`
+	QueuingMechanism            TaskQueuingMechanism `json:"queuingMechanismm,omitempty"`
 }
 
 func (t *Task) CopyForSubtask() *Task {
@@ -75,23 +83,4 @@ func (t *Task) Valid() bool {
 	return true
 }
 
-// Budget the budget specification
-type Budget struct {
-	MaximumMilliseconds int `json:"maximumMilliseconds,omitempty"`
-	Price               int `json:"price,omitempty"`
-}
 
-func (b *Budget) valid() bool {
-	if b.MaximumMilliseconds == 0 || b.Price == 0 {
-		return false
-	}
-	return true
-}
-
-func (b *Budget) Copy() *Budget {
-	newBudget := &Budget{
-		MaximumMilliseconds: b.MaximumMilliseconds,
-		Price:               b.Price,
-	}
-	return newBudget
-}

@@ -1,7 +1,8 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
+	// "aces/jade-go/kernel"
+	"sync"
 )
 
 // the shape of task cache:
@@ -12,11 +13,14 @@ import (
 // 		[node-key]: {
 // 			node: node-instance,
 // 			status: task-status,
-// 			[sub-task-key]: {
-// 				subtask: sub-task-instance,
-// 				status: sub-task-status,
-// 				updates: sub-task-result,
-// 			}
+// 			[moduleName]: {
+//        status: task-status,
+// 			  [sub-task-key]: {
+// 				  subtask: sub-task-instance,
+// . 				status: sub-task-status,
+//  				updates: sub-task-result,
+// 	  		}
+// .    }
 // 		}
 // }
 
@@ -31,11 +35,13 @@ import (
 
 type TaskCache struct {
 	Cache map[string]*TaskCacheTaskItem
+	mutex *sync.Mutex
 }
 
 func NewTaskCache() *TaskCache {
 	inst := &TaskCache{
 		Cache: make(map[string]*TaskCacheTaskItem),
+		mutex: &sync.Mutex{},
 	}
 	return inst
 }
@@ -51,7 +57,7 @@ func (c *TaskCache) Describe() map[string]interface{} {
 	return cache
 }
 
-func (c *TaskCache) GetTask(taskID string) *kernel.Task {
+func (c *TaskCache) GetTask(taskID string) *TaskDispatchingItem {
 	if taskID == "" {
 		return nil
 	}
@@ -62,7 +68,7 @@ func (c *TaskCache) GetTask(taskID string) *kernel.Task {
 }
 
 type TaskCacheTaskItem struct {
-	task            *kernel.Task
+	task            *TaskDispatchingItem
 	dispatchedNodes map[string]*TaskCacheNodeItem // node-key : nodeItem
 	status          TaskStatus
 }
@@ -76,88 +82,11 @@ func (i *TaskCacheTaskItem) describe() map[string]interface{} {
 		dispatchedNodes[key] = node.describe()
 	}
 	desc := map[string]interface{}{
-		"task":            i.task,
+		"task":            i.task.Task,
 		"dispatchedNodes": dispatchedNodes,
 		"status":          i.status,
 	}
 	return desc
-}
-
-// interfaces
-
-func (c *TaskCache) delete(task *kernel.Task, node *kernel.Node) {
-	if c.Cache == nil || task == nil {
-		return
-	}
-	if _, exists := c.Cache[task.GetKey()]; !exists {
-		return
-	}
-	if node == nil {
-		delete(c.Cache, task.GetKey())
-	} else {
-		item, _ := c.Cache[task.GetKey()]
-		if _, nodeExists := item.dispatchedNodes[node.Key()]; nodeExists {
-			delete(item.dispatchedNodes, node.Key())
-		}
-	}
-}
-
-func (c *TaskCache) set(task *kernel.Task, node *kernel.Node, subtask *kernel.SubTask, status TaskStatus, updates interface{}) bool {
-	if task == nil {
-		return false
-	}
-	if c.Cache == nil {
-		c.Cache = make(map[string]*TaskCacheTaskItem)
-	}
-	taskKey := task.GetKey()
-	if _, exists := c.Cache[taskKey]; !exists {
-		c.Cache[taskKey] = &TaskCacheTaskItem{
-			task:            task,
-			dispatchedNodes: make(map[string]*TaskCacheNodeItem),
-			status:          TaskStatusPending,
-		}
-	}
-	taskItem := c.Cache[taskKey]
-	result := false
-	// if node is nil, then just cache a task for future process
-	if node != nil {
-		if _, exists := taskItem.dispatchedNodes[node.Key()]; !exists {
-			newItem := &TaskCacheNodeItem{
-				node:     node,
-				status:   TaskStatusPending,
-				subtasks: make(map[string]*TaskCacheSubtaskItem),
-			}
-			taskItem.dispatchedNodes[node.Key()] = newItem
-		}
-		nodeItem, _ := taskItem.dispatchedNodes[node.Key()]
-
-		if subtask != nil {
-			if subtaskItem, subtaskExists := nodeItem.subtasks[subtask.GetKey()]; subtaskExists {
-				subtaskItem.status = status
-				subtaskItem.updates = updates
-			} else {
-				nodeItem.subtasks[subtask.GetKey()] = &TaskCacheSubtaskItem{
-					subtask: subtask,
-					status:  status,
-					updates: updates,
-				}
-			}
-			// update task status
-			if status == TaskStatusRejected || status == TaskStatusInvalid {
-				taskItem.status = status
-				nodeItem.status = status
-			} else {
-				nodeItem.CheckStatus()
-				taskItem.CheckStatus()
-			}
-			result = true
-		}
-	} else {
-		taskItem.status = status
-	}
-
-	// Check the task integrity at everytime something changes
-	return result
 }
 
 // CheckTaskStatus check whether a task is totally accepted or rejected by all worker nodes, or totally done,

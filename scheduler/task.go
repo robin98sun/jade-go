@@ -4,9 +4,14 @@ import (
 	"aces/jade-go/kernel"
 )
 
+type TaskDispatchingItemReportTo struct {
+	Node *kernel.Node `json:"node,omitempty"`
+	Pod  *kernel.Pod  `json:"pod,omitempty"`
+}
+
 type TaskDispatchingItem struct {
-	Task     *kernel.Task `json:"task,omitempty"`
-	ReportTo *kernel.Pod  `json:"reportTo,omitempty"`
+	Task     *kernel.Task                 `json:"task,omitempty"`
+	ReportTo *TaskDispatchingItemReportTo `json:"reportTo,omitempty"`
 }
 
 // Status

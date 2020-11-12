@@ -4,9 +4,8 @@ type Pod struct {
 	NodeKey    string          `json:"nodeId,omitempty"`
 	Namespace  string          `json:"namespace,omitempty"`
 	PodName    string          `json:"podName,omitempty"`
-	ClusterIP  string          `json:"clusterIP,omitempty"`
-	PodIP      string          `json:"podIP,omitempty"`
-	Port       string          `json:"port,omitempty"`
+	Addr       string          `json:"addr,omitempty"`
+	Port       int             `json:"port,omitempty"`
 	Allocation *AllocationUnit `json:"allocation,omitempty"`
 	AppKey     string          `json:"appId,omitempty"`
 	Container  *Container      `json:"container,omitempty"`
@@ -40,4 +39,12 @@ func NewPod(appKey string, moduleName string, nodeKey string) *Pod {
 		AppKey:     appKey,
 		ModuleName: moduleName,
 	}
+}
+
+func (p *Pod) GetNodeRepresentation(protocol string) *Node {
+	node := NewNode()
+	node.Address = p.Addr
+	node.Port = p.Port
+	node.Protocol = protocol
+	return node
 }

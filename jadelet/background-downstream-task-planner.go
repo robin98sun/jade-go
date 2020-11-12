@@ -28,23 +28,14 @@ func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDis
 	go j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", node, payload, 0, 10)
 }
 
-func (j *JADE) newEnv(task *kernel.Task, masterNode *kernel.Node) []map[string]string {
+func (j *JADE) newEnv(masterNode *kernel.Node, appName string, moduleName string) []map[string]string {
 	envVars := []map[string]string{
 		map[string]string{
-			"name":  "JADE_AGGREGATORNODE_ADDR",
-			"value": task.Application.GetModule(string(kernel.AppModuleAggregator)).Addr,
+			"name":  "JADE_APPLICATION",
+			"value": appName,
 		}, map[string]string{
-			"name":  "JADE_AGGREGATORNODE_PORT",
-			"value": strconv.Itoa(task.Application.GetModule(string(kernel.AppModuleAggregator)).Port),
-		}, map[string]string{
-			"name":  "JADE_AGGREGATORNODE_PROTOCOL",
-			"value": task.Application.GetModule(string(kernel.AppModuleAggregator)).Protocol,
-		}, map[string]string{
-			"name":  "JADE_TTL",
-			"value": strconv.Itoa(task.Budget.MaximumMilliseconds / 1000),
-		}, map[string]string{
-			"name":  "JADE_TASKID",
-			"value": task.GetKey(),
+			"name":  "JADE_MODULE",
+			"value": moduleName,
 		}, map[string]string{
 			"name":  "JADE_MASTERNODE_ADDR",
 			"value": masterNode.Address,

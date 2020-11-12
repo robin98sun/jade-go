@@ -6,6 +6,7 @@ type SubTask struct {
 	ModuleName string `json:"moduleName,omitempty"`
 	NodeKey    string `json:"nodeId,omitempty"`
 	PodKey     string `json:"podId,omitempty"`
+	Pod        *Pod   `json:"pod,omitempty"`
 }
 
 func (t *SubTask) GetKey() string {

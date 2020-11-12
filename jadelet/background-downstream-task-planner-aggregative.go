@@ -11,32 +11,67 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	// first, check or allocate itself's pod
 	// 1. if the node itself is a coordinator, then allocate an aggregator pod for it
 	goodTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
-	if j.IsCoordinator() {
-		for _, taskItem := range tasklist {
-			task := taskItem.Task
+	for _, taskItem := range tasklist {
+		task := taskItem.Task
+		if j.IsCoordinator() {
 			// allocate an aggregator pod if needed
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 			aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 			if aggregatorPod == nil {
 				// provision an aggregator pod
+				podName, nodePort, err := j.Provisioner.ProvisionTask(
+					j.Kube, j.Config.SelfNode, j.newEnv(j.Config.SelfNode, task.Application.Name, string(kernel.AppModuleAggregator)),
+					task.Application, string(kernel.AppModuleAggregator),
+					task.Application.GetModule(string(kernel.AppModuleAggregator)),
+					task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
+					1,
+				)
+				if err != nil {
+					j.log.Println("ERROR when provisioning", string(kernel.AppModuleAggregator), "for task", task.GetKey())
+				} else {
+					aggregatorPod = &kernel.Pod{
+						NodeKey:    j.Config.SelfNode.Key(),
+						Namespace:  j.Config.SelfNode.Namespace,
+						PodName:    podName,
+						Addr:       j.Config.SelfNode.Address,
+						Port:       nodePort,
+						Allocation: task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
+						AppKey:     task.Application.Key(),
+						Container:  task.Application.GetModule(string(kernel.AppModuleAggregator)),
+						ModuleName: string(kernel.AppModuleAggregator),
+					}
+					aggregatorPod.GetKey()
+					j.PodCache.SetPodForApplication(
+						j.Config.SelfNode.Key(),
+						task.Application,
+						string(kernel.AppModuleAggregator),
+						task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
+						aggregatorPod,
+						false,
+					)
+				}
 			}
 			if aggregatorPod == nil {
 				// reject the task
 				rejectTaskCache[task.GetKey()] = taskItem
 			} else {
-				taskItem.ReportTo = aggregatorPod
+				taskItem.ReportTo.Pod = aggregatorPod
+				taskItem.ReportTo.Node = j.Config.SelfNode
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), taskItem, aggregatorPod)
 				goodTaskCache[task.GetKey()] = taskItem
 			}
+		} else {
+			goodTaskCache[task.GetKey()] = taskItem
 		}
 	}
 	// second, downstream propagate the task
 	if len(goodTaskCache) > 0 {
-		j.downstreamDispatching(goodTaskCache)
+		j.downstreamPropagating(goodTaskCache)
 	}
 	// third, reject bad tasks
 	if len(rejectTaskCache) > 0 {
 		for _, taskItem := range rejectTaskCache {
+			j.TaskCache.RejectTask(taskItem.Task.GetKey())
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
 				taskItem.Task.GetKey(),
@@ -47,9 +82,9 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	}
 }
 
-func (j *JADE) downstreamDispatching(tasklist map[string]*scheduler.TaskDispatchingItem) {
+func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	tasksGoingToDispatch := make(map[string][]*scheduler.TaskDispatchingItem) // nodekey: []*TaskDispatchingItem
-	readyTaskCache := make(map[string]*scheduler.TaskDispatchingItem)         // taskkey: *TaskDispatchingItem
+	readyTaskCache := make(map[string]*kernel.Pod)                            // taskkey: *Pod
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
@@ -64,7 +99,38 @@ func (j *JADE) downstreamDispatching(tasklist map[string]*scheduler.TaskDispatch
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
 				if workerPod == nil {
-					// allocate a worker Pod for it
+					// provision a worker Pod for it
+					podName, nodePort, err := j.Provisioner.ProvisionTask(
+						j.Kube, j.Config.SelfNode, j.newEnv(taskItem.ReportTo.Node, task.Application.Name, string(kernel.AppModuleWorker)),
+						task.Application, string(kernel.AppModuleWorker),
+						task.Application.GetModule(string(kernel.AppModuleWorker)),
+						task.Requirements.GetModule(string(kernel.AppModuleWorker)),
+						1,
+					)
+					if err != nil {
+						j.log.Println("ERROR when provisioning", string(kernel.AppModuleWorker), "for task", task.GetKey())
+					} else {
+						workerPod = &kernel.Pod{
+							NodeKey:    j.Config.SelfNode.Key(),
+							Namespace:  j.Config.SelfNode.Namespace,
+							PodName:    podName,
+							Addr:       j.Config.SelfNode.Address,
+							Port:       nodePort,
+							Allocation: task.Requirements.GetModule(string(kernel.AppModuleWorker)),
+							AppKey:     task.Application.Key(),
+							Container:  task.Application.GetModule(string(kernel.AppModuleWorker)),
+							ModuleName: string(kernel.AppModuleWorker),
+						}
+						workerPod.GetKey()
+						j.PodCache.SetPodForApplication(
+							j.Config.SelfNode.Key(),
+							task.Application,
+							string(kernel.AppModuleWorker),
+							task.Requirements.GetModule(string(kernel.AppModuleWorker)),
+							workerPod,
+							true,
+						)
+					}
 				}
 				if workerPod == nil {
 					// reject if the worker pod can not be allocated
@@ -81,7 +147,7 @@ func (j *JADE) downstreamDispatching(tasklist map[string]*scheduler.TaskDispatch
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod)
 
 				if _, e := readyTaskCache[task.GetKey()]; !e {
-					readyTaskCache[task.GetKey()] = taskItem
+					readyTaskCache[task.GetKey()] = workerPod
 				}
 			} else if !j.IsSelfNode(nodekey) {
 				//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
@@ -115,23 +181,37 @@ func (j *JADE) downstreamDispatching(tasklist map[string]*scheduler.TaskDispatch
 			// 				II. The worker sub-tasks could be enqueued into corresponding pod-queues
 		}
 	}
-	// check task status and enqueue them the task is ready
-	for _, taskItem := range readyTaskCache {
-		j.TaskCache.CheckTask(taskItem.Task.GetKey())
-	}
-	// dispatch tasks
+
+	// dispatch sub-tasks
 	for nodekey, subTasklist := range tasksGoingToDispatch {
 		j.dispatchTasks(nodekey, subTasklist)
 	}
 	// reject bad tasks
 	if len(rejectTaskCache) > 0 {
 		for _, taskItem := range rejectTaskCache {
+			j.TaskCache.RejectTask(taskItem.Task.GetKey())
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
 				taskItem.Task.GetKey(),
 				string(kernel.AppModuleWorker),
 				nil,
 			))
+		}
+	}
+	// acknowledge good tasks
+	if !j.IsCoordinator() {
+		for taskKey, pod := range readyTaskCache {
+			j.feedbackProvisioning(NewTaskProvisioningResult(
+				j.Config.SelfNode.Key(),
+				taskKey,
+				string(kernel.AppModuleWorker),
+				pod,
+			))
+		}
+	} else {
+		// check task status and enqueue them the task is ready
+		for taskKey := range readyTaskCache {
+			j.checkTaskStatus(taskKey)
 		}
 	}
 }
