@@ -1,9 +1,10 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
+	"log"
 	"sync"
 	"time"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 type PodQueue struct {
@@ -80,10 +81,14 @@ func (q *PodQueue) Enqueue(payload interface{}, queueType kernel.TaskQueuingMech
 func (q *PodQueue) Dequeue() interface{} {
 	q.Lock()
 	defer q.Unlock()
+	log.Printf("dequeuing for pod{%v}", q.Pod.GetKey())
 	if len(q.Queue) > 0 {
 		item := q.Queue[0]
 		q.Queue = q.Queue[1:]
+		log.Println("dequeued an item:", item)
+		log.Println("payload of the dequeued an item:", item.Payload)
 		return item.Payload
 	}
+	log.Printf("queue of pod{%v} is empty", q.Pod.GetKey())
 	return nil
 }

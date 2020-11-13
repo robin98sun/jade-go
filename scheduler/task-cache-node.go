@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 type TaskCacheNodeItem struct {

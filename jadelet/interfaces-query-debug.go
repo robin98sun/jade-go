@@ -1,10 +1,10 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
 	"strconv"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 // ShowConfigurations show current JADE runtime configurations
@@ -145,4 +145,8 @@ func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.TaskCache.Describe())
+}
+
+func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteJson(j.PodCache)
 }

@@ -1,9 +1,9 @@
 package jadelet
 
 import (
-	"aces/jade-go/scheduler"
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
+	"uta.edu/aces/jade-go/scheduler"
 )
 
 // TaskReceiver task receiver

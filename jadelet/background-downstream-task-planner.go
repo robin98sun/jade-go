@@ -1,9 +1,9 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
-	"aces/jade-go/scheduler"
 	"strconv"
+	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/scheduler"
 )
 
 func (j *JADE) evaluateTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {

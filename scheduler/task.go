@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 type TaskDispatchingItemReportTo struct {
@@ -9,9 +9,23 @@ type TaskDispatchingItemReportTo struct {
 	Pod  *kernel.Pod  `json:"pod,omitempty"`
 }
 
+func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
+	return &TaskDispatchingItemReportTo{
+		Node: node,
+		Pod:  pod,
+	}
+}
+
 type TaskDispatchingItem struct {
 	Task     *kernel.Task                 `json:"task,omitempty"`
 	ReportTo *TaskDispatchingItemReportTo `json:"reportTo,omitempty"`
+}
+
+func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
+	return &TaskDispatchingItem{
+		Task:     t.Task,
+		ReportTo: t.ReportTo,
+	}
 }
 
 // Status

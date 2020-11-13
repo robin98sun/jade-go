@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	// Sub packages
-	"aces/jade-go/jadelet"
-	"aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/jadelet"
+	"uta.edu/aces/jade-go/kernel"
 
 	// others
 	"flag"
@@ -57,6 +57,7 @@ func main() {
 		rest.Get("/$jade$/debug/node", j.ShowNode),
 		rest.Get("/$jade$/debug/subnodes", j.ShowSubnodes),
 		rest.Get("/$jade$/debug/taskCache", j.ShowTaskCache),
+		rest.Get("/$jade$/debug/podCache", j.ShowPodCache),
 		rest.Get("/$jade$/debug/capabilityCache", j.ShowCapabilityCache),
 		rest.Get("/$jade$/debug/capacityCache", j.ShowSubnodeCapacities),
 		rest.Post("/$jade$/debug/searchNodes", j.SearchNodes),

@@ -1,11 +1,12 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
-	"aces/jade-go/kube"
-	"aces/jade-go/provisioner"
-	"aces/jade-go/scheduler"
 	"sync"
+	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kube"
+	"uta.edu/aces/jade-go/provisioner"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jadesdk"
 )
 
 // Init to do initializing work
@@ -13,6 +14,7 @@ func (j *JADE) Init() {
 	j.log = &kernel.Logger{}
 	j.mutex = &sync.Mutex{}
 	// Initialize caches and queues
+	j.sdk = jadesdk.NewJadeSDK()
 	j.Subnodes = make(map[string]*kernel.Node)
 	j.capabilityCache = &kernel.CapabilityCache{}
 	j.capacityCache = &kernel.CapacityCache{}
@@ -33,5 +35,5 @@ func (j *JADE) Init() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
 	go j.Register(0)
-	go j.routimeForPodQueues()
+	// go j.routimeForPodQueues(1000)
 }

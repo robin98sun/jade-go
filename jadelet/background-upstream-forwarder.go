@@ -1,8 +1,8 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
 	"encoding/json"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 type TaskProvisioningResult struct {

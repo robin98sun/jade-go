@@ -1,16 +1,17 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
 	"sort"
 	"sync"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 type PodCache struct {
-	Nodes       map[string]*PodCacheNodeItem // nodekey: cacheItem
-	mutex       *sync.Mutex
-	Pods        []*kernel.Pod
-	QueuingPods []*kernel.Pod
+	Nodes                      map[string]*PodCacheNodeItem // nodekey: cacheItem
+	mutex                      *sync.Mutex
+	Pods                       map[string]*kernel.Pod
+	QueuingPods                map[string]*kernel.Pod
+	IsBackgroundRoutineStarted bool
 }
 
 func (p *PodCache) Lock() {
@@ -69,7 +70,9 @@ func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.A
 		Queue:       NewPodQueue(),
 		Allocation:  alloc,
 		Pod:         pod,
+		IsIdle:      true,
 	}
+	inst.Queue.Pod = pod
 	return inst
 }
 
@@ -160,6 +163,9 @@ func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName stri
 func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod, enqueue bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+	if _, e := p.Pods[pod.GetKey()]; e {
+		return
+	}
 
 	if p.Nodes == nil {
 		p.Nodes = make(map[string]*PodCacheNodeItem)
@@ -198,7 +204,13 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application,
 	})
 	nodeItem.Cache[key].Cache[pod.GetKey()] = podItem
 	if enqueue {
-		p.QueuingPods = append(p.QueuingPods, pod)
+		if p.QueuingPods == nil {
+			p.QueuingPods = make(map[string]*kernel.Pod)
+		}
+		p.QueuingPods[pod.GetKey()] = pod
 	}
-	p.Pods = append(p.Pods, pod)
+	if p.Pods == nil {
+		p.Pods = make(map[string]*kernel.Pod)
+	}
+	p.Pods[pod.GetKey()] = pod
 }

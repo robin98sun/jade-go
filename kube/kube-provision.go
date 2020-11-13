@@ -1,13 +1,13 @@
 package kube
 
 import (
-	"aces/jade-go/kernel"
 	"context"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,

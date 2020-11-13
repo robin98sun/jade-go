@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"strconv"
+	"uta.edu/aces/jadesdk"
 )
 
 type Node struct {
@@ -27,6 +28,15 @@ func NewNode() *Node {
 		PodName:   "",
 		Hostname:  "",
 	}
+}
+
+func (n *Node) GetSDKNode() *jadesdk.Node {
+	sdkNode := &jadesdk.Node{
+		Addr:     n.Address,
+		Port:     n.Port,
+		Protocol: n.Protocol,
+	}
+	return sdkNode
 }
 
 // Key is used to store node in cache

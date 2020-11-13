@@ -1,9 +1,9 @@
 package provisioner
 
 import (
-	"aces/jade-go/kernel"
-	"aces/jade-go/kube"
 	"strings"
+	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kube"
 )
 
 type Provisioner struct {
@@ -40,7 +40,7 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 		return deploymentName, 0, err
 	} else {
 		p.log.Println("Successfully provisioned pods, deployment:", deployedName)
-		return deploymentName, nodePort, nil
+		return deployedName, nodePort, nil
 	}
 }
 

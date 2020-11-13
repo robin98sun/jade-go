@@ -1,9 +1,9 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 // UpdateConfigurations to configure JADE at runtime

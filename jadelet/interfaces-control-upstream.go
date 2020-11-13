@@ -1,9 +1,10 @@
 package jadelet
 
 import (
-	"aces/jade-go/scheduler"
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
+	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/scheduler"
 	// "strings"
 )
 
@@ -25,6 +26,15 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 	j.capacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
 	// finish the request
 	j.DoneRequest(w, r, nil)
+	// start the pod queue
+	if j.IsCoordinator() {
+		j.PodCache.Lock()
+		defer j.PodCache.Unlock()
+		if !j.PodCache.IsBackgroundRoutineStarted {
+			j.PodCache.IsBackgroundRoutineStarted = true
+			go j.routimeForPodQueues(3000)
+		}
+	}
 }
 
 func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
@@ -62,6 +72,16 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		})
 	} else {
 		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod)
+		taskItem := j.TaskCache.GetTask(feedback.TaskKey)
+		whetherEnqueue := true
+		if feedback.ModuleName == string(kernel.AppModuleAggregator) {
+			whetherEnqueue = false
+		}
+		j.PodCache.SetPodForApplication(
+			feedback.NodeKey, taskItem.Task.Application,
+			feedback.ModuleName, taskItem.Task.Requirements.Allocations[feedback.ModuleName],
+			feedback.Pod, whetherEnqueue,
+		)
 		// check if the task is ready for dispatching
 		j.checkTaskStatus(feedback.TaskKey)
 		// if it is ready, then dispatch the task for it

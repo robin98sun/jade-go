@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
@@ -47,6 +47,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, mod
 				if tmpst.subtask.PodKey == pod.GetKey() {
 					subtask = tmpst.subtask
 					subtask.Pod = pod
+					tmpst.status = TaskStatusAccepted
 					break
 				}
 			}

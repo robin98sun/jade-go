@@ -1,16 +1,17 @@
 package jadelet
 
 import (
-	"aces/jade-go/kernel"
-	"aces/jade-go/kube"
-	"aces/jade-go/provisioner"
-	"aces/jade-go/scheduler"
 	"encoding/json"
 	"errors"
 	"github.com/ant0ine/go-json-rest/rest"
 	"io/ioutil"
 	"net/http"
 	"sync"
+	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/kube"
+	"uta.edu/aces/jade-go/provisioner"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jadesdk"
 )
 
 // JADE to instantiate JADE memory structure
@@ -27,6 +28,7 @@ type JADE struct {
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
 	PodCache        *scheduler.PodCache  `json:"podCache"`
 	mutex           *sync.Mutex
+	sdk             *jadesdk.JadeSDK
 }
 
 func NewJadelet() *JADE {
