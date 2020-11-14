@@ -71,15 +71,24 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 				// 2. dispatch the subtask to each worker,
 				//    together with the aggregator's address
+				fanoutDegree := len(workerSubtasks)
+				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
+				budget := taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+				if budget > 0 {
+					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
+				}
 				for _, worker := range workerSubtasks {
 					j.log.Printf("enqueuing subtask for pod[%v] on node[%v]", worker.Subtask.Pod.GetKey(), worker.Node.Key())
-					req := NewAggregativeWorkerTask(taskItem, worker, j.Config.SelfNode.Protocol)
+					req := NewAggregativeWorkerTask(
+						taskItem, worker, j.Config.SelfNode.Protocol,
+						task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
+					)
 					queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
 					if queue == nil {
 						j.log.Printf("ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
 						continue
 					}
-					done := queue.Enqueue(worker.Subtask.GetKey(), req, task.QueuingMechanism, 10)
+					done := queue.Enqueue(worker.Subtask.GetKey(), req, task.QueuingMechanism, budget)
 					if done {
 						j.log.Printf("pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
 					} else {
@@ -121,7 +130,7 @@ func NewAggregatorEnqueuingMessage(task *scheduler.TaskDispatchingItem, subtasks
 	return inst
 }
 
-func NewAggregativeWorkerTask(taskItem *scheduler.TaskDispatchingItem, worker *scheduler.SubtaskOnNode, protocol string) *Request {
+func NewAggregativeWorkerTask(taskItem *scheduler.TaskDispatchingItem, worker *scheduler.SubtaskOnNode, protocol string, input interface{}) *Request {
 	task := taskItem.Task
 	req := &Request{
 		Task: &TaskSpec{
@@ -139,7 +148,7 @@ func NewAggregativeWorkerTask(taskItem *scheduler.TaskDispatchingItem, worker *s
 				ModuleName: string(kernel.AppModuleAggregator),
 			},
 		},
-		Payload: worker.Subtask.Pod.Container.Input,
+		Payload: input,
 	}
 	return req
 }

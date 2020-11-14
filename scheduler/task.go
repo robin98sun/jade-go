@@ -16,16 +16,35 @@ func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDis
 	}
 }
 
+type TaskDispatchingItemBudget struct {
+	FanoutTable []int64
+}
+
 type TaskDispatchingItem struct {
-	Task     *kernel.Task                 `json:"task,omitempty"`
-	ReportTo *TaskDispatchingItemReportTo `json:"reportTo,omitempty"`
+	Task     *kernel.Task                          `json:"task,omitempty"`
+	ReportTo *TaskDispatchingItemReportTo          `json:"reportTo,omitempty"`
+	Budgets  map[string]*TaskDispatchingItemBudget `json:"budgets,omitempty"` // moduleName : budget
 }
 
 func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
 	return &TaskDispatchingItem{
 		Task:     t.Task,
 		ReportTo: t.ReportTo,
+		Budgets:  t.Budgets,
 	}
+}
+
+func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) int64 {
+	if t.Budgets == nil || len(t.Budgets) == 0 {
+		return 0
+	}
+	if budgetItem, e := t.Budgets[moduleName]; e {
+		if len(budgetItem.FanoutTable) < fanoutDegree+1 {
+			return 0
+		}
+		return budgetItem.FanoutTable[fanoutDegree]
+	}
+	return 0
 }
 
 // Status

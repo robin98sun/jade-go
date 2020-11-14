@@ -2,7 +2,7 @@
     "token": "some kind of randome string token in upper node",
     "payload": [{
         "task": {
-            "forceUpdateNetworkStructure": true,
+            "forceUpdateNetworkStructure": false,
             "queuingMechanismm": "ddl",
             "application": {
                 "envName": "local-test",
@@ -11,13 +11,13 @@
                 "owner": "skywalker",
                 "modules": {
                     "aggregator": {
-                        "image": "192.168.57.8/plankton:0.0.3",
+                        "image": "192.168.57.8/plankton:0.0.11",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {}
                     },
                     "worker": {
-                        "image": "192.168.57.8/plankton:0.0.3",
+                        "image": "192.168.57.8/plankton:0.0.11",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {
@@ -82,6 +82,16 @@
         },
         "reportTo": {
 
+        },
+        "budgets":{
+            "worker":{
+                "fanoutTable": [
+                    0, 
+                    0, 10, 11, 12, 13, 15, 18, 20, 21, 24,
+                    28, 30, 33, 35, 40, 41, 42, 43, 45, 48,
+                    51, 55, 59, 60, 67, 71, 77, 89, 97, 101
+                ]
+            }
         }
     }]
   }
