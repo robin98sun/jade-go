@@ -32,7 +32,7 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 		defer j.PodCache.Unlock()
 		if !j.PodCache.IsBackgroundRoutineStarted {
 			j.PodCache.IsBackgroundRoutineStarted = true
-			go j.routimeForPodQueues(3000)
+			go j.routimeForPodQueues(1)
 		}
 	}
 }
@@ -40,6 +40,8 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
 	content, req, err := j.ValidateUpstreamRequest(w, r)
+	// j.Lock()
+	// defer j.Unlock()
 	if err != nil {
 		// the request has been rejected by validator
 		j.log.Println("[provisioning collecter] ERROR of validating feedback of provisioning:", err.Error())
@@ -71,6 +73,7 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 			Pod:        nil,
 		})
 	} else {
+		j.log.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey)
 		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod)
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey)
 		whetherEnqueue := true
@@ -90,16 +93,16 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
-	var msg struct {
+	msg := &struct {
 		TaskID    string                 `json:"taskId,omitempty"`
 		SubtaskID string                 `json:"subtaskId,omitempty"`
 		Status    scheduler.TaskStatus   `json:"status,omitempty"`
 		Updates   map[string]interface{} `json:"updates,omitempty"`
-	}
+	}{}
 	err := r.DecodeJsonPayload(msg)
 	if err == nil {
 		bs, _ := json.MarshalIndent(msg, "", "    ")
-		j.log.Println("Received application message:", string(bs))
+		j.log.Println("[app message collector] Received application message:", string(bs))
 		if msg.TaskID != "" && msg.SubtaskID != "" {
 			if msg.Status == scheduler.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskID)
@@ -110,17 +113,19 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					"status":  "OK",
 					"payload": "message received",
 				})
-				// to see if the task is done
-				j.checkTaskStatus(msg.TaskID)
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
+				// to see if the task is done
+				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskID, scheduler.TaskStatusDone)
+				j.TaskCache.CheckTask(msg.TaskID, scheduler.TaskStatusDone, j.log.Printf)
 			} else {
 				j.PeacefulFatalRequest(w, r, "invalid subtask")
 			}
 			return
 		}
+	} else {
+		w.WriteJson(map[string]string{
+			"error": "invalid message: " + err.Error(),
+		})
 	}
-	w.WriteJson(map[string]string{
-		"error": "invalid message",
-	})
 }

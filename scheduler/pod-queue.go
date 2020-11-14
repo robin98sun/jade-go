@@ -1,22 +1,23 @@
 package scheduler
 
 import (
-	"log"
 	"sync"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 )
 
 type PodQueue struct {
-	Pod   *kernel.Pod
-	Queue []*PodQueueItem
-	mutex *sync.Mutex
+	Pod          *kernel.Pod
+	Queue        []*PodQueueItem
+	ItemsInQueue map[string]*PodQueueItem
+	mutex        *sync.Mutex
 }
 
 func NewPodQueue() *PodQueue {
 	return &PodQueue{
-		Queue: []*PodQueueItem{},
-		mutex: &sync.Mutex{},
+		Queue:        []*PodQueueItem{},
+		mutex:        &sync.Mutex{},
+		ItemsInQueue: make(map[string]*PodQueueItem),
 	}
 }
 
@@ -40,20 +41,26 @@ type PodQueueItem struct {
 	ArrivalTime time.Time
 	Deadline    time.Time
 	TimeToRun   int64 // in milliseconds
+	Key         string
 }
 
-func (q *PodQueue) Enqueue(payload interface{}, queueType kernel.TaskQueuingMechanism, timeToRun int64) bool {
-	if payload == nil {
+func (q *PodQueue) Enqueue(key string, payload interface{}, queueType kernel.TaskQueuingMechanism, timeToRun int64) bool {
+	if payload == nil || key == "" {
+		return false
+	}
+	if _, e := q.ItemsInQueue[key]; e {
 		return false
 	}
 	newItem := &PodQueueItem{
 		Payload:     payload,
 		ArrivalTime: time.Now(),
 		TimeToRun:   timeToRun,
+		Key:         key,
 	}
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(timeToRun) * time.Millisecond)
 	q.Lock()
 	defer q.Unlock()
+
 	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
 		q.Queue = append(q.Queue, newItem)
 	} else if queueType == kernel.TaskQueuingDDL {
@@ -75,20 +82,18 @@ func (q *PodQueue) Enqueue(payload interface{}, queueType kernel.TaskQueuingMech
 			q.Queue = newQueue
 		}
 	}
-	return false
+	q.ItemsInQueue[key] = newItem
+	return true
 }
 
 func (q *PodQueue) Dequeue() interface{} {
 	q.Lock()
 	defer q.Unlock()
-	log.Printf("dequeuing for pod{%v}", q.Pod.GetKey())
 	if len(q.Queue) > 0 {
 		item := q.Queue[0]
 		q.Queue = q.Queue[1:]
-		log.Println("dequeued an item:", item)
-		log.Println("payload of the dequeued an item:", item.Payload)
+		delete(q.ItemsInQueue, item.Key)
 		return item.Payload
 	}
-	log.Printf("queue of pod{%v} is empty", q.Pod.GetKey())
 	return nil
 }

@@ -90,9 +90,69 @@ func (c *TaskCache) SaveResultFromApp(taskId string, subtaskId string, status Ta
 	return c.Cache[taskId].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskId].subtask
 }
 
-func (c *TaskCache) CheckTask(taskId string) TaskStatus {
+func (c *TaskCache) allSubtasksHaveTheSameStatus(taskId string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
+	if taskItem, e := c.Cache[taskId]; e {
+		if printf != nil {
+			printf("[task cache] checking if all subtasks are {%v} of task[%v]", desiredStatus, taskId)
+		}
+		checkResult := desiredStatus
+		for _, nodeItem := range taskItem.dispatchedNodes {
+			checkNode := desiredStatus
+			if len(nodeItem.modules) == 0 {
+				checkResult = TaskStatusInvalid
+			} else {
+				for moduleName, moduleItem := range nodeItem.modules {
+					checkModule := desiredStatus
+					if len(moduleItem.subtasks) == 0 {
+						checkModule = TaskStatusInvalid
+						checkNode = TaskStatusInvalid
+					} else {
+						for _, subtaskItem := range moduleItem.subtasks {
+							if subtaskItem.status != desiredStatus {
+								checkModule = TaskStatusInvalid
+								checkNode = TaskStatusInvalid
+								checkResult = TaskStatusInvalid
+								break
+							}
+						}
+					}
+					if checkModule == desiredStatus {
+						moduleItem.status = desiredStatus
+						if printf != nil {
+							printf("[task cache] task[%v] module[%v] on node[%v] is {%v}", taskId, moduleName, nodeItem.node.Key(), desiredStatus)
+						}
+					} else {
+						if printf != nil {
+							printf("[task cache] task[%v] module[%v] on node[%v] is NOT {%v}", taskId, moduleName, nodeItem.node.Key(), desiredStatus)
+						}
+						checkNode = TaskStatusInvalid
+						checkResult = TaskStatusInvalid
+					}
+				}
+			}
+			if checkNode == desiredStatus {
+				nodeItem.status = desiredStatus
+			} else {
+				checkResult = TaskStatusInvalid
+			}
+		}
+		if checkResult == desiredStatus {
+			taskItem.status = desiredStatus
+			if printf != nil {
+				printf("[task cache] task[%v] is {%v}", taskId, desiredStatus)
+			}
+			return true
+		}
+		if printf != nil {
+			printf("[task cache] task[%v] is NOT {%v}", taskId, desiredStatus)
+		}
+	}
+	return false
+}
+
+func (c *TaskCache) CheckTask(taskId string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
 	if c == nil {
-		return TaskStatusInvalid
+		return false
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -100,48 +160,31 @@ func (c *TaskCache) CheckTask(taskId string) TaskStatus {
 		if taskItem.status == TaskStatusRejected ||
 			taskItem.status == TaskStatusDone ||
 			taskItem.status == TaskStatusFailed {
-			return taskItem.status
+			return taskItem.status == desiredStatus
 		}
-		acceptedStatus := TaskStatusAccepted
-		doneStatus := TaskStatusDone
-		for _, nodeItem := range taskItem.dispatchedNodes {
-			acceptedStatusNode := TaskStatusAccepted
-			doneStatusNode := TaskStatusDone
-			for _, moduleItem := range nodeItem.modules {
-				acceptedStatusModule := TaskStatusAccepted
-				doneStatusModule := TaskStatusDone
-				for _, subtaskItem := range moduleItem.subtasks {
-					if subtaskItem.status != TaskStatusAccepted {
-						acceptedStatus = TaskStatusInvalid
-						acceptedStatusModule = TaskStatusInvalid
-						acceptedStatusNode = TaskStatusInvalid
-					}
-					if subtaskItem.status != TaskStatusDone {
-						doneStatus = TaskStatusInvalid
-						doneStatusModule = TaskStatusInvalid
-						doneStatusNode = TaskStatusInvalid
-					}
-				}
-				if acceptedStatusModule == TaskStatusAccepted {
-					moduleItem.status = TaskStatusAccepted
-				} else if doneStatusModule == TaskStatusDone {
-					moduleItem.status = TaskStatusDone
-				}
-			}
-			if acceptedStatusNode == TaskStatusAccepted {
-				nodeItem.status = TaskStatusAccepted
-			} else if doneStatusNode == TaskStatusDone {
-				nodeItem.status = TaskStatusDone
-			}
-		}
-		if acceptedStatus == TaskStatusAccepted {
-			taskItem.status = TaskStatusAccepted
-		} else if doneStatus == TaskStatusDone {
-			taskItem.status = TaskStatusDone
-		}
-		return taskItem.status
+		return c.allSubtasksHaveTheSameStatus(taskId, desiredStatus, printf)
 	}
-	return TaskStatusInvalid
+	return false
+}
+
+func (c *TaskCache) SetTaskStatus(taskId string, status TaskStatus) {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if taskItem, e := c.Cache[taskId]; e {
+		taskItem.status = status
+		for _, nodeItem := range taskItem.dispatchedNodes {
+			nodeItem.status = status
+			for _, moduleItem := range nodeItem.modules {
+				moduleItem.status = status
+				for _, subtaskItem := range moduleItem.subtasks {
+					subtaskItem.status = status
+				}
+			}
+		}
+	}
 }
 
 func (c *TaskCache) RejectTask(taskId string) {

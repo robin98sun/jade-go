@@ -8,15 +8,12 @@ import (
 
 func (j *JADE) routimeForPodQueues(interval int) {
 	for {
-		j.log.Println("checking pod queues")
 		time.Sleep(time.Duration(interval) * time.Millisecond)
 		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
 			continue
 		}
 		for _, pod := range j.PodCache.QueuingPods {
-			j.log.Printf("checking queue for pod[%v]", pod.GetKey())
 			if j.PodCache.IsPodIdle(pod) {
-				j.log.Printf("pod[%v] is idle", pod.GetKey())
 				j.dispatchSubtask(pod)
 				time.Sleep(time.Duration(interval) * time.Millisecond)
 			}
@@ -33,8 +30,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	queue := j.PodCache.GetPodQueue(pod)
 	req := queue.Dequeue()
 	if req == nil {
-		j.log.Printf("ERROR when dispatching subtask to pod[%v]: the dequeued request is null", pod.GetKey())
-		j.PodCache.SetPodBusy(pod)
+		j.PodCache.SetPodIdle(pod)
 		return
 	}
 	j.log.Printf("dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
@@ -47,9 +43,11 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 }
 
 func (j *JADE) checkTaskStatus(taskKey string) {
-	status := j.TaskCache.CheckTask(taskKey)
-	j.log.Printf("the task{%v} is in status {%v}", taskKey, status)
-	if status == scheduler.TaskStatusAccepted {
+	// j.Lock()
+	// defer j.Unlock()
+	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, j.log.Printf) {
+		j.log.Printf("the task{%v} is accepted", taskKey)
+		j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
 		// dispatching the task
 		taskItem := j.TaskCache.GetTask(taskKey)
 		task := taskItem.Task
@@ -58,10 +56,11 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		//   a. collect the workers
 		workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker))
 		if len(workerSubtasks) > 0 {
-			msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
 			aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
 			if len(aggregatorSubtasks) > 0 {
 				for _, aggregator := range aggregatorSubtasks {
+					msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
+					msg.SubtaskKey = aggregator.Subtask.GetKey()
 					j.log.Println("dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 					j.HTTPCommunicate(
 						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
@@ -73,12 +72,19 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				// 2. dispatch the subtask to each worker,
 				//    together with the aggregator's address
 				for _, worker := range workerSubtasks {
+					j.log.Printf("enqueuing subtask for pod[%v] on node[%v]", worker.Subtask.Pod.GetKey(), worker.Node.Key())
 					req := NewAggregativeWorkerTask(taskItem, worker, j.Config.SelfNode.Protocol)
 					queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
 					if queue == nil {
+						j.log.Printf("ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
 						continue
 					}
-					queue.Enqueue(req, task.QueuingMechanism, 10)
+					done := queue.Enqueue(worker.Subtask.GetKey(), req, task.QueuingMechanism, 10)
+					if done {
+						j.log.Printf("pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
+					} else {
+						j.log.Printf("ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
+					}
 				}
 			}
 		}
@@ -86,9 +92,10 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 }
 
 type AggregatorEnqueuingMessage struct {
-	TaskKey  string           `json:"taskId,omitempty"`
-	Subtasks []string         `json:"subtasks,omitempty"`
-	ReportTo []*InterfaceSpec `json:"reportTo,omitempty"`
+	TaskKey    string           `json:"taskId,omitempty"`
+	SubtaskKey string           `json:"subtaskId,omitempty"`
+	Subtasks   []string         `json:"subtasks,omitempty"`
+	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
 }
 
 func NewAggregatorEnqueuingMessage(task *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {

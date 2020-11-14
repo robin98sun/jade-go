@@ -1,8 +1,10 @@
 package jadelet
 
 import (
+	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jadesdk"
 )
 
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
@@ -20,12 +22,22 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			if aggregatorPod == nil {
 				// provision an aggregator pod
 				podName, nodePort, err := j.Provisioner.ProvisionTask(
-					j.Kube, j.Config.SelfNode, j.newEnv(j.Config.SelfNode, task.Application.Name, string(kernel.AppModuleAggregator)),
+					j.Kube, j.Config.SelfNode,
+					j.newEnv(
+						j.Config.SelfNode,
+						task.Application.Name,
+						task.Application.Version,
+						string(kernel.AppModuleAggregator),
+						task.GetKey(),
+					),
 					task.Application, string(kernel.AppModuleAggregator),
 					task.Application.GetModule(string(kernel.AppModuleAggregator)),
 					task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
 					1,
 				)
+				// Update self-node inside the pod
+				j.updatePodConfigOfSelfNodePort(nodePort)
+				//
 				if err != nil {
 					j.log.Println("ERROR when provisioning", string(kernel.AppModuleAggregator), "for task", task.GetKey())
 				} else {
@@ -83,6 +95,26 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	}
 }
 
+func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) {
+	seconds := 5
+	j.log.Printf("waiting {%v} seconds for pod up", seconds)
+	time.Sleep(time.Duration(seconds) * time.Second)
+	newConf := &jadesdk.Conf{
+		SelfNode: &jadesdk.Node{
+			Addr:     j.Config.SelfNode.Address,
+			Port:     nodePort,
+			Protocol: j.Config.SelfNode.Protocol,
+		},
+	}
+	j.sdk.HTTPCommunicate(
+		"update configuration", j.Config.SelfNode.Protocol,
+		"PUT", "/$jade$/config", newConf.SelfNode, newConf,
+		0, -1,
+	)
+	// j.log.Printf("waiting {%v} seconds for pod merging configuration", seconds)
+	// time.Sleep(time.Duration(seconds) * time.Second)
+}
+
 func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	tasksGoingToDispatch := make(map[string][]*scheduler.TaskDispatchingItem) // nodekey: []*TaskDispatchingItem
 	readyTaskCache := make(map[string]*kernel.Pod)                            // taskkey: *Pod
@@ -110,12 +142,22 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				if workerPod == nil {
 					// provision a worker Pod for it
 					podName, nodePort, err := j.Provisioner.ProvisionTask(
-						j.Kube, j.Config.SelfNode, j.newEnv(taskItem.ReportTo.Node, task.Application.Name, string(kernel.AppModuleWorker)),
+						j.Kube, j.Config.SelfNode,
+						j.newEnv(
+							taskItem.ReportTo.Node,
+							task.Application.Name,
+							task.Application.Version,
+							string(kernel.AppModuleWorker),
+							task.GetKey(),
+						),
 						task.Application, string(kernel.AppModuleWorker),
 						task.Application.GetModule(string(kernel.AppModuleWorker)),
 						task.Requirements.GetModule(string(kernel.AppModuleWorker)),
 						1,
 					)
+					// Update self-node inside the pod
+					j.updatePodConfigOfSelfNodePort(nodePort)
+
 					if err != nil {
 						j.log.Println("ERROR when provisioning", string(kernel.AppModuleWorker), "for task", task.GetKey())
 					} else {
@@ -155,6 +197,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
 				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, kernel.AppModuleWorker)
 				if j.IsCoordinator() {
+					j.log.Printf("Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; !e {
@@ -178,6 +221,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
 				}
+				j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil)
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes

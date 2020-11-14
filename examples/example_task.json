@@ -2,25 +2,29 @@
     "token": "some kind of randome string token in upper node",
     "payload": [{
         "task": {
-            "forceUpdateNetworkStructure": false,
+            "forceUpdateNetworkStructure": true,
             "queuingMechanismm": "ddl",
             "application": {
                 "envName": "local-test",
-                "name": "video-detection",
+                "name": "plankton",
                 "version": "0.0.1",
                 "owner": "skywalker",
                 "modules": {
                     "aggregator": {
-                        "image": "192.168.57.8/plankton:0.0.1.0",
+                        "image": "192.168.57.8/plankton:0.0.3",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {}
                     },
                     "worker": {
-                        "image": "192.168.57.8/plankton:0.0.1.0",
+                        "image": "192.168.57.8/plankton:0.0.3",
                         "port": 8080,
                         "protocol": "TCP",
-                        "input": {}
+                        "input": {
+                            "key1": "hello",
+                            "key2": 3,
+                            "key3": "echo"
+                        }
                     }
                 }
             },
@@ -75,6 +79,9 @@
                 "maximumMilliseconds": 10000,
                 "price": 10
             }
+        },
+        "reportTo": {
+
         }
     }]
   }

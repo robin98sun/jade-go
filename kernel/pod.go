@@ -1,5 +1,9 @@
 package kernel
 
+import (
+	"strconv"
+)
+
 type Pod struct {
 	NodeKey    string          `json:"nodeId,omitempty"`
 	Namespace  string          `json:"namespace,omitempty"`
@@ -24,13 +28,13 @@ func (a *AllocationUnit) Valid() bool {
 
 func (p *Pod) GetKey() string {
 	if p.Key == "" {
-		p.Key = GenPodKey(p.AppKey, p.ModuleName, p.NodeKey)
+		p.Key = GenPodKey(p.AppKey, p.ModuleName, p.Addr, p.Port)
 	}
 	return p.Key
 }
 
-func GenPodKey(appKey string, moduleName string, nodeKey string) string {
-	return appKey + ":" + moduleName + "@" + nodeKey
+func GenPodKey(appKey string, moduleName string, podAddr string, podPort int) string {
+	return appKey + ":" + moduleName + "@" + podAddr + ":" + strconv.Itoa(podPort)
 }
 
 func NewPod(appKey string, moduleName string, nodeKey string) *Pod {

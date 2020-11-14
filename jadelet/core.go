@@ -47,6 +47,7 @@ func (j *JADE) Unlock() {
 
 func (j *JADE) Verbose(on bool) {
 	j.log.Enable = on
+	j.sdk.Verbose(on)
 }
 
 func (j *JADE) PrintConfig() {
