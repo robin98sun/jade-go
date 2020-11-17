@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"uta.edu/aces/jadesdk"
 )
 
 // ReadConfFromEnv Read configuration from environment variables
@@ -94,26 +95,9 @@ func ReadConfFromEnv() *Conf {
 					c.Capacity.Bandwidth = v
 				}
 			}
-		} else if nameParts[1] == "CAPABILITY" && len(nameParts) == 4 {
-			i, err := strconv.Atoi(nameParts[2])
-			if err == nil {
-				if i >= len(c.Capabilities) {
-					for x := len(c.Capabilities); x <= i; x++ {
-						capability := *NewCapability()
-						c.Capabilities = append(c.Capabilities, &capability)
-					}
-				}
-				switch nameParts[3] {
-				case "NAME":
-					c.Capabilities[i].Name = envValue
-				case "API":
-					c.Capabilities[i].API = envValue
-				}
-				c.Capabilities[i].ParseAPI()
-			}
 		}
-
 	}
+	c.Capabilities = jadesdk.ReadCapabilitiesFromEnv()
 	return c
 }
 

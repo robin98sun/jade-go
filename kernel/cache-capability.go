@@ -1,5 +1,9 @@
 package kernel
 
+import (
+	"uta.edu/aces/jadesdk"
+)
+
 // CapabilityCache in a two layers structure: capabilityName: capabilityValue: [ NodeID ]
 type CapabilityCache struct {
 	cache map[string]map[string]capabilityCacheItem
@@ -9,7 +13,7 @@ type capabilityCacheItem struct {
 	nodes []string
 }
 
-func (c *CapabilityCache) Set(nodeId string, capabilities []*Capability) {
+func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability) {
 	if nodeId == "" || len(capabilities) == 0 {
 		return
 	}
@@ -48,7 +52,7 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*Capability) {
 }
 
 // GetNodes node Id list for that capability
-func (c *CapabilityCache) getNodes(cap *Capability, nodefilter []string) []string {
+func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string) []string {
 	if cap == nil || cap.Name == "" {
 		return nil
 	}
@@ -70,8 +74,8 @@ func (c *CapabilityCache) getNodes(cap *Capability, nodefilter []string) []strin
 }
 
 type capabilityWithNodes struct {
-	Capability Capability `json:"capability"`
-	Nodes      []string   `json:"nodes"`
+	Capability jadesdk.Capability `json:"capability"`
+	Nodes      []string           `json:"nodes"`
 }
 
 func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
@@ -79,7 +83,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	for capName, subcache := range c.cache {
 		for capValue, item := range subcache {
 			result = append(result, capabilityWithNodes{
-				Capability: Capability{
+				Capability: jadesdk.Capability{
 					Name:  capName,
 					Value: capValue,
 				},
@@ -90,7 +94,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	return result
 }
 
-func (c *CapabilityCache) SelectNodesExclusively(capabilities []*Capability, nodefilter []string) []string {
+func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
 	if len(capabilities) == 0 {
 		return nil
 	}
@@ -112,7 +116,7 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*Capability, nod
 	return nodes
 }
 
-func (c *CapabilityCache) SelectNodesCollectively(capabilities []*Capability, nodefilter []string) []string {
+func (c *CapabilityCache) SelectNodesCollectively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
 	var nodes []string
 	for _, cap := range capabilities {
 		tmpnodes := c.getNodes(cap, nodefilter)

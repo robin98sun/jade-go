@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jadesdk"
 )
 
 // ShowConfigurations show current JADE runtime configurations
@@ -121,7 +122,7 @@ func (j *JADE) ShowCapabilityCache(w rest.ResponseWriter, r *rest.Request) {
 
 // SearchNodes search nodes according a list of capabilities
 func (j *JADE) SearchNodes(w rest.ResponseWriter, r *rest.Request) {
-	caplist := []*kernel.Capability{}
+	caplist := []*jadesdk.Capability{}
 	err := r.DecodeJsonPayload(&caplist)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)

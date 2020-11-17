@@ -1,11 +1,15 @@
 package kernel
 
+import (
+	"uta.edu/aces/jadesdk"
+)
+
 // Conf configuration data structure in memory
 type Conf struct {
-	UpperNode    *Node         `json:"upperNode"`
-	SelfNode     *Node         `json:"selfNode"`
-	Capabilities []*Capability `json:"capabilities"`
-	Capacity     *Capacity     `json:"capacity"`
+	UpperNode    *Node                 `json:"upperNode"`
+	SelfNode     *Node                 `json:"selfNode"`
+	Capabilities []*jadesdk.Capability `json:"capabilities"`
+	Capacity     *Capacity             `json:"capacity"`
 }
 
 // NewConfiguration construct a new configuration instance with default values
@@ -13,13 +17,13 @@ func NewConfiguration() *Conf {
 	c := &Conf{}
 	c.UpperNode = NewNode()
 	c.SelfNode = NewNode()
-	c.Capabilities = []*Capability{}
+	c.Capabilities = []*jadesdk.Capability{}
 	c.Capacity = NewCapacity()
 	return c
 }
 
 // FindCapability search a capability by name
-func (c *Conf) FindCapability(name string) (int, *Capability) {
+func (c *Conf) FindCapability(name string) (int, *jadesdk.Capability) {
 	if c.Capabilities == nil || len(c.Capabilities) == 0 || name == "" {
 		return -1, nil
 	}
@@ -32,7 +36,7 @@ func (c *Conf) FindCapability(name string) (int, *Capability) {
 }
 
 // AddOrUpdateCapability add or update a capability
-func (c *Conf) AddOrUpdateCapability(nc *Capability) *Capability {
+func (c *Conf) AddOrUpdateCapability(nc *jadesdk.Capability) *jadesdk.Capability {
 	if nc == nil || nc.Name == "" {
 		return nil
 	}
@@ -47,7 +51,7 @@ func (c *Conf) AddOrUpdateCapability(nc *Capability) *Capability {
 }
 
 // DeleteCapability delete a capability
-func (c *Conf) DeleteCapability(name string) *Capability {
+func (c *Conf) DeleteCapability(name string) *jadesdk.Capability {
 	if name == "" {
 		return nil
 	}

@@ -142,12 +142,12 @@ func (j *JADE) IsRegistered() bool {
 
 // UpstreamRequestPayload for all requests
 type RequestPayload struct {
-	Payload      interface{}          `json:"payload,omitempty"`
-	Token        string               `json:"token,omitempty"`
-	Node         *kernel.Node         `json:"node,omitempty"`
-	NodeID       string               `json:"nodeId,omitempty"`
-	Capabilities []*kernel.Capability `json:"capabilities,omitempty"`
-	Capacity     *kernel.Capacity     `json:"capability,omitempty"`
+	Payload      interface{}           `json:"payload,omitempty"`
+	Token        string                `json:"token,omitempty"`
+	Node         *kernel.Node          `json:"node,omitempty"`
+	NodeID       string                `json:"nodeId,omitempty"`
+	Capabilities []*jadesdk.Capability `json:"capabilities,omitempty"`
+	Capacity     *kernel.Capacity      `json:"capability,omitempty"`
 }
 
 // ResponsePayload for all requests
@@ -230,7 +230,7 @@ func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg 
 }
 
 // GeneratePayloadOfRequest generate payload of request
-func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*kernel.Capability, capacity *kernel.Capacity) *RequestPayload {
+func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*jadesdk.Capability, capacity *kernel.Capacity) *RequestPayload {
 	payload := RequestPayload{
 		Token:  j.Config.UpperNode.Token,
 		NodeID: j.Config.SelfNode.Key(),
