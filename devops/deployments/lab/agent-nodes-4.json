@@ -1,0 +1,22 @@
+{
+    "nodes": [
+        "aces-pi-41",
+        "aces-pi-42",
+        "aces-pi-43",
+        "aces-pi-44"
+    ], 
+    "capacity": {
+        "cpu": 2000,
+        "ram": 1000,
+        "disk": 1000,
+        "bandwidth": 1000
+    },
+    "capabilities": {
+        "location": ":static://CHI",
+        "accuracy": ":static://city",
+        "avg_temperature": "get:http://176.0.0.3/temperature:timespan=int",
+        "current_temperature": "get:http://176.0.0.3/temperature",
+        "VIDEOSTREAM_URL": "get:http://176.0.0.1:8888/video_stream"
+    },
+    "image": "robin98/jadelet:0.4.0-arm32"
+}

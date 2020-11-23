@@ -39,6 +39,7 @@ parser.add_argument('--print', action='store_true', help='print the deployment f
 parser.add_argument('--container-port', type=int, required=False, default=8080, help='container port of the application')
 parser.add_argument('--bypass-deploying', action='store_true', help='bypass the actual deploying step')
 parser.add_argument('--apply-json', type=str, required=False, help='using a JSON file for kubectl apply -f')
+parser.add_argument('--fetch-node-port', type=bool, required=False, default=False, help='only fetch the nodePort of the desired pod')
 args = parser.parse_args()
 
 # Apply the deployment
@@ -171,8 +172,8 @@ for i in self_node:
 doc["spec"]["containers"][0]["env"] = envVariables
 
 
-
-apply(doc)
+if not args.fetch_node_port:
+  apply(doc)
 
 # Create a service to allow external accessing of the 
 doc = {
@@ -207,11 +208,15 @@ doc = {
   }
 }
 
-apply(doc, append=True)
+if not args.fetch_node_port:
+  apply(doc, append=True)
 
 # Get the runtime node port
 # batcmd='sudo kubectl get service/'+ service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}{{"\\n"}}\''
 batcmd='kubectl get service/'+ external_service_name +' --namespace '+ args.namespace +' --template=\'{{(index .spec.ports 0).nodePort}}\''
 node_port = evalcmd(batcmd)
-print("node port:", int(node_port))
-print("")
+if not args.fetch_node_port:
+  print("node port:", int(node_port))
+  print("")
+else:
+  print(int(node_port))
