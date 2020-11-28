@@ -42,6 +42,11 @@ parser.add_argument(
   help='delete existing pods or services or all or none'
 )
 
+parser.add_argument(
+  '--version', type=str, required=False, default=None,
+  help='the version in the image tag'
+)
+
 args = parser.parse_args()
 
 # Read configurations
@@ -66,11 +71,14 @@ def random_token(length):
     token += alphabet[random.randint(0, len(alphabet)-1)]
   return token 
 
-def gen_env(master_conf, agent_conf, token_of_master = None):
+def gen_env(master_conf, agent_conf, token_of_master = None, token_of_agent = None):
   master = None
+  master_name = None
   master_token = token_of_master
   if master_conf is not None:
-    master = master_conf["nodes"][0]
+    node_keys = list(master_conf["nodes"].keys())
+    master_name = node_keys[0]
+    master = master_conf["nodes"][master_name]
 
   if master_token is None:
     tmp_master_token = None
@@ -81,32 +89,34 @@ def gen_env(master_conf, agent_conf, token_of_master = None):
   if master_token is None:
     master_token = random_token(80)
 
-  for agent in agent_conf["nodes"]:
-    env_file = args.env_dir + '/' + agent + '.txt'
+  for agent_name in agent_conf["nodes"].keys():
+    agent = agent_conf["nodes"][agent_name]
+    env_file = args.env_dir + '/' + agent_name + '.txt'
     content = []
-    token = None
-    if master is None:
-      token = master_token
-    else:
-      if "token" in agent_conf:
-        token = agent_conf["token"]
-      if token is None:
-        token = random_token(80)
+    token = token_of_agent
+    if token is None and "token" in agent_conf:
+      token = agent_conf["token"]
+    if token is None:
+      token = random_token(80)
 
     content.append('JADE_SELFNODE_TOKEN='+token)
-    content.append('JADE_SELFNODE_SERVICEEXTERNAL=jadelet-'+agent.replace('_','-').replace('.','-'))
+    content.append('JADE_SELFNODE_SERVICEEXTERNAL=jadelet-'+agent_name.replace('_','-').replace('.','-')+'-service-external')
     content.append('JADE_SELFNODE_NAMESPACE='+args.namespace)
     content.append('JADE_SELFNODE_PROTOCOL='+args.protocol)
-    content.append('JADE_SELFNODE_ADDRESS='+agent)
-    content.append('JADE_SELFNODE_HOSTNAME='+agent)
+    content.append('JADE_SELFNODE_ADDRESS='+agent["address"])
+    content.append('JADE_SELFNODE_HOSTNAME='+agent["hostname"])
+    if "port" in agent:
+      content.append('JADE_SELFNODE_PORT='+str(agent["port"]))
 
     if master is not None:
       content.append('JADE_UPPERNODE_PROTOCOL='+args.protocol)
-      content.append('JADE_UPPERNODE_ADDRESS='+master)
-      content.append('JADE_UPPERNODE_HOSTNAME='+master)
+      content.append('JADE_UPPERNODE_ADDRESS='+master["address"])
+      content.append('JADE_UPPERNODE_HOSTNAME='+master["hostname"])
       content.append('JADE_UPPERNODE_TOKEN='+master_token)
-      content.append('JADE_UPPERNODE_SERVICEEXTERNAL=jadelet-'+master.replace('_','-').replace('.','-'))
-      content.append('JADE_SELFNODE_NAMESPACE='+args.namespace)
+      content.append('JADE_UPPERNODE_SERVICEEXTERNAL=jadelet-'+master_name.replace('_','-').replace('.','-')+'-service-external')
+      content.append('JADE_UPPERNODE_NAMESPACE='+args.namespace)
+      if "port" in master:
+        content.append('JADE_UPPERNODE_PORT='+str(master["port"]))
 
     if "capacity" in agent_conf:
       if "cpu" in agent_conf["capacity"]:
@@ -134,10 +144,21 @@ def gen_env(master_conf, agent_conf, token_of_master = None):
   else:
     return None
 
-master_token=gen_env(None, master_conf)
+master_token=gen_env(None, master_conf, master_conf["token"], master_conf["token"])
 
 for agent_conf in agents: 
-  gen_env(master_conf, agent_conf, master_token)
+  gen_env(master_conf, agent_conf, master_token, agent_conf["token"])
+
+def update_version(image, version):
+  if version is None:
+    return image
+  start = 0
+  end = None
+  if ':' in image:
+    start = image.index(':')
+  if '-' in image:
+    end = image.index('-')
+  return image.replace(image[start+1:end], version)
 
 # Deploy cluster
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -148,6 +169,7 @@ if os.path.exists(deploy_script):
   for conf in agents:
     if "nodes" in conf and "image" in conf:
       image = conf["image"]
+      image = update_version(image, args.version)
       for node in conf["nodes"]:
         cmd = deploy_script + ' ' + node + ' ' + image
         cmd += ' ' + args.env_dir + '/' + node + '.txt' 
@@ -157,9 +179,3 @@ if os.path.exists(deploy_script):
         print(cmd)
         if not args.do_not_deploy:
           os.system(cmd)
-
-
-
-
-
-

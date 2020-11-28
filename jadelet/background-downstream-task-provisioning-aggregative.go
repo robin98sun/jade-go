@@ -35,11 +35,12 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 					task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
 					1,
 				)
-				// Update self-node inside the pod
-				j.updatePodConfigOfSelfNodePort(nodePort)
 				//
 				if err != nil {
 					j.log.Println("ERROR when provisioning", string(kernel.AppModuleAggregator), "for task", task.GetKey())
+				} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
+					// Update self-node inside the pod
+					j.log.Println("Error when updating pod configuration:", err)
 				} else {
 					aggregatorPod = &kernel.Pod{
 						NodeKey:    j.Config.SelfNode.Key(),
@@ -95,7 +96,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	}
 }
 
-func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) {
+func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	seconds := 5
 	j.log.Printf("waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
@@ -106,13 +107,13 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) {
 			Protocol: j.Config.SelfNode.Protocol,
 		},
 	}
-	j.sdk.HTTPCommunicate(
+	_, err := j.sdk.HTTPCommunicate(
 		"update configuration", j.Config.SelfNode.Protocol,
 		"PUT", "/$jade$/config", newConf.SelfNode, newConf,
-		0, -1,
+		0, 200,
 	)
-	// j.log.Printf("waiting {%v} seconds for pod merging configuration", seconds)
-	// time.Sleep(time.Duration(seconds) * time.Second)
+
+	return err
 }
 
 func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatchingItem) {

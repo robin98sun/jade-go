@@ -1,10 +1,13 @@
 package scheduler
 
 import (
+	"strconv"
+	"time"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
 	if c == nil {
 		return
 	}
@@ -13,37 +16,33 @@ func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, mod
 	if c.Cache == nil {
 		c.Cache = make(map[string]*TaskCacheTaskItem)
 	}
-	if _, e := c.Cache[taskId]; !e {
-		if taskItem != nil && taskId == taskItem.Task.GetKey() {
-			c.Cache[taskId] = &TaskCacheTaskItem{
-				task:            taskItem,
-				dispatchedNodes: make(map[string]*TaskCacheNodeItem),
-				status:          TaskStatusPending,
-			}
+	if _, e := c.Cache[taskKey]; !e {
+		if taskItem != nil && taskKey == taskItem.Task.GetKey() {
+			c.Cache[taskKey] = NewTaskCacheTaskItem(taskItem)
 		} else {
 			return
 		}
 	}
-	if _, e := c.Cache[taskId].dispatchedNodes[subnode.Key()]; !e {
-		c.Cache[taskId].dispatchedNodes[subnode.Key()] = &TaskCacheNodeItem{
+	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()]; !e {
+		c.Cache[taskKey].dispatchedNodes[subnode.Key()] = &TaskCacheNodeItem{
 			node:    subnode,
 			modules: make(map[string]*TaskCacheModuleItem),
 			status:  TaskStatusPending,
 		}
 	}
-	if _, e := c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
+	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
 		if taskItem == nil {
 			return
 		}
-		c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
+		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
 			subtasks: nil,
 			status:   TaskStatusPending,
 		}
 	}
 	if pod != nil {
 		var subtask *kernel.SubTask
-		if len(c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
-			for _, tmpst := range c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
+		if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
+			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
 				if tmpst.subtask.PodKey == pod.GetKey() {
 					subtask = tmpst.subtask
 					subtask.Pod = pod
@@ -53,16 +52,16 @@ func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, mod
 			}
 		}
 		if subtask == nil {
-			subtask := c.Cache[taskId].task.Task.NewSubtask(
+			subtask := c.Cache[taskKey].task.Task.NewSubtask(
 				moduleName,
 				subnode.Key(),
 				pod.GetKey(),
 			)
 			subtask.Pod = pod
-			if c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
-				c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks = make(map[string]*TaskCacheSubtaskItem)
+			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
+				c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks = make(map[string]*TaskCacheSubtaskItem)
 			}
-			c.Cache[taskId].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()] = &TaskCacheSubtaskItem{
+			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()] = &TaskCacheSubtaskItem{
 				subtask: subtask,
 				status:  TaskStatusAccepted,
 				updates: nil,
@@ -71,29 +70,60 @@ func (c *TaskCache) CacheTaskForSubnode(taskId string, subnode *kernel.Node, mod
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskId string, subtaskId string, status TaskStatus, result interface{}) *kernel.SubTask {
+func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	task := c.GetTask(taskId)
+	task := c.GetTask(taskKey)
 	if task == nil {
 		return nil
 	}
-	subtask := task.Task.GetSubtask(subtaskId)
+	subtask := task.Task.GetSubtask(subtaskKey)
 	if subtask == nil {
 		return nil
 	}
-	c.Cache[taskId].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskId].status = status
-	c.Cache[taskId].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskId].updates = result
-	return c.Cache[taskId].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskId].subtask
+	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].status = status
+	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].updates = result
+	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask.FinishTimestamp = time.Now()
+	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
 }
 
-func (c *TaskCache) allSubtasksHaveTheSameStatus(taskId string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
-	if taskItem, e := c.Cache[taskId]; e {
+type TaskResult struct {
+	Status TaskStatus  `json:"status,omitempty"`
+	Result interface{} `json:"result,omitempty"`
+}
+
+func (c *TaskCache) GetResultOfTask(taskKey string, moduleName string) []*TaskResult {
+	if c == nil {
+		return nil
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	task := c.GetTask(taskKey)
+	if task == nil {
+		return nil
+	}
+	result := []*TaskResult{}
+	for _, nodeItem := range c.Cache[taskKey].dispatchedNodes {
+		if moduleItem, ok := nodeItem.modules[moduleName]; ok && len(moduleItem.subtasks) > 0 {
+			for _, subtaskItem := range moduleItem.subtasks {
+				result = append(result, &TaskResult{
+					Status: subtaskItem.status,
+					Result: subtaskItem.updates,
+				})
+			}
+		}
+
+	}
+	return result
+}
+
+func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
+	if taskItem, e := c.Cache[taskKey]; e {
 		if printf != nil {
-			printf("[task cache] checking if all subtasks are {%v} of task[%v]", desiredStatus, taskId)
+			printf("[task cache] checking if all subtasks are {%v} of task[%v]", desiredStatus, taskKey)
 		}
 		checkResult := desiredStatus
 		for _, nodeItem := range taskItem.dispatchedNodes {
@@ -119,11 +149,11 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskId string, desiredStatus Ta
 					if checkModule == desiredStatus {
 						moduleItem.status = desiredStatus
 						if printf != nil {
-							printf("[task cache] task[%v] module[%v] on node[%v] is {%v}", taskId, moduleName, nodeItem.node.Key(), desiredStatus)
+							printf("[task cache] task[%v] module[%v] on node[%v] is {%v}", taskKey, moduleName, nodeItem.node.Key(), desiredStatus)
 						}
 					} else {
 						if printf != nil {
-							printf("[task cache] task[%v] module[%v] on node[%v] is NOT {%v}", taskId, moduleName, nodeItem.node.Key(), desiredStatus)
+							printf("[task cache] task[%v] module[%v] on node[%v] is NOT {%v}", taskKey, moduleName, nodeItem.node.Key(), desiredStatus)
 						}
 						checkNode = TaskStatusInvalid
 						checkResult = TaskStatusInvalid
@@ -139,41 +169,41 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskId string, desiredStatus Ta
 		if checkResult == desiredStatus {
 			taskItem.status = desiredStatus
 			if printf != nil {
-				printf("[task cache] task[%v] is {%v}", taskId, desiredStatus)
+				printf("[task cache] task[%v] is {%v}", taskKey, desiredStatus)
 			}
 			return true
 		}
 		if printf != nil {
-			printf("[task cache] task[%v] is NOT {%v}", taskId, desiredStatus)
+			printf("[task cache] task[%v] is NOT {%v}", taskKey, desiredStatus)
 		}
 	}
 	return false
 }
 
-func (c *TaskCache) CheckTask(taskId string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
+func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
 	if c == nil {
 		return false
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if taskItem, e := c.Cache[taskId]; e {
+	if taskItem, e := c.Cache[taskKey]; e {
 		if taskItem.status == TaskStatusRejected ||
 			taskItem.status == TaskStatusDone ||
 			taskItem.status == TaskStatusFailed {
 			return taskItem.status == desiredStatus
 		}
-		return c.allSubtasksHaveTheSameStatus(taskId, desiredStatus, printf)
+		return c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf)
 	}
 	return false
 }
 
-func (c *TaskCache) SetTaskStatus(taskId string, status TaskStatus) {
+func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 	if c == nil {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if taskItem, e := c.Cache[taskId]; e {
+	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = status
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			nodeItem.status = status
@@ -187,24 +217,24 @@ func (c *TaskCache) SetTaskStatus(taskId string, status TaskStatus) {
 	}
 }
 
-func (c *TaskCache) RejectTask(taskId string) {
+func (c *TaskCache) RejectTask(taskKey string) {
 	if c == nil {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if taskItem, e := c.Cache[taskId]; e {
+	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = TaskStatusRejected
 	}
 }
 
-func (c *TaskCache) FailTask(taskId string) {
+func (c *TaskCache) FailTask(taskKey string) {
 	if c == nil {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if taskItem, e := c.Cache[taskId]; e {
+	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = TaskStatusFailed
 	}
 }
@@ -214,12 +244,14 @@ type SubtaskOnNode struct {
 	Node    *kernel.Node
 }
 
-func (c *TaskCache) GetSubtasks(taskId string, moduleName string) []*SubtaskOnNode {
+func (c *TaskCache) GetSubtasks(taskKey string, moduleName string) []*SubtaskOnNode {
 	if c == nil || c.Cache == nil {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	subtasks := []*SubtaskOnNode{}
-	if taskItem, e := c.Cache[taskId]; e {
+	if taskItem, e := c.Cache[taskKey]; e {
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			if moduleItem, e := nodeItem.modules[moduleName]; e {
 				for _, subtaskItem := range moduleItem.subtasks {
@@ -235,4 +267,52 @@ func (c *TaskCache) GetSubtasks(taskId string, moduleName string) []*SubtaskOnNo
 		return nil
 	}
 	return subtasks
+}
+
+func (c *TaskCache) DispatchedSubtask(taskKey string, subtaskKey string) {
+	if c == nil || len(c.Cache) == 0 {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if cacheItem, ok := c.Cache[taskKey]; ok {
+		subtask := cacheItem.task.Task.GetSubtask(subtaskKey)
+		if subtask != nil {
+			subtask.DispatchTimestamp = time.Now()
+		}
+	}
+}
+
+func (c *TaskCache) SaveStatOfModule(appName string, moduleName string, fanoutDegree int, statItem *jadesdk.StatItem, dispatchTimestamp time.Time, finishTimestamp time.Time) {
+	if c == nil || statItem == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if _, ok := c.Stat[appName]; !ok {
+		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
+	}
+	appItem := c.Stat[appName]
+
+	if _, ok := appItem[moduleName]; !ok {
+		appItem[moduleName] = make(map[string]*jadesdk.Stat)
+	}
+	fanouts := appItem[moduleName]
+
+	realFanoutDegree := fanoutDegree
+	if realFanoutDegree <= 0 {
+		realFanoutDegree = 1
+	}
+	fanoutKey := strconv.Itoa(realFanoutDegree)
+	if _, ok := fanouts[fanoutKey]; !ok {
+		fanouts[fanoutKey] = &jadesdk.Stat{}
+	}
+
+	stat := fanouts[fanoutKey]
+	totalDuration := finishTimestamp.Sub(dispatchTimestamp)
+	stat.Total.AddDuration(totalDuration)
+	onFlyDuration := totalDuration - statItem.Decoding - statItem.Forwarding - statItem.Task
+	stat.OnFly.AddDuration(onFlyDuration)
+	stat.ApplyItem(statItem)
 }

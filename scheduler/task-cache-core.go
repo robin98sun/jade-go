@@ -1,8 +1,8 @@
 package scheduler
 
 import (
-	// "aces/jade-go/kernel"
 	"sync"
+	"uta.edu/aces/jadesdk"
 )
 
 // the shape of task cache:
@@ -36,12 +36,14 @@ import (
 type TaskCache struct {
 	Cache map[string]*TaskCacheTaskItem
 	mutex *sync.Mutex
+	Stat  map[string]map[string]map[string]*jadesdk.Stat // app -> module -> fanout degree -> stat
 }
 
 func NewTaskCache() *TaskCache {
 	inst := &TaskCache{
 		Cache: make(map[string]*TaskCacheTaskItem),
 		mutex: &sync.Mutex{},
+		Stat:  make(map[string]map[string]map[string]*jadesdk.Stat),
 	}
 	return inst
 }
@@ -71,6 +73,15 @@ type TaskCacheTaskItem struct {
 	task            *TaskDispatchingItem
 	dispatchedNodes map[string]*TaskCacheNodeItem // node-key : nodeItem
 	status          TaskStatus
+}
+
+func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {
+	item := &TaskCacheTaskItem{
+		task:            taskItem,
+		dispatchedNodes: make(map[string]*TaskCacheNodeItem),
+		status:          TaskStatusPending,
+	}
+	return item
 }
 
 func (i *TaskCacheTaskItem) describe() map[string]interface{} {

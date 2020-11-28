@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler"
-	// "strings"
 )
 
 // RegisterNode receive and process node registration
@@ -90,42 +88,4 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		// if it is ready, then dispatch the task for it
 	}
 	j.DoneRequest(w, r, "OK")
-}
-
-func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
-	msg := &struct {
-		TaskID    string                 `json:"taskId,omitempty"`
-		SubtaskID string                 `json:"subtaskId,omitempty"`
-		Status    scheduler.TaskStatus   `json:"status,omitempty"`
-		Updates   map[string]interface{} `json:"updates,omitempty"`
-	}{}
-	err := r.DecodeJsonPayload(msg)
-	if err == nil {
-		bs, _ := json.MarshalIndent(msg, "", "    ")
-		j.log.Println("[app message collector] Received application message:", string(bs))
-		if msg.TaskID != "" && msg.SubtaskID != "" {
-			if msg.Status == scheduler.TaskStatusFailed {
-				j.TaskCache.FailTask(msg.TaskID)
-			}
-			subtask := j.TaskCache.SaveResultFromApp(msg.TaskID, msg.SubtaskID, msg.Status, msg.Updates)
-			if subtask != nil && subtask.Pod != nil {
-				w.WriteJson(map[string]string{
-					"status":  "OK",
-					"payload": "message received",
-				})
-				// then dequeue or release the pod queue
-				j.PodCache.SetPodIdle(subtask.Pod)
-				// to see if the task is done
-				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskID, scheduler.TaskStatusDone)
-				j.TaskCache.CheckTask(msg.TaskID, scheduler.TaskStatusDone, j.log.Printf)
-			} else {
-				j.PeacefulFatalRequest(w, r, "invalid subtask")
-			}
-			return
-		}
-	} else {
-		w.WriteJson(map[string]string{
-			"error": "invalid message: " + err.Error(),
-		})
-	}
 }

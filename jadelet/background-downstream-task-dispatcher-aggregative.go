@@ -6,16 +6,16 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 )
 
-func (j *JADE) routimeForPodQueues(interval int) {
+func (j *JADE) routimeForPodQueues(intervalMilliseconds int) {
 	for {
-		time.Sleep(time.Duration(interval) * time.Millisecond)
+		time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
 		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
 			continue
 		}
 		for _, pod := range j.PodCache.QueuingPods {
 			if j.PodCache.IsPodIdle(pod) {
 				j.dispatchSubtask(pod)
-				time.Sleep(time.Duration(interval) * time.Millisecond)
+				time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
 			}
 		}
 	}
@@ -28,12 +28,14 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 	j.PodCache.SetPodBusy(pod)
 	queue := j.PodCache.GetPodQueue(pod)
-	req := queue.Dequeue()
-	if req == nil {
+	queueItem := queue.Dequeue()
+	if queueItem == nil {
 		j.PodCache.SetPodIdle(pod)
 		return
 	}
+	req := queueItem.Payload
 	j.log.Printf("dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
+	j.TaskCache.DispatchedSubtask(queueItem.TaskKey, queueItem.SubtaskKey)
 	go j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
@@ -62,6 +64,10 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()
 					j.log.Println("dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+					// Save the dispatching timestamp and fanout degree
+					aggregator.Subtask.Fanout = len(workerSubtasks)
+					j.TaskCache.DispatchedSubtask(taskKey, aggregator.Subtask.GetKey())
+					// dispatch the aggregator subtask
 					j.HTTPCommunicate(
 						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
 						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
@@ -88,7 +94,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						j.log.Printf("ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
 						continue
 					}
-					done := queue.Enqueue(worker.Subtask.GetKey(), req, task.QueuingMechanism, budget)
+					done := queue.Enqueue(worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req, task.QueuingMechanism, budget)
 					if done {
 						j.log.Printf("pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
 					} else {

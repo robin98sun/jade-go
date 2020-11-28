@@ -28,21 +28,24 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		}
 		taskList := reqInst.Payload
 		validTasks := make(map[string]*scheduler.TaskDispatchingItem)
+		res := &struct {
+			ValidTasksCount int      `json:"validTasksCount,omitempty"`
+			TaskIDList      []string `json:"taskIDList,omitempty"`
+		}{}
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
 				validTasks[taskItem.Task.GetKey()] = taskItem
+				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
 				j.log.Println("WARN: received an invalid task")
+				res.TaskIDList = append(res.TaskIDList, "")
 			}
 		}
 		if len(validTasks) > 0 {
 			go j.evaluateTasks(validTasks)
 		}
-		res := &struct {
-			ReceivedTasks int `json:"receivedTasks,omitempty"`
-		}{
-			ReceivedTasks: len(validTasks),
-		}
+
+		res.ValidTasksCount = len(validTasks)
 		j.DoneRequest(w, r, res)
 	}
 

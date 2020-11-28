@@ -1,10 +1,14 @@
 {
-    "nodes": [
-        "aces-pi-21",
-        "aces-pi-22",
-        "aces-pi-23",
-        "aces-pi-24"
-    ], 
+    "nodes": {
+        "aces-pi-22": {
+            "hostname": "aces-pi-22",
+            "address": "129.107.206.94"
+        }, 
+        "aces-pi-23": {
+            "hostname": "aces-pi-23",
+            "address": "129.107.206.93"
+        }
+    }, 
     "capacity": {
         "cpu": 2000,
         "ram": 1000,
@@ -18,5 +22,6 @@
         "current_temperature": "get:http://176.0.0.3/temperature",
         "VIDEOSTREAM_URL": "get:http://176.0.0.1:8888/video_stream"
     },
-    "image": "robin98/jadelet:0.4.0-arm32"
+    "image": "robin98/jadelet:0.4.1-arm32",
+    "token": "5gWM1hHbKrnGRNkuaqnvpWwTAXvFAI73x1xqOeVsxvrfovCdnm5yLNlvHkyUWcle6OCUf4qTFkqxOPDV"
 }

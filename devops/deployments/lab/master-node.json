@@ -1,7 +1,10 @@
 {
-    "nodes": [
-        "aces-diamonds-ace"
-    ], 
+    "nodes": {
+        "aces-diamonds-ace": {
+            "hostname": "aces-diamonds-ace",
+            "address": "aces-diamonds-ace"
+        }
+    },
     "capacity": {
         "cpu": 2000,
         "ram": 1000,
@@ -15,5 +18,6 @@
         "current_temperature": "get:http://176.0.0.3/temperature",
         "VIDEOSTREAM_URL": "get:http://176.0.0.1:8888/video_stream"
     },
-    "image": "robin98/jadelet:0.4.0-amd64"
+    "image": "robin98/jadelet:0.4.0-amd64",
+    "token": "oUcflyC2rSW1ul0bKeNMp4090Jqg6cfy8GNzgmBABaawO6ZvuA1Bq8hcr3SaecZHr3tAp0Kaxyje8oAo"
 }

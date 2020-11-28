@@ -38,12 +38,14 @@ func (p *PodQueue) Length() int {
 
 type PodQueueItem struct {
 	Payload     interface{}
+	TaskKey     string
+	SubtaskKey  string
 	ArrivalTime time.Time
 	Deadline    time.Time
 	Key         string
 }
 
-func (q *PodQueue) Enqueue(key string, payload interface{}, queueType kernel.TaskQueuingMechanism, maxQueuingTime int64) bool {
+func (q *PodQueue) Enqueue(key string, taskKey string, subtaskKey string, payload interface{}, queueType kernel.TaskQueuingMechanism, maxQueuingTime int64) bool {
 	if payload == nil || key == "" {
 		return false
 	}
@@ -54,6 +56,8 @@ func (q *PodQueue) Enqueue(key string, payload interface{}, queueType kernel.Tas
 		Payload:     payload,
 		ArrivalTime: time.Now(),
 		Key:         key,
+		TaskKey:     taskKey,
+		SubtaskKey:  subtaskKey,
 	}
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	q.Lock()
@@ -84,14 +88,14 @@ func (q *PodQueue) Enqueue(key string, payload interface{}, queueType kernel.Tas
 	return true
 }
 
-func (q *PodQueue) Dequeue() interface{} {
+func (q *PodQueue) Dequeue() *PodQueueItem {
 	q.Lock()
 	defer q.Unlock()
 	if len(q.Queue) > 0 {
 		item := q.Queue[0]
 		q.Queue = q.Queue[1:]
 		delete(q.ItemsInQueue, item.Key)
-		return item.Payload
+		return item
 	}
 	return nil
 }

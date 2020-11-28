@@ -1,8 +1,9 @@
 {
     "nodes": {
         "aces-pi-13": {
-            "hostname": "aces-pi-13",
-            "address": "129.107.206.63"
+            "hostname": "129.107.206.63",
+            "address": "129.107.206.63",
+            "port": 31853
         }
     }, 
     "capacity": {

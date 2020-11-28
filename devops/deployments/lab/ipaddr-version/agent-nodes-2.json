@@ -1,8 +1,14 @@
 {
     "nodes": {
-        "aces-pi-13": {
-            "hostname": "aces-pi-13",
-            "address": "129.107.206.63"
+        "aces-pi-22": {
+            "hostname": "129.107.206.94",
+            "address": "129.107.206.94",
+            "port": 32509
+        }, 
+        "aces-pi-23": {
+            "hostname": "129.107.206.93",
+            "address": "129.107.206.93",
+            "port": 32188
         }
     }, 
     "capacity": {
@@ -12,12 +18,12 @@
         "bandwidth": 1000
     },
     "capabilities": {
-        "location": ":static://LA",
+        "location": ":static://NY",
         "accuracy": ":static://city",
         "avg_temperature": "get:http://176.0.0.3/temperature:timespan=int",
         "current_temperature": "get:http://176.0.0.3/temperature",
         "VIDEOSTREAM_URL": "get:http://176.0.0.1:8888/video_stream"
     },
     "image": "robin98/jadelet:0.4.1-arm32",
-    "token": "Vv11AJu6j0ahS4fW20eOJ9iaapqJsf79r60DfFwVMsURO8cV7Vxt81rKsOkKvdM5Hb8d0PTVp8bVMUUN"
+    "token": "5gWM1hHbKrnGRNkuaqnvpWwTAXvFAI73x1xqOeVsxvrfovCdnm5yLNlvHkyUWcle6OCUf4qTFkqxOPDV"
 }

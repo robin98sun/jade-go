@@ -44,7 +44,7 @@ func (t *Task) NewSubtask(module string, nodeKey string, podKey string) *SubTask
 	if t.Subtasks == nil {
 		t.Subtasks = make(map[string]*SubTask)
 	}
-	nst := NewSubtask(t.GetKey(), module, nodeKey, podKey)
+	nst := NewSubtask(t.GetKey(), t.Application.Name, module, nodeKey, podKey)
 	t.Subtasks[nst.GetKey()] = nst
 	return nst
 }
@@ -82,5 +82,3 @@ func (t *Task) Valid() bool {
 	}
 	return true
 }
-
-

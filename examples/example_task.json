@@ -1,5 +1,5 @@
 {
-    "token": "some kind of randome string token in upper node",
+    "token": "oUcflyC2rSW1ul0bKeNMp4090Jqg6cfy8GNzgmBABaawO6ZvuA1Bq8hcr3SaecZHr3tAp0Kaxyje8oAo",
     "payload": [{
         "task": {
             "forceUpdateNetworkStructure": false,
@@ -11,13 +11,13 @@
                 "owner": "skywalker",
                 "modules": {
                     "aggregator": {
-                        "image": "192.168.57.8/plankton:0.0.11",
+                        "image": "robin98/plankton:0.4.0-amd64",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {}
                     },
                     "worker": {
-                        "image": "192.168.57.8/plankton:0.0.11",
+                        "image": "robin98/plankton:0.4.0-arm32",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {

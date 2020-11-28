@@ -1,8 +1,14 @@
 {
     "nodes": {
-        "aces-pi-13": {
-            "hostname": "aces-pi-13",
-            "address": "129.107.206.63"
+        "aces-pi-11": {
+            "hostname": "129.107.206.161",
+            "address": "129.107.206.161",
+            "port": 30830
+        }, 
+        "aces-pi-12": {
+            "hostname": "129.107.206.162",
+            "address": "129.107.206.162",
+            "port": 31990
         }
     }, 
     "capacity": {
@@ -19,5 +25,5 @@
         "VIDEOSTREAM_URL": "get:http://176.0.0.1:8888/video_stream"
     },
     "image": "robin98/jadelet:0.4.1-arm32",
-    "token": "Vv11AJu6j0ahS4fW20eOJ9iaapqJsf79r60DfFwVMsURO8cV7Vxt81rKsOkKvdM5Hb8d0PTVp8bVMUUN"
+    "token": "xjigpgAFcoKYXT0Pc4lvovUbjcs1RzNOMHwYjesw57ZdLqHoZu7KCLwraezsf5vSHV37HUmLJmDyCXx8"
 }

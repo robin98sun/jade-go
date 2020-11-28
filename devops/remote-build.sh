@@ -114,7 +114,7 @@ id
 hostname
 workspace="~/Dev/src/jadelet"
 
-ssh -tt ${remote_account}@${remote_host} <<!
+ssh ${remote_account}@${remote_host} <<!
 hostname
 if [[ "\$GOROOT" == "" ]];then
     echo "no go root is defined"

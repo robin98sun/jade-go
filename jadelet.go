@@ -47,6 +47,9 @@ func main() {
 		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
 		// for data path
 		rest.Put("/$jade$/app/listener", j.CollectAppMsg),
+		rest.Post("/$jade$/getTaskResults", j.GetAggregativeTaskResults),
+		// for stat
+		rest.Get("/$jade$/dumpStat", j.DumpStat),
 		// for debugging
 		rest.Get("/$jade$/debug/jadelet", j.ShowJadelet),
 		rest.Get("/$jade$/debug/configurations", j.ShowConfigurations),

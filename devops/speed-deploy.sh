@@ -14,7 +14,7 @@ if [[ "$namespace" == "" ]];then
 fi
 
 if [[ "$delete" == "pods" || "$delete" == "all" ]];then
-  kubectl get pods|sed '1d'|awk '{print $1}'|grep jadelet|xargs kubectl delete pods
+  kubectl get pods|sed '1d'|awk '{print $1}'|grep jadelet-${node_name}|xargs kubectl delete pods
 fi
 
 function service_name() {
