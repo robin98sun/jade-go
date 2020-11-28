@@ -25,8 +25,12 @@ func ReadConfFromEnv() *Conf {
 			continue
 		}
 
-		// for UpperNode and SelfNode
+		// for UpperNode and SelfNode and version
 		switch nameParts[2] {
+		case "VERSION":
+			if nameParts[1] == "JADELET" {
+				c.Version = envValue
+			}
 		case "ADDRESS":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.Address = envValue

@@ -43,8 +43,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--version', type=str, required=False, default=None,
-  help='the version in the image tag'
+  '--version', type=str, required=True,
+  help='the version of Jadelet in the image tag'
 )
 
 args = parser.parse_args()
@@ -71,7 +71,7 @@ def random_token(length):
     token += alphabet[random.randint(0, len(alphabet)-1)]
   return token 
 
-def gen_env(master_conf, agent_conf, token_of_master = None, token_of_agent = None):
+def gen_env(version, master_conf, agent_conf, token_of_master = None, token_of_agent = None):
   master = None
   master_name = None
   master_token = token_of_master
@@ -99,6 +99,7 @@ def gen_env(master_conf, agent_conf, token_of_master = None, token_of_agent = No
     if token is None:
       token = random_token(80)
 
+    content.append('JADE_JADELET_VERSION='+version)
     content.append('JADE_SELFNODE_TOKEN='+token)
     content.append('JADE_SELFNODE_SERVICEEXTERNAL=jadelet-'+agent_name.replace('_','-').replace('.','-')+'-service-external')
     content.append('JADE_SELFNODE_NAMESPACE='+args.namespace)
@@ -144,10 +145,10 @@ def gen_env(master_conf, agent_conf, token_of_master = None, token_of_agent = No
   else:
     return None
 
-master_token=gen_env(None, master_conf, master_conf["token"], master_conf["token"])
+master_token=gen_env(args.version, None, master_conf, master_conf["token"], master_conf["token"])
 
 for agent_conf in agents: 
-  gen_env(master_conf, agent_conf, master_token, agent_conf["token"])
+  gen_env(args.version, master_conf, agent_conf, master_token, agent_conf["token"])
 
 def update_version(image, version):
   if version is None:

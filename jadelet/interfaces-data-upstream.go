@@ -25,6 +25,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
 				// collect the stat for the task
+				j.log.Printf("[app message collector] saving stat data for app[%v] module[%v] with fanout degree[%v]", subtask.AppName, subtask.ModuleName, subtask.Fanout)
 				j.TaskCache.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, msg.Stat, subtask.DispatchTimestamp, subtask.FinishTimestamp)
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
@@ -53,19 +54,21 @@ func (j *JADE) GetAggregativeTaskResults(w rest.ResponseWriter, r *rest.Request)
 		return
 	}
 	taskIDList := []string{}
-	err := r.DecodeJsonPayload(taskIDList)
-	if err == nil {
-		if len(taskIDList) == 0 {
-			j.PeacefulFatalRequest(w, r, "empty request")
-		} else {
-			results := make(map[string][]*scheduler.TaskResult)
-			for _, taskKey := range taskIDList {
-				taskResult := j.TaskCache.GetResultOfTask(taskKey, string(kernel.AppModuleAggregator))
-				results[taskKey] = taskResult
+	for key, value := range r.URL.Query() {
+		if key == "tasks" {
+			for _, taskId := range value {
+				taskIDList = append(taskIDList, taskId)
 			}
-			j.DoneRequest(w, r, results)
 		}
+	}
+	if len(taskIDList) == 0 {
+		j.PeacefulFatalRequest(w, r, "empty request")
 	} else {
-		j.PeacefulFatalRequest(w, r, "invalid request: "+err.Error())
+		results := make(map[string][]*scheduler.TaskResult)
+		for _, taskKey := range taskIDList {
+			taskResult := j.TaskCache.GetResultOfTask(taskKey, string(kernel.AppModuleAggregator))
+			results[taskKey] = taskResult
+		}
+		j.DoneRequest(w, r, results)
 	}
 }

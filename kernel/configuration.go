@@ -6,6 +6,7 @@ import (
 
 // Conf configuration data structure in memory
 type Conf struct {
+	Version      string                `json:"version"`
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`
 	Capabilities []*jadesdk.Capability `json:"capabilities"`

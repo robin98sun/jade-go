@@ -306,7 +306,7 @@ func (c *TaskCache) SaveStatOfModule(appName string, moduleName string, fanoutDe
 	}
 	fanoutKey := strconv.Itoa(realFanoutDegree)
 	if _, ok := fanouts[fanoutKey]; !ok {
-		fanouts[fanoutKey] = &jadesdk.Stat{}
+		fanouts[fanoutKey] = jadesdk.NewStat()
 	}
 
 	stat := fanouts[fanoutKey]
