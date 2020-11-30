@@ -32,9 +32,29 @@ type TaskDispatchingItemBudget struct {
 }
 
 type TaskDispatchingItem struct {
-	Task     *kernel.Task                          `json:"task,omitempty"`
-	ReportTo *TaskDispatchingItemReportTo          `json:"reportTo,omitempty"`
-	Budgets  map[string]*TaskDispatchingItemBudget `json:"budgets,omitempty"` // moduleName : budget
+	Task     *kernel.Task                            `json:"task,omitempty"`
+	ReportTo map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
+	Budgets  map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
+}
+
+func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {
+	if t == nil || node == nil || pod == nil || len(moduleName) == 0 {
+		return
+	}
+	if t.ReportTo == nil {
+		t.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
+	}
+	t.ReportTo[moduleName] = NewTaskDispatchingItemReportTo(node, pod)
+}
+
+func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispatchingItemReportTo {
+	if t == nil || len(moduleName) == 0 || t.ReportTo == nil {
+		return nil
+	}
+	if reportTo, ok := t.ReportTo[moduleName]; ok {
+		return reportTo
+	}
+	return nil
 }
 
 func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
@@ -45,8 +65,11 @@ func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
 	if t.Budgets != nil {
 		inst.Budgets = t.Budgets
 	}
-	if t.ReportTo != nil {
-		inst.ReportTo = t.ReportTo.Copy()
+	if t.ReportTo != nil && len(t.ReportTo) > 0 {
+		inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
+		for k, v := range t.ReportTo {
+			inst.ReportTo[k] = v.Copy()
+		}
 	}
 	return inst
 }

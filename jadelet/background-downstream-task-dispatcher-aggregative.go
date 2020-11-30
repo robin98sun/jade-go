@@ -84,7 +84,10 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
 				}
 				for _, worker := range workerSubtasks {
-					j.log.Printf("enqueuing subtask for pod[%v] on node[%v]", worker.Subtask.Pod.GetKey(), worker.Node.Key())
+					j.log.Printf("enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
+						worker.Subtask.Pod.GetKey(), worker.Node.Key(),
+						taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
+					)
 					req := NewAggregativeWorkerTask(
 						taskItem, worker, j.Config.SelfNode.Protocol,
 						task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
@@ -113,17 +116,18 @@ type AggregatorEnqueuingMessage struct {
 	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
 }
 
-func NewAggregatorEnqueuingMessage(task *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {
+func NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {
 	inst := &AggregatorEnqueuingMessage{
-		TaskKey:  task.Task.GetKey(),
+		TaskKey:  taskItem.Task.GetKey(),
 		Subtasks: []string{},
 		ReportTo: []*InterfaceSpec{},
 	}
-	if task.ReportTo.Pod != nil {
+	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleAggregator))
+	if reportTo != nil && reportTo.Pod != nil {
 		inst.ReportTo = append(inst.ReportTo, &InterfaceSpec{
 			Node: &NodeSpec{
-				Addr:     task.ReportTo.Pod.Addr,
-				Port:     task.ReportTo.Pod.Port,
+				Addr:     reportTo.Pod.Addr,
+				Port:     reportTo.Pod.Port,
 				Protocol: protocol,
 			},
 			ModuleName: string(kernel.AppModuleAggregator),
@@ -138,6 +142,10 @@ func NewAggregatorEnqueuingMessage(task *scheduler.TaskDispatchingItem, subtasks
 
 func NewAggregativeWorkerTask(taskItem *scheduler.TaskDispatchingItem, worker *scheduler.SubtaskOnNode, protocol string, input interface{}) *Request {
 	task := taskItem.Task
+	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
+	if reportTo == nil || reportTo.Pod == nil {
+		return nil
+	}
 	req := &Request{
 		Task: &TaskSpec{
 			ModuleName: kernel.AppModuleWorker,
@@ -147,8 +155,8 @@ func NewAggregativeWorkerTask(taskItem *scheduler.TaskDispatchingItem, worker *s
 		To: []*InterfaceSpec{
 			&InterfaceSpec{
 				Node: &NodeSpec{
-					Addr:     taskItem.ReportTo.Pod.Addr,
-					Port:     taskItem.ReportTo.Pod.Port,
+					Addr:     reportTo.Pod.Addr,
+					Port:     reportTo.Pod.Port,
 					Protocol: protocol,
 				},
 				ModuleName: string(kernel.AppModuleAggregator),
