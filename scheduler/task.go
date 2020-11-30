@@ -38,11 +38,17 @@ type TaskDispatchingItem struct {
 }
 
 func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
-	return &TaskDispatchingItem{
-		Task:     t.Task,
-		ReportTo: t.ReportTo.Copy(),
-		Budgets:  t.Budgets,
+	inst := &TaskDispatchingItem{}
+	if t.Task != nil {
+		inst.Task = t.Task
 	}
+	if t.Budgets != nil {
+		inst.Budgets = t.Budgets
+	}
+	if t.ReportTo != nil {
+		inst.ReportTo = t.ReportTo.Copy()
+	}
+	return inst
 }
 
 func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) int64 {
