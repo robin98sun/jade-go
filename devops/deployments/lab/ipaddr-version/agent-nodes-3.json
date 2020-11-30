@@ -13,7 +13,7 @@
         "bandwidth": 1000
     },
     "capabilities": {
-        "location": ":static://LA",
+        "location": ":static://DAL",
         "accuracy": ":static://city",
         "avg_temperature": "get:http://176.0.0.3/temperature:timespan=int",
         "current_temperature": "get:http://176.0.0.3/temperature",

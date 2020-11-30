@@ -3,10 +3,10 @@
         "aces-pi-22": {
             "hostname": "aces-pi-22",
             "address": "129.107.206.94"
-        }, 
-        "aces-pi-23": {
-            "hostname": "aces-pi-23",
-            "address": "129.107.206.93"
+        },
+        "aces-pi-12": {
+            "hostname": "aces-pi-12",
+            "address": "129.107.206.162"
         }
     }, 
     "capacity": {
