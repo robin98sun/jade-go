@@ -190,7 +190,7 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 		if taskItem.status == TaskStatusRejected ||
 			taskItem.status == TaskStatusDone ||
 			taskItem.status == TaskStatusFailed {
-			printf("task[%v] is {%v}, won't check deeper", taskKey, taskItem.status)
+			printf("[task cache] task[%v] is {%v}, won't check deeper", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
 		return c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf)
