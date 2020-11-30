@@ -72,9 +72,10 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// reject the task
 				rejectTaskCache[task.GetKey()] = taskItem
 			} else {
-				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), taskItem, aggregatorPod)
-				taskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
-				goodTaskCache[task.GetKey()] = taskItem
+				newTaskItem := taskItem.Copy()
+				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod)
+				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
+				goodTaskCache[task.GetKey()] = newTaskItem
 			}
 		} else {
 			goodTaskCache[task.GetKey()] = taskItem
