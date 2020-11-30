@@ -9,6 +9,17 @@ type TaskDispatchingItemReportTo struct {
 	Pod  *kernel.Pod  `json:"pod,omitempty"`
 }
 
+func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
+	if r == nil {
+		return nil
+	}
+	inst := &TaskDispatchingItemReportTo{
+		Node: r.Node,
+		Pod:  r.Pod,
+	}
+	return inst
+}
+
 func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
 	return &TaskDispatchingItemReportTo{
 		Node: node,
@@ -29,7 +40,7 @@ type TaskDispatchingItem struct {
 func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
 	return &TaskDispatchingItem{
 		Task:     t.Task,
-		ReportTo: t.ReportTo,
+		ReportTo: t.ReportTo.Copy(),
 		Budgets:  t.Budgets,
 	}
 }
