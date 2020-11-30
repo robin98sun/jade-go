@@ -70,8 +70,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			} else {
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), taskItem, aggregatorPod)
 				newItem := taskItem.Copy()
-				newItem.ReportTo.Pod = aggregatorPod
-				newItem.ReportTo.Node = j.Config.SelfNode
+				newItem.ReportTo = scheduler.NewTaskDispatchingItemReportTo(j.Config.SelfNode, aggregatorPod)
 				goodTaskCache[task.GetKey()] = newItem
 			}
 		} else {
