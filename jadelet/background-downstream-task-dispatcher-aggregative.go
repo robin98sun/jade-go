@@ -34,7 +34,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 		return
 	}
 	req := queueItem.Payload
-	j.log.Printf("dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
+	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	j.TaskCache.DispatchedSubtask(queueItem.TaskKey, queueItem.SubtaskKey)
 	go j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
@@ -48,7 +48,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 	// j.Lock()
 	// defer j.Unlock()
 	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, j.log.Printf) {
-		j.log.Printf("the task{%v} is accepted", taskKey)
+		j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
 		// dispatching the task
 		taskItem := j.TaskCache.GetTask(taskKey)
@@ -63,7 +63,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				for _, aggregator := range aggregatorSubtasks {
 					msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()
-					j.log.Println("dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+					j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 					// Save the dispatching timestamp and fanout degree
 					aggregator.Subtask.Fanout = len(workerSubtasks)
 					j.TaskCache.DispatchedSubtask(taskKey, aggregator.Subtask.GetKey())
@@ -84,7 +84,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
 				}
 				for _, worker := range workerSubtasks {
-					j.log.Printf("enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
+					j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
 						worker.Subtask.Pod.GetKey(), worker.Node.Key(),
 						taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
 					)
@@ -94,14 +94,14 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					)
 					queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
 					if queue == nil {
-						j.log.Printf("ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
+						j.log.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
 						continue
 					}
 					done := queue.Enqueue(worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req, task.QueuingMechanism, budget)
 					if done {
-						j.log.Printf("pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
+						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
 					} else {
-						j.log.Printf("ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
+						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 					}
 				}
 			}

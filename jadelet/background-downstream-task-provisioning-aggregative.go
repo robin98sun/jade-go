@@ -16,10 +16,6 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
 		if j.IsCoordinator() {
-			reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
-			if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
-				taskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
-			}
 			// allocate an aggregator pod if needed
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 			aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
@@ -72,7 +68,11 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// reject the task
 				rejectTaskCache[task.GetKey()] = taskItem
 			} else {
-				newTaskItem := taskItem.Copy()
+				newTaskItem := taskItem.Copy(false)
+				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
+				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
+					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
+				}
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod)
 				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
 				goodTaskCache[task.GetKey()] = newTaskItem

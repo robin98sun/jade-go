@@ -57,7 +57,7 @@ func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispa
 	return nil
 }
 
-func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
+func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
 	inst := &TaskDispatchingItem{}
 	if t.Task != nil {
 		inst.Task = t.Task
@@ -65,10 +65,12 @@ func (t *TaskDispatchingItem) Copy() *TaskDispatchingItem {
 	if t.Budgets != nil {
 		inst.Budgets = t.Budgets
 	}
-	if t.ReportTo != nil && len(t.ReportTo) > 0 {
-		inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
-		for k, v := range t.ReportTo {
-			inst.ReportTo[k] = v.Copy()
+	if withReport {
+		if t.ReportTo != nil && len(t.ReportTo) > 0 {
+			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
+			for k, v := range t.ReportTo {
+				inst.ReportTo[k] = v.Copy()
+			}
 		}
 	}
 	return inst
