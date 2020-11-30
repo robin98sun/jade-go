@@ -7,7 +7,7 @@
             "application": {
                 "envName": "local-test",
                 "name": "plankton",
-                "version": "0.0.1",
+                "version": "1.0.0",
                 "owner": "skywalker",
                 "modules": {
                     "aggregator": {
