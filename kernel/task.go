@@ -10,7 +10,6 @@ const (
 type Task struct {
 	Application                 *Application         `json:"application,omitempty"`
 	Requirements                *Requirements        `json:"requirements,omitempty"`
-	Budget                      *Budget              `json:"budget,omitempty"`
 	Key                         string               `json:"id,omitempty"`
 	SubtaskKey                  string               `json:"subtaskId,omitempty"`
 	PodKey                      string               `json:"podId,omitempty"`
@@ -24,7 +23,6 @@ func (t *Task) CopyForSubtask() *Task {
 	newTask := &Task{
 		Application:  t.Application,
 		Requirements: t.Requirements,
-		Budget:       t.Budget.Copy(),
 		Key:          t.Key,
 	}
 	return newTask
@@ -77,8 +75,6 @@ func (t *Task) Valid() bool {
 	if !t.Requirements.valid() {
 		return false
 	}
-	if !t.Budget.valid() {
-		return false
-	}
+
 	return true
 }
