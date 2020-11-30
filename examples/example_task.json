@@ -11,18 +11,18 @@
                 "owner": "skywalker",
                 "modules": {
                     "aggregator": {
-                        "image": "robin98/plankton:0.6.1-amd64",
+                        "image": "robin98/plankton:0.6.2-amd64",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {}
                     },
                     "worker": {
-                        "image": "robin98/plankton:0.6.1-arm32",
+                        "image": "robin98/plankton:0.6.2-arm32",
                         "port": 8080,
                         "protocol": "TCP",
                         "input": {
                             "cmd": "gen and merge",
-                            "size": 1000000,
+                            "size": 10000,
                             "args": {
                                 "redundent": "verifying the decoding procedure"
                             }
