@@ -1,7 +1,7 @@
 package jadelet
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
@@ -12,8 +12,9 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 	msg := &jadesdk.ReportMessage{}
 	err := r.DecodeJsonPayload(msg)
 	if err == nil {
-		bs, _ := json.MarshalIndent(msg, "", "    ")
-		j.log.Println("[app message collector] Received application message:", string(bs))
+		// bs, _ := json.MarshalIndent(msg, "", "    ")
+		// j.log.Println("[app message collector] Received application message:", string(bs))
+		j.log.Println("[app message collector] Received application message for subtask[%v] of task[%v]:", msg.SubtaskKey, msg.TaskKey)
 		if msg.TaskKey != "" && msg.SubtaskKey != "" {
 			if msg.Status == scheduler.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskKey)
