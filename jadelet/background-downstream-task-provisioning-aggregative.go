@@ -124,7 +124,12 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
-		j.log.Println("evaluating task:", task.GetKey())
+		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
+		j.log.Printf("evaluating task[%v], report to [%v]", task.GetKey(), reportTo)
+		if reportTo == nil {
+			j.log.Printf("ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
+			continue
+		}
 		// 1. search all required sub-nodes
 		availableNodes := []string{}
 		if j.IsCoordinator() {
@@ -147,7 +152,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 					podName, nodePort, err := j.Provisioner.ProvisionTask(
 						j.Kube, j.Config.SelfNode,
 						j.newEnv(
-							taskItem.ReportTo.Node,
+							reportTo.Node,
 							task.Application.Name,
 							task.Application.Version,
 							string(kernel.AppModuleWorker),
