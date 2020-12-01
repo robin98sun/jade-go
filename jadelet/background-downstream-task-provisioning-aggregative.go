@@ -164,11 +164,12 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 						task.Requirements.GetModule(string(kernel.AppModuleWorker)),
 						1,
 					)
-					// Update self-node inside the pod
-					j.updatePodConfigOfSelfNodePort(nodePort)
 
 					if err != nil {
 						j.log.Println("ERROR when provisioning", string(kernel.AppModuleWorker), "for task", task.GetKey())
+						// Update self-node inside the pod
+					} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
+						j.log.Println("ERROR when updating pod nodePort", string(kernel.AppModuleWorker), "for task", task.GetKey())
 					} else {
 						workerPod = &kernel.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
