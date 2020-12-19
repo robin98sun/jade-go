@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # important: remote user must be in sudo group and OMIT PASSWORD
 # reference: how to omit password when sudo 
