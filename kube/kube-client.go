@@ -45,7 +45,7 @@ func (k *KubeClient) Init() {
 			}
 			k.Clientset = clientset
 			// using dynamic
-			client, errDyna := dynamic.NewForConfig(config)
+			client, err := dynamic.NewForConfig(config)
 			if err != nil {
 				// panic(errDyna.Error())
 				log.Println("can not create dynamic config for k8s client:", err.Error())
@@ -53,7 +53,7 @@ func (k *KubeClient) Init() {
 			}
 			k.Client = client
 		},
-		Catch: func(e Exception) {
+		Catch: func(e jadesdk.Exception) {
 			log.Printf("ERROR when initializing k8s client: %v", e)
 		},
 	}.Do()
