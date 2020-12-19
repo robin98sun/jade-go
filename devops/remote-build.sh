@@ -5,16 +5,19 @@ if [[ "$4" != "" ]];then
     remote_account=$4
 fi
 if [[ "$5" != "" ]];then
-    cmd=$5
+    tarfile=$5
 fi
 if [[ "$6" != "" ]];then
-    registry=$6
+    cmd=$6
 fi
 if [[ "$7" != "" ]];then
-    tag=$7
+    registry=$7
 fi
 if [[ "$8" != "" ]];then
-    registry_password=$8
+    tag=$8
+fi
+if [[ "$9" != "" ]];then
+    registry_password=$9
 fi
 
 proxy_host=$1
@@ -39,13 +42,13 @@ if [[ "$proxy_account" != "" && "$proxy_host" != "" && "$proxy_account" != "none
     echo "remote_account=$remote_account" >> $tmpfile
     echo "hostname" >>$tmpfile
 
-    if [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "$cmd" != "" ]];then
+    if [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "$tarfile" != "" ]];then
         if [[ "$cmd" != "reuse" ]];then
             ssh ${proxy_account}@${proxy_host} <<!
                 rm -rf ~/tmp/jadelet
                 rm -f ~/jadelet.source.tar.gz
 !
-            scp $cmd ${proxy_account}@${proxy_host}:~/jadelet.source.tar.gz
+            scp $tarfile ${proxy_account}@${proxy_host}:~/jadelet.source.tar.gz
             ssh ${proxy_account}@${proxy_host} <<!
                 rm -rf ~/tmp/jadelet
                 mkdir -p ~/tmp/jadelet
@@ -81,13 +84,13 @@ if [[ "$proxy_account" != "" && "$proxy_host" != "" && "$proxy_account" != "none
     ssh ${proxy_account}@${proxy_host} 'bash -s' < $tmpfile
     rm -f $tmpfile
     exit
-elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" ]];then
+elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "$tarfile" != "" ]];then
     if [[ "$cmd" != "reuse" ]];then
         ssh ${remote_account}@${remote_host} <<!
             rm -rf ~/tmp/jadelet
             rm -f ~/jadelet.source.tar.gz
 !
-        scp $cmd ${remote_account}@${remote_host}:~/jadelet.source.tar.gz
+        scp $tarfile ${remote_account}@${remote_host}:~/jadelet.source.tar.gz
     fi
     ssh -t ${remote_account}@${remote_host} <<!
         rm -rf ~/tmp/jadelet
