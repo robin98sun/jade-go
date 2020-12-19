@@ -81,7 +81,7 @@ if [[ "$proxy_account" != "" && "$proxy_host" != "" && "$proxy_account" != "none
     ssh ${proxy_account}@${proxy_host} 'bash -s' < $tmpfile
     rm -f $tmpfile
     exit
-elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "$cmd" != "" ]];then
+elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" ]];then
     if [[ "$cmd" != "reuse" ]];then
         ssh ${remote_account}@${remote_host} <<!
             rm -rf ~/tmp/jadelet
@@ -106,7 +106,9 @@ elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "
         fi
         rm -rf ~/tmp/jadelet
 !
-    cmd="build-and-push"
+    if [[ "$cmd" != "" ]];then
+        cmd="build-and-push"
+    fi
     source_pack='~/jadelet.source.tar.gz'
 fi
 
