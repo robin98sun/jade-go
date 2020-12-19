@@ -89,7 +89,7 @@ elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" ]];t
 !
         scp $cmd ${remote_account}@${remote_host}:~/jadelet.source.tar.gz
     fi
-    ssh -i ${remote_account}@${remote_host} <<!
+    ssh -t ${remote_account}@${remote_host} <<!
         rm -rf ~/tmp/jadelet
         mkdir -p ~/tmp/jadelet
         cp ~/jadelet.source.tar.gz ~/tmp/jadelet
