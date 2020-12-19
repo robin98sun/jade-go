@@ -4,6 +4,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"log"
 )
 
 type Logger interface {
@@ -27,19 +28,25 @@ func (k *KubeClient) Init() {
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error())
+		// panic(err.Error())
+		log.Println("can not initialize k8s client:", err.Error())
+		return
 	}
 	k.Config = config
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		// panic(err.Error())
+		log.Println("can not create static config for k8s client:", err.Error())
+		return
 	}
 	k.Clientset = clientset
 	// using dynamic
 	client, errDyna := dynamic.NewForConfig(config)
 	if err != nil {
-		panic(errDyna.Error())
+		// panic(errDyna.Error())
+		log.Println("can not create dynamic config for k8s client:", err.Error())
+		return
 	}
 	k.Client = client
 }
