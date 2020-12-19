@@ -72,7 +72,8 @@ func main() {
 	api.SetApp(router)
 	http.Handle("/$jade$/", http.StripPrefix("/$jade$", api.MakeHandler()))
 	// UI
-	http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
+	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
+	http.Handle("/", http.FileServer(http.Dir("/ui")))
 	// Start HTTP server
 	port := 8080
 	fmt.Println("JADE is listening on port", port)
