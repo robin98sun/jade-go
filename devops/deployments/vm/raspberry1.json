@@ -1,8 +1,8 @@
 {
   "nodes": {
-      "aces-diamonds-ace": {
+      "raspberry1": {
           "hostname": "raspberry1",
-          "address": "192.168.57.12"
+          "address": "192.168.57.13"
       }
   },
   "capacity": {

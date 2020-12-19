@@ -1,8 +1,8 @@
 {
   "nodes": {
-      "aces-diamonds-ace": {
+      "master-node": {
           "hostname": "cluster-1",
-          "address": "192.168.57.10"
+          "address": "192.168.57.11"
       }
   },
   "capacity": {

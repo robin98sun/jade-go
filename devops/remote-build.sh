@@ -1,3 +1,9 @@
+#!/bin/env bash
+
+# important: remote user must be in sudo group and OMIT PASSWORD
+# reference: how to omit password when sudo 
+# http://jonmoore.duckdns.org/index.php/linux-articles/58-remove-sudo-password-prompt
+
 if [[ "$3" != "" ]];then 
     remote_host=$3
 fi
@@ -157,10 +163,12 @@ fi
 # build the application of jadelet  
 if [[ "$cmd" == "build" || "$cmd" == "build-and-push" ]];then
     cd $workspace/jadesdk
+    echo "building jadesdk"
     go install
     if [[ \$? != 0 ]];then exit; fi
 
     cd $workspace/jade-go
+    echo "building jade-go"
     go install
     if [[ \$? != 0 ]];then exit; fi
 
@@ -168,17 +176,20 @@ if [[ "$cmd" == "build" || "$cmd" == "build-and-push" ]];then
     if [[ \$? != 0 ]];then exit; fi
 
     cd $workspace/plankton
+    echo "building plankton"
     go install
     if [[ \$? != 0 ]];then exit; fi
 
     go build -o plankton
     if [[ \$? != 0 ]];then exit; fi
+
+    echo "source code has been built"
 fi
 
 # push to docker registry
 if [[ "$tag" != ""  && "$registry" != "" ]];then
 if [[ "$cmd" == "push" || "$cmd" == "build-and-push" ]];then
-
+    echo "build and push images"
     if [[ "$registry_password" != "" ]];then
         sudo docker login --username $registry --password $registry_password
     fi
