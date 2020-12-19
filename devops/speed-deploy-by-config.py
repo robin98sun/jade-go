@@ -63,6 +63,10 @@ if args.agents is not None and len(args.agents) > 0:
     agents.append(agent_conf)
 
 # Generate environment files
+# create env dir if needed
+if args.env_dir is not None:
+  os.system("mkdir -p "+args.env_dir)
+
 alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890"
 def random_token(length):
   random.seed()

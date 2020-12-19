@@ -115,7 +115,7 @@ elif [[ "$cmd" != "build" && "$cmd" != "push" && "$cmd" != "build-and-push" && "
         fi
         rm -rf ~/tmp/jadelet
 !
-    if [[ "$cmd" != "" ]];then
+    if [[ "$cmd" != "" && "$cmd" != "copy" ]];then
         cmd="build-and-push"
     fi
     source_pack='~/jadelet.source.tar.gz'
@@ -148,6 +148,11 @@ if [[ "$source_pack" != "" ]];then
 fi 
 
 ls -l $workspace
+
+if [[ "$cmd" == "" || "$cmd" == "copy" ]];then
+    echo "copying to remote is done"
+    exit
+fi
 
 # prepare to build and/or push
 if [[ "\$GOROOT" == "" ]];then
