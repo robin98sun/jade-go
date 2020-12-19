@@ -35,42 +35,48 @@ func main() {
 	j.Verbose(true)
 	//
 
+	// APIs
 	api := rest.NewApi()
 	api.Use(rest.DefaultDevStack...)
 	router, err := rest.MakeRouter(
 		// Control path upstream
-		rest.Put("/$jade$/registerNode", j.RegisterNode),
-		rest.Post("/$jade$/collectProvisioning", j.CollectProvisioning),
+		rest.Put("/registerNode", j.RegisterNode),
+		rest.Post("/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
-		rest.Post("/$jade$/taskReceiver", j.TaskReceiver),
+		rest.Post("/taskReceiver", j.TaskReceiver),
 		// for administration
-		rest.Put("/$jade$/configurations", j.UpdateConfigurations),
+		rest.Put("/configurations", j.UpdateConfigurations),
 		// for data path
-		rest.Put("/$jade$/app/listener", j.CollectAppMsg),
-		rest.Get("/$jade$/taskResults", j.GetAggregativeTaskResults),
+		rest.Put("/app/listener", j.CollectAppMsg),
+		rest.Get("/taskResults", j.GetAggregativeTaskResults),
 		// for stat
-		rest.Get("/$jade$/dumpStat", j.DumpStat),
+		rest.Get("/dumpStat", j.DumpStat),
 		// for debugging
-		rest.Get("/$jade$/debug/jadelet", j.ShowJadelet),
-		rest.Get("/$jade$/debug/configurations", j.ShowConfigurations),
-		rest.Get("/$jade$/debug/pod", j.ShowPodInfo),
-		rest.Get("/$jade$/debug/service", j.ShowService),
-		rest.Get("/$jade$/debug/clusterIP", j.ShowClusterIP),
-		rest.Get("/$jade$/debug/externalIP", j.ShowExternalIP),
-		rest.Get("/$jade$/debug/node", j.ShowNode),
-		rest.Get("/$jade$/debug/subnodes", j.ShowSubnodes),
-		rest.Get("/$jade$/debug/taskCache", j.ShowTaskCache),
-		rest.Get("/$jade$/debug/podCache", j.ShowPodCache),
-		rest.Get("/$jade$/debug/capabilityCache", j.ShowCapabilityCache),
-		rest.Get("/$jade$/debug/capacityCache", j.ShowSubnodeCapacities),
-		rest.Post("/$jade$/debug/searchNodes", j.SearchNodes),
+		rest.Get("/debug/jadelet", j.ShowJadelet),
+		rest.Get("/debug/configurations", j.ShowConfigurations),
+		rest.Get("/debug/pod", j.ShowPodInfo),
+		rest.Get("/debug/service", j.ShowService),
+		rest.Get("/debug/clusterIP", j.ShowClusterIP),
+		rest.Get("/debug/externalIP", j.ShowExternalIP),
+		rest.Get("/debug/node", j.ShowNode),
+		rest.Get("/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/debug/taskCache", j.ShowTaskCache),
+		rest.Get("/debug/podCache", j.ShowPodCache),
+		rest.Get("/debug/capabilityCache", j.ShowCapabilityCache),
+		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
+		rest.Post("/debug/searchNodes", j.SearchNodes),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	api.SetApp(router)
+	http.Handle("/$jade$/", http.StripPrefix("/$jade$", api.MakeHandler()))
+	// UI
+	http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
+	// Start HTTP server
 	port := 8080
 	fmt.Println("JADE is listening on port", port)
-	log.Fatal(http.ListenAndServe(":"+fmt.Sprint(port), api.MakeHandler()))
+	// log.Fatal(http.ListenAndServe(":"+fmt.Sprint(port), api.MakeHandler()))
+	log.Fatal(http.ListenAndServe(":"+fmt.Sprint(port), nil))
 	fmt.Println("JADE is done")
 }
