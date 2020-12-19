@@ -121,15 +121,6 @@ workspace="~/Dev/src/jadelet"
 
 ssh ${remote_account}@${remote_host} <<!
 hostname
-if [[ "\$GOROOT" == "" ]];then
-    echo "no go root is defined"
-    exit
-fi
-
-if [[ "\$GOPATH" == "" ]];then
-    echo "no go path is defined"
-    exit
-fi
 
 echo "workspace =" $workspace
 # clear and re-establish the workplace
@@ -151,6 +142,17 @@ if [[ "$source_pack" != "" ]];then
 fi 
 
 ls -l $workspace
+
+# prepare to build and/or push
+if [[ "\$GOROOT" == "" ]];then
+    echo "no go root is defined"
+    exit
+fi
+
+if [[ "\$GOPATH" == "" ]];then
+    echo "no go path is defined"
+    exit
+fi
 
 # build the application of jadelet  
 if [[ "$cmd" == "build" || "$cmd" == "build-and-push" ]];then
