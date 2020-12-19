@@ -1,6 +1,6 @@
 {
   "nodes": {
-      "master-node": {
+      "cluster-1": {
           "hostname": "cluster-1",
           "address": "192.168.57.11"
       }
