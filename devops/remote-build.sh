@@ -150,7 +150,7 @@ fi
 ls -l $workspace
 
 # build the application of jadelet  
-if [[ "$cmd" == "build" || "$cmd" == "build-and-push" || "$cmd" == "" ]];then
+if [[ "$cmd" == "build" || "$cmd" == "build-and-push" ]];then
     cd $workspace/jadesdk
     go install
     if [[ \$? != 0 ]];then exit; fi
