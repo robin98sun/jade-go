@@ -75,9 +75,9 @@ func main() {
 	middleware := func(next http.Handler) http.Handler {
 	  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	    	// allow cross domain AJAX requests
-    		w.Header().Set("Access-Control-Allow-Origin", "*")
-    		w.Header().Set("Access-Control-Allow-Methods", "*")
-    		w.Header().Set("Access-Control-Allow-Headers", "*")
+    		w.Header().Set("Access-Control-Allow-Origin", "localhost:3000")
+    		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT")
+    		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding")
     		// business logic
 	    	next.ServeHTTP(w, r)
 	  	})
