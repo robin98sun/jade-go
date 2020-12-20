@@ -76,6 +76,8 @@ func main() {
 	  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	    	// allow cross domain AJAX requests
     		w.Header().Set("Access-Control-Allow-Origin", "*")
+    		w.Header().Set("Access-Control-Allow-Methods", "*")
+    		w.Header().Set("Access-Control-Allow-Headers", "*")
     		// business logic
 	    	next.ServeHTTP(w, r)
 	  	})
