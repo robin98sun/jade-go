@@ -74,9 +74,10 @@ func main() {
 	// Http server
 	middleware := func(next http.Handler) http.Handler {
 	  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	    	next.ServeHTTP(w, r)
 	    	// allow cross domain AJAX requests
     		w.Header().Set("Access-Control-Allow-Origin", "*")
+    		// business logic
+	    	next.ServeHTTP(w, r)
 	  	})
 	}
 	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
