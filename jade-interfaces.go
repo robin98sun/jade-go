@@ -78,7 +78,7 @@ func main() {
     			// allow cross domain AJAX requests
 		    	if origin := r.Header.Get("Origin"); origin != "" {
 	        	    w.Header().Set("Access-Control-Allow-Origin", origin)
-	        	    j.log.Printf("CORS origin: %v", origin)
+	        	    log.Printf("CORS origin: %v", origin)
 	        	}
 	       		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	        	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
