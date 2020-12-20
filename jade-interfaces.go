@@ -70,7 +70,16 @@ func main() {
 		log.Fatal(err)
 	}
 	api.SetApp(router)
-	http.Handle("/$jade$/", http.StripPrefix("/$jade$", api.MakeHandler()))
+
+	// Http server
+	middleware := func(next http.Handler) http.Handler {
+	  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	    	next.ServeHTTP(w, r)
+	    	// allow cross domain AJAX requests
+    		w.Header().Set("Access-Control-Allow-Origin", "*")
+	  	})
+	}
+	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
 	// UI
 	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
 	http.Handle("/", http.FileServer(http.Dir("/ui")))
