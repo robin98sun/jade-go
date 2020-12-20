@@ -74,15 +74,20 @@ func main() {
 	// Http server
 	middleware := func(next http.Handler) http.Handler {
 	  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	    	// allow cross domain AJAX requests
-	    	if origin := r.Header.Get("Origin"); origin != "" {
-        	    w.Header().Set("Access-Control-Allow-Origin", origin)
-        	}
-       		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-        	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
-    		w.Header().Set("Access-Control-Allow-Credentials", "true")
-    		// business logic
-	    	next.ServeHTTP(w, r)
+    		if r.Method == "OPTIONS" {
+    			// allow cross domain AJAX requests
+		    	if origin := r.Header.Get("Origin"); origin != "" {
+	        	    w.Header().Set("Access-Control-Allow-Origin", origin)
+	        	    j.log.Printf("CORS origin: %v", origin)
+	        	}
+	       		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	        	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	    		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	    		w.Header().Add("Access-Control-Max-Age", "86400")
+    		} else {
+    			// business logic
+	    		next.ServeHTTP(w, r)
+	    	}
 	  	})
 	}
 	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
