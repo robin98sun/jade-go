@@ -18,7 +18,7 @@ func (j *JADE) Register(retryCnt int) {
 		return
 	}
 
-	j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
+	// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
 
 	if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
 		if j.Config.UpperNode != nil {
