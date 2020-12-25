@@ -15,9 +15,16 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 		j.PeacefulFatalRequest(w, r, err.Error())
 		return
 	}
-	// Save the sub node in its sub node array
+	
 	nodekey := payload.Node.Key()
+	if _, exists := j.Subnodes[nodekey]; exists {
+		j.PeacefulFatalRequest(w, r, "already registered")
+		return
+	}
+
+	// Save the sub node in its sub node array
 	j.Subnodes[nodekey] = payload.Node
+
 	// En-cache capabilities
 	j.capabilityCache.Set(nodekey, payload.Capabilities)
 	// En-cache capacity
