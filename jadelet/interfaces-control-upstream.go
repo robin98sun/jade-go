@@ -18,7 +18,7 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 	
 	nodekey := payload.Node.Key()
 	if _, exists := j.Subnodes[nodekey]; exists {
-		j.PeacefulFatalRequest(w, r, "already registered")
+		j.DoneRequest(w, r, "already registered")
 		return
 	}
 
