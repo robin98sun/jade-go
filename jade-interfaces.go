@@ -51,6 +51,7 @@ func main() {
 		rest.Get("/taskResults", j.GetAggregativeTaskResults),
 		// for stat
 		rest.Get("/dumpStat", j.DumpStat),
+		rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
 		// for debugging
 		rest.Get("/debug/jadelet", j.ShowJadelet),
 		rest.Get("/debug/configurations", j.ShowConfigurations),

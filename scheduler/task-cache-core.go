@@ -9,14 +9,14 @@ import (
 // for each task, there should have a cache for each sub-node it has been dispatched
 // [task-key]: {
 // 		task: task-instance,
-//    status: task-status,
+//      status: task-status,
 // 		[node-key]: {
 // 			node: node-instance,
 // 			status: task-status,
 // 			[moduleName]: {
-//        status: task-status,
+//            status: task-status,
 // 			  [sub-task-key]: {
-// 				  subtask: sub-task-instance,
+// 				    subtask: sub-task-instance,
 // . 				status: sub-task-status,
 //  				updates: sub-task-result,
 // 	  		}
@@ -67,6 +67,27 @@ func (c *TaskCache) GetTask(taskID string) *TaskDispatchingItem {
 		return item.task
 	}
 	return nil
+}
+
+func (c *TaskCache) Clear() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.Cache == nil {
+		return
+	}
+
+	for k := range c.Cache {
+		delete(c.Cache, k)
+	}
+
+	if c.Stat == nil {
+		return
+	}
+
+	for k := range c.Stat {
+		delete(c.Stat, k)
+	}
 }
 
 type TaskCacheTaskItem struct {

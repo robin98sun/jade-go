@@ -42,3 +42,10 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 	deleted := j.Config.DeleteCapability(nc.Name)
 	w.WriteJson(deleted)
 }
+
+func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
+	if j.TaskCache != nil {
+		j.TaskCache.Clear()
+	}
+	j.DoneRequest(w, r, "OK")
+}
