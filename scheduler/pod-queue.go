@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"math"
 	"sync"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
@@ -11,6 +12,7 @@ type PodQueue struct {
 	Queue        []*PodQueueItem
 	ItemsInQueue map[string]*PodQueueItem
 	mutex        *sync.Mutex
+	dequeueClock int64
 }
 
 func NewPodQueue() *PodQueue {
@@ -18,6 +20,7 @@ func NewPodQueue() *PodQueue {
 		Queue:        []*PodQueueItem{},
 		mutex:        &sync.Mutex{},
 		ItemsInQueue: make(map[string]*PodQueueItem),
+		dequeueClock: 0,
 	}
 }
 
@@ -37,15 +40,25 @@ func (p *PodQueue) Length() int {
 }
 
 type PodQueueItem struct {
-	Payload     interface{}
-	TaskKey     string
-	SubtaskKey  string
-	ArrivalTime time.Time
-	Deadline    time.Time
-	Key         string
+	Payload              interface{}
+	TaskKey              string
+	SubtaskKey           string
+	ArrivalTime          time.Time
+	Deadline             time.Time
+	DispatchTime         time.Time
+	PackageSize          int
+	Key                  string
+	enqueueTime          int64
+	dequeueTime          int64
+	QueueLength          int64
+	EstimatedServiceTime int64
 }
 
-func (q *PodQueue) Enqueue(key string, taskKey string, subtaskKey string, payload interface{}, queueType kernel.TaskQueuingMechanism, maxQueuingTime int64) bool {
+func (q *PodQueue) Enqueue(
+	key string, taskKey string, subtaskKey string, payload interface{},
+	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64,
+	estimatedServiceTime int64, // milliseconds
+) bool {
 	if payload == nil || key == "" {
 		return false
 	}
@@ -53,11 +66,14 @@ func (q *PodQueue) Enqueue(key string, taskKey string, subtaskKey string, payloa
 		return false
 	}
 	newItem := &PodQueueItem{
-		Payload:     payload,
-		ArrivalTime: time.Now(),
-		Key:         key,
-		TaskKey:     taskKey,
-		SubtaskKey:  subtaskKey,
+		Payload:              payload,
+		ArrivalTime:          time.Now(),
+		Key:                  key,
+		TaskKey:              taskKey,
+		SubtaskKey:           subtaskKey,
+		enqueueTime:          q.dequeueClock,
+		dequeueTime:          0,
+		EstimatedServiceTime: estimatedServiceTime,
 	}
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	q.Lock()
@@ -95,6 +111,21 @@ func (q *PodQueue) Dequeue() *PodQueueItem {
 		item := q.Queue[0]
 		q.Queue = q.Queue[1:]
 		delete(q.ItemsInQueue, item.Key)
+		item.dequeueTime = q.dequeueClock
+		item.DispatchTime = time.Now()
+		// calculate queue length
+		if item.dequeueTime >= item.enqueueTime {
+			item.QueueLength = item.dequeueTime - item.enqueueTime
+		} else {
+			item.QueueLength = math.MaxInt64 - item.enqueueTime + item.dequeueTime
+		}
+		// move dequeue clock
+		if q.dequeueClock == math.MaxInt64 {
+			q.dequeueClock = 1
+		} else {
+			q.dequeueClock++
+		}
+
 		return item
 	}
 	return nil

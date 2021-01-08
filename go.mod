@@ -18,14 +18,13 @@ require (
 	github.com/yvasiyarov/gorelic v0.0.7
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20160601141957-9c099fbc30e9 // indirect
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	gonum.org/v1/gonum v0.8.2
 	gopkg.in/tylerb/graceful.v1 v1.2.15
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/api v0.19.0
 	k8s.io/apimachinery v0.19.0
 	k8s.io/client-go v0.19.0
-    uta.edu/aces/jadesdk v0.0.0
+	uta.edu/aces/jadesdk v0.0.0
 )
 
-replace (
-    uta.edu/aces/jadesdk => ../jadesdk
-)
+replace uta.edu/aces/jadesdk => ../jadesdk

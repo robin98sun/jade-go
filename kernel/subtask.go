@@ -1,7 +1,7 @@
 package kernel
 
 import (
-	"time"
+	// "time"
 )
 
 type SubTask struct {
@@ -13,8 +13,6 @@ type SubTask struct {
 	NodeKey           string    `json:"nodeId,omitempty"`
 	PodKey            string    `json:"podId,omitempty"`
 	Pod               *Pod      `json:"pod,omitempty"`
-	DispatchTimestamp time.Time `json:"dispatchTimestamp,omitempty"`
-	FinishTimestamp   time.Time `json:"finishTimestamp,omitempty"`
 }
 
 func (t *SubTask) GetKey() string {

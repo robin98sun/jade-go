@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"time"
 	"uta.edu/aces/jade-go/kernel"
 )
 
@@ -29,9 +30,21 @@ func (i *TaskCacheModuleItem) describe() map[string]interface{} {
 }
 
 type TaskCacheSubtaskItem struct {
-	subtask *kernel.SubTask
-	status  TaskStatus
-	updates interface{}
+	subtask            *kernel.SubTask
+	status             TaskStatus
+	updates            interface{}
+	ArriveTimestamp    time.Time     `json:"arriveTimestemp,omitempty"`
+	EnqueueTimestamp   time.Time     `json:"enqueueTimestemp,omitempty"`
+	QueueLength        int64         `json:"queueLength,omitempty"`
+	SendPackageSize    int           `json:"sendPackageSize,omitempty"`
+	ReceivePackageSize int           `json:"receivePackageSize,omitempty"`
+	DispatchTimestamp  time.Time     `json:"dispatchTimestamp,omitempty"`
+	FinishTimestamp    time.Time     `json:"finishTimestamp,omitempty"`
+	QueueingTime       time.Duration `json:"queueingTime,omitempty"`
+	ServiceTime        time.Duration `json:"serviceTime,omitempty"`
+	RequestTime        time.Duration `json:"requestTime,omitempty"`
+	ForwardingTime     time.Duration `json:"forwardingTime,omitempty"`
+	RTT                time.Duration `json:"RTT,omitempty"`
 }
 
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {

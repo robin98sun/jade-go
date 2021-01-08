@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"uta.edu/aces/jade-go/kernel"
-	// "uta.edu/aces/jadesdk"
 )
 
 // ShowConfigurations show current JADE runtime configurations

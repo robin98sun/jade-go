@@ -62,15 +62,16 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 				c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks = make(map[string]*TaskCacheSubtaskItem)
 			}
 			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()] = &TaskCacheSubtaskItem{
-				subtask: subtask,
-				status:  TaskStatusAccepted,
-				updates: nil,
+				subtask:         subtask,
+				status:          TaskStatusAccepted,
+				updates:         nil,
+				ArriveTimestamp: time.Now(),
 			}
 		}
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}) *kernel.SubTask {
+func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}, stat *jadesdk.StatItem) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -84,9 +85,23 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	if subtask == nil {
 		return nil
 	}
-	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].status = status
-	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].updates = result
-	c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask.FinishTimestamp = time.Now()
+	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
+	subtaskItem.status = status
+
+	if task.Options != nil && task.Options.SaveResultInCache {
+		subtaskItem.updates = result
+	}
+
+	subtaskItem.FinishTimestamp = time.Now()
+	subtaskItem.ForwardingTime = stat.Forwarding
+	subtaskItem.ServiceTime = stat.Service
+	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
+	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
+	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
+
+	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
+
+	c.Cache[taskKey].LastUpdateTimestamp = time.Now()
 	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
 }
 
@@ -270,6 +285,29 @@ func (c *TaskCache) GetSubtasks(taskKey string, moduleName string) []*SubtaskOnN
 	return subtasks
 }
 
+func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem) {
+	if c == nil || len(c.Cache) == 0 {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if cacheItem, ok := c.Cache[item.TaskKey]; ok {
+		if subtask := cacheItem.task.Task.GetSubtask(item.SubtaskKey); subtask != nil {
+			if dispatchedNodeItem, exists := cacheItem.dispatchedNodes[pod.NodeKey]; exists {
+				if subtaskCache, exists := dispatchedNodeItem.modules[pod.ModuleName]; exists {
+					if subtaskItem, exists := subtaskCache.subtasks[item.SubtaskKey]; exists {
+						subtaskItem.EnqueueTimestamp = item.ArrivalTime
+						subtaskItem.DispatchTimestamp = item.DispatchTime
+						subtaskItem.QueueingTime = item.DispatchTime.Sub(item.ArrivalTime)
+						subtaskItem.QueueLength = item.QueueLength
+						subtaskItem.SendPackageSize = item.PackageSize
+					}
+				}
+			}
+		}
+	}
+}
+
 func (c *TaskCache) DispatchedSubtask(taskKey string, subtaskKey string) {
 	if c == nil || len(c.Cache) == 0 {
 		return
@@ -277,15 +315,17 @@ func (c *TaskCache) DispatchedSubtask(taskKey string, subtaskKey string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if cacheItem, ok := c.Cache[taskKey]; ok {
-		subtask := cacheItem.task.Task.GetSubtask(subtaskKey)
-		if subtask != nil {
-			subtask.DispatchTimestamp = time.Now()
+		if subtask := cacheItem.task.Task.GetSubtask(subtaskKey); subtask != nil {
+			// subtask.DispatchTimestamp = time.Now()
 		}
 	}
 }
 
-func (c *TaskCache) SaveStatOfModule(appName string, moduleName string, fanoutDegree int, statItem *jadesdk.StatItem, dispatchTimestamp time.Time, finishTimestamp time.Time) {
-	if c == nil || statItem == nil {
+func (c *TaskCache) SaveStatOfModule(
+	appName string, moduleName string,
+	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
+) {
+	if c == nil || subtaskItem == nil {
 		return
 	}
 	c.mutex.Lock()
@@ -311,9 +351,11 @@ func (c *TaskCache) SaveStatOfModule(appName string, moduleName string, fanoutDe
 	}
 
 	stat := fanouts[fanoutKey]
-	totalDuration := finishTimestamp.Sub(dispatchTimestamp)
-	stat.Total.AddDuration(totalDuration)
-	onFlyDuration := totalDuration - statItem.Decoding - statItem.Forwarding - statItem.Task
-	stat.OnFly.AddDuration(onFlyDuration)
-	stat.ApplyItem(statItem)
+	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
+	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
+	stat.Service.AddDuration(subtaskItem.ServiceTime)
+	stat.Request.AddDuration(subtaskItem.RequestTime)
+	stat.RTT.AddDuration(subtaskItem.RTT)
+	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
+	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
 }

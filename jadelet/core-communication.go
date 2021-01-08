@@ -7,7 +7,7 @@ import (
 func (j *JADE) HTTPCommunicate(
 	operationName string, method string, path string, targetNode *kernel.Node,
 	payload interface{}, retryCnt int, retryLimitation int,
-) (interface{}, error) {
+) (interface{}, int, error) {
 	return j.sdk.HTTPCommunicate(
 		operationName, targetNode.Protocol, method, path,
 		targetNode.GetSDKNode(), payload, retryCnt, retryLimitation,

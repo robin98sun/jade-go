@@ -4,6 +4,21 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 )
 
+type TaskDispatchingItem struct {
+	Task     *kernel.Task                            `json:"task,omitempty"`
+	ReportTo map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
+	Budgets  map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
+	Options  *TaskDispatchingOptions                 `json:"options,omitempty"`
+}
+
+type TaskDispatchingOptions struct {
+	SaveResultInCache         bool   `json:"saveResultInCache,omitempty"`
+	PersistCache              bool   `json:"persistCache,omitempty"`
+	EstimatedServiceTimeModel string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
+	EstimatedServiceTime      int64  `json:"estimatedServiceTime,omitempty"`      // for "constant"
+	EstimatedMeanServiceTime  int64  `json:"estimatedArrivalRate,omitempty"`      // for "exponential" / "poission"
+}
+
 type TaskDispatchingItemReportTo struct {
 	Node *kernel.Node `json:"node,omitempty"`
 	Pod  *kernel.Pod  `json:"pod,omitempty"`
@@ -29,12 +44,6 @@ func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDis
 
 type TaskDispatchingItemBudget struct {
 	FanoutTable []int64
-}
-
-type TaskDispatchingItem struct {
-	Task     *kernel.Task                            `json:"task,omitempty"`
-	ReportTo map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
-	Budgets  map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 }
 
 func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {

@@ -22,15 +22,12 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			if msg.Status == scheduler.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
-			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates)
+			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat)
 			if subtask != nil && subtask.Pod != nil {
 				j.DoneRequest(w, r, "message received")
 
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
-				// collect the stat for the task
-				j.log.Printf("[app message collector] saving stat data for app[%v] module[%v] with fanout degree[%v]", subtask.AppName, subtask.ModuleName, subtask.Fanout)
-				j.TaskCache.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, msg.Stat, subtask.DispatchTimestamp, subtask.FinishTimestamp)
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
 				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, j.log.Printf)

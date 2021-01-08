@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"sync"
+	"time"
 	"uta.edu/aces/jadesdk"
 )
 
@@ -91,9 +92,10 @@ func (c *TaskCache) Clear() {
 }
 
 type TaskCacheTaskItem struct {
-	task            *TaskDispatchingItem
-	dispatchedNodes map[string]*TaskCacheNodeItem // node-key : nodeItem
-	status          TaskStatus
+	task                *TaskDispatchingItem
+	dispatchedNodes     map[string]*TaskCacheNodeItem // node-key : nodeItem
+	status              TaskStatus
+	LastUpdateTimestamp time.Time `json:"lastUpdateTimestamp,omitempty"`
 }
 
 func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {
