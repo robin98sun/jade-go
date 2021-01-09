@@ -80,6 +80,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				// 2. dispatch the subtask to each worker,
 				//    together with the aggregator's address
 				fanoutDegree := len(workerSubtasks)
+				j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
 				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
 				budget := taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 				if budget > 0 {

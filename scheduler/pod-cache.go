@@ -22,6 +22,22 @@ func (p *PodCache) Unlock() {
 	p.mutex.Unlock()
 }
 
+func (p *PodCache) Clear() {
+	p.Lock()
+	defer p.Unlock()
+	for key := range p.Nodes {
+		delete(p.Nodes, key)
+	}
+
+	for key := range p.Pods {
+		delete(p.Pods, key)
+	}
+
+	for key := range p.QueuingPods {
+		delete(p.QueuingPods, key)
+	}
+}
+
 func NewPodCache() *PodCache {
 	inst := &PodCache{
 		Nodes: make(map[string]*PodCacheNodeItem),

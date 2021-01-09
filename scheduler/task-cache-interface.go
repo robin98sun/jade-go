@@ -2,13 +2,108 @@ package scheduler
 
 import (
 	"strconv"
+	"strings"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CollectTrace() {
+func (c *TaskCache) CollectTraces() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if c == nil {
+		return ""
+	}
+	traces := "Status Task_ID Fanout_Degree Subtask_ID Module_Name Node_ID"
+	traces += " Task_Arrival_Timestamp Task_Start_Timestamp Task_Finish_Timestamp"
+	traces += " Subtask_Arrival_Timestamp Subtask_Enqueue_Timestamp Subtask_Dispatch_Timestamp Subtask_Finish_Timestamp"
+	traces += " Task_Total_Time(ms) Task_Provision_Time(ms) Task_Execution_Time(ms)"
+	traces += " Subtask_Request_Time(ms) Subtask_Queueing_Time(ms)"
+	traces += " Queue_Length"
+	traces += " Subtask_Service_Time(ms)"
+	traces += " Subtask_Round_Trip_Time(ms) Subtask_Upward_Trip_Time(ms)"
+	traces += " Subtask_Downward_Package_Size Subtask_Upward_Package_Size"
+	traces += "\n"
+	for _, taskItem := range c.Cache {
+		for _, dispatchedNode := range taskItem.dispatchedNodes {
+			for moduleName, moduleItem := range dispatchedNode.modules {
+				for _, subtaskItem := range moduleItem.subtasks {
+					// keys
+					line := "" + string(taskItem.status)
+					line += " " + taskItem.task.Task.GetKey()
+					line += " " + strconv.FormatInt(taskItem.Fanout, 10)
+					line += " " + subtaskItem.subtask.GetKey()
+					line += " " + moduleName
+					line += " " + dispatchedNode.node.Key()
 
+					// timestamps
+					timeArr := [...]time.Time{
+						taskItem.task.GetArriveTime(),
+						taskItem.DispatchTimestamp,
+						taskItem.FinishTimestamp,
+						subtaskItem.ArriveTimestamp,
+						subtaskItem.EnqueueTimestamp,
+						subtaskItem.DispatchTimestamp,
+						subtaskItem.FinishTimestamp,
+					}
+					for _, ts := range timeArr {
+						if ts.IsZero() {
+							line += " " + "N/A"
+						} else {
+							line += " " + strings.Replace(ts.String(), " ", "_", -1)
+						}
+					}
+
+					// task durations milliseconds
+					// Task_Total_Time(ms)
+					dur := int64(0)
+					if !timeArr[0].IsZero() && !timeArr[2].IsZero() {
+						dur = int64(timeArr[2].Sub(timeArr[0]) / time.Millisecond)
+					}
+					line += " " + strconv.FormatInt(dur, 10)
+
+					// Task_Provision_Time(ms)
+					dur = int64(0)
+					if !timeArr[0].IsZero() && !timeArr[1].IsZero() {
+						dur = int64(timeArr[1].Sub(timeArr[0]) / time.Millisecond)
+					}
+					line += " " + strconv.FormatInt(dur, 10)
+
+					// Task_Execution_Time(ms)
+					dur = int64(0)
+					if !timeArr[1].IsZero() && !timeArr[2].IsZero() {
+						dur = int64(timeArr[2].Sub(timeArr[1]) / time.Millisecond)
+					}
+					line += " " + strconv.FormatInt(dur, 10)
+
+					// Subtask_Request_Time(ms)
+					dur = int64(subtaskItem.RequestTime / time.Millisecond)
+					line += " " + strconv.FormatInt(dur, 10)
+					// Subtask_Queueing_Time(ms)
+					dur = int64(subtaskItem.QueueingTime / time.Millisecond)
+					line += " " + strconv.FormatInt(dur, 10)
+					// Queue_Length
+					line += " " + strconv.FormatInt(subtaskItem.QueueLength, 10)
+					// Subtask_Service_Time(ms)
+					dur = int64(subtaskItem.ServiceTime / time.Millisecond)
+					line += " " + strconv.FormatInt(dur, 10)
+					// Subtask_Round_Trip_Time(ms)
+					dur = int64(subtaskItem.RTT / time.Millisecond)
+					line += " " + strconv.FormatInt(dur, 10)
+					// Subtask_Upward_Trip_Time(ms)
+					dur = int64(subtaskItem.ForwardingTime / time.Millisecond)
+					line += " " + strconv.FormatInt(dur, 10)
+					// Subtask_Downward_Package_Size
+					line += " " + strconv.Itoa(subtaskItem.SendPackageSize)
+					// Subtask_Upward_Package_Size
+					line += " " + strconv.Itoa(subtaskItem.ReceivePackageSize)
+					line += "\n"
+					traces += line
+				}
+			}
+		}
+	}
+	return traces
 }
 
 func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
@@ -104,6 +199,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
 	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
+	subtaskItem.RequestTime -= subtaskItem.RTT / 2
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 
@@ -251,7 +347,12 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 			printf("[task cache] task[%v] is {%v}, won't check deeper", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
-		return c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf)
+		if result := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf); result {
+			if desiredStatus == TaskStatusDone {
+
+			}
+			return result
+		}
 	}
 	return false
 }
@@ -264,6 +365,11 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = status
+		if status == TaskStatusRunning {
+			taskItem.DispatchTimestamp = time.Now()
+		} else if status == TaskStatusDone || status == TaskStatusFailed {
+			taskItem.FinishTimestamp = time.Now()
+		}
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			nodeItem.status = status
 			for _, moduleItem := range nodeItem.modules {
@@ -273,6 +379,18 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 				}
 			}
 		}
+	}
+}
+
+func (c *TaskCache) SetFanoutDegree(taskKey string, fanout int64) {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if taskItem, e := c.Cache[taskKey]; e {
+		taskItem.Fanout = fanout
 	}
 }
 

@@ -96,6 +96,9 @@ type TaskCacheTaskItem struct {
 	dispatchedNodes     map[string]*TaskCacheNodeItem // node-key : nodeItem
 	status              TaskStatus
 	LastUpdateTimestamp time.Time `json:"lastUpdateTimestamp,omitempty"`
+	DispatchTimestamp   time.Time `json:"dispatchTimestamp,omitempty"`
+	FinishTimestamp     time.Time `json:"finishTimestamp,omitempty"`
+	Fanout              int64     `json:"fanout,omitempty"`
 }
 
 func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {

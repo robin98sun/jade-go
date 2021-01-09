@@ -15,11 +15,12 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 		j.PeacefulFatalRequest(w, r, err.Error())
 		return
 	}
-	
+
 	nodekey := payload.Node.Key()
 	if _, exists := j.Subnodes[nodekey]; exists {
-		j.DoneRequest(w, r, "already registered")
-		return
+		// j.DoneRequest(w, r, "already registered")
+		// return
+		j.log.Printf("updating information for subnode[%v]", nodekey)
 	}
 
 	// Save the sub node in its sub node array

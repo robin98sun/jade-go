@@ -34,6 +34,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		}{}
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
+				taskItem.Arrived()
 				validTasks[taskItem.Task.GetKey()] = taskItem
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {

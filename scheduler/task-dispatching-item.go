@@ -1,14 +1,26 @@
 package scheduler
 
 import (
+	"time"
 	"uta.edu/aces/jade-go/kernel"
 )
 
 type TaskDispatchingItem struct {
-	Task     *kernel.Task                            `json:"task,omitempty"`
-	ReportTo map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
-	Budgets  map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
-	Options  *TaskDispatchingOptions                 `json:"options,omitempty"`
+	Task            *kernel.Task                            `json:"task,omitempty"`
+	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
+	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
+	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
+	arriveTimestamp time.Time
+}
+
+func (t *TaskDispatchingItem) Arrived() {
+	if t != nil {
+		t.arriveTimestamp = time.Now()
+	}
+}
+
+func (t *TaskDispatchingItem) GetArriveTime() time.Time {
+	return t.arriveTimestamp
 }
 
 type TaskDispatchingOptions struct {
