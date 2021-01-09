@@ -23,23 +23,23 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
 			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat)
+			j.log.Printf("[app message collector] processed result for subtask[%v]", subtask)
 			if subtask != nil && subtask.Pod != nil {
-				j.DoneRequest(w, r, "message received")
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
+				j.DoneRequest(w, r, "message received")
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
 				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, j.log.Printf)
-			} else {
-				j.log.Printf("[app message collector] the subtask[%v] of task[%v] claimed by a message from pod[%v] is not pre-cached",
-					msg.SubtaskKey, msg.TaskKey,
-					msg.Node.Key(),
-				)
-				j.PeacefulFatalRequest(w, r, "invalid subtask")
+				return
 			}
-			return
 		}
+		j.log.Printf("[app message collector] the subtask[%v] of task[%v] claimed by a message from pod[%v] is not pre-cached",
+			msg.SubtaskKey, msg.TaskKey,
+			msg.Node.Key(),
+		)
+		j.PeacefulFatalRequest(w, r, "invalid subtask")
 	} else {
 		j.PeacefulFatalRequest(w, r, "invalid message: "+err.Error())
 	}
