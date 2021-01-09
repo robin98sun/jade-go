@@ -95,6 +95,7 @@ func main() {
 	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
 	// UI
 	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
+	http.Handle("/debug", http.FileServer(http.Dir("/ui")))
 	http.Handle("/", http.FileServer(http.Dir("/ui")))
 	// Start HTTP server
 	port := 8080
