@@ -85,6 +85,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	if subtask == nil {
 		return nil
 	}
+
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
 	subtaskItem.status = status
 
