@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"log"
 	"strconv"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
@@ -75,34 +76,51 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	if c == nil {
 		return nil
 	}
+	log.Println("a")
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	log.Println("b")
 	task := c.GetTask(taskKey)
+	log.Println("c")
 	if task == nil {
 		return nil
 	}
+	log.Println("d")
 	subtask := task.Task.GetSubtask(subtaskKey)
+	log.Println("f", subtask)
 	if subtask == nil {
 		return nil
 	}
+	log.Println("g")
 
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
+	log.Println("h")
+
 	subtaskItem.status = status
+	log.Println("i")
 
 	if task.Options != nil && task.Options.SaveResultInCache {
+		log.Println("j")
 		subtaskItem.updates = result
 	}
+	log.Println("k")
 
 	subtaskItem.FinishTimestamp = time.Now()
 	subtaskItem.ForwardingTime = stat.Forwarding
 	subtaskItem.ServiceTime = stat.Service
+	log.Println("l")
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
+	log.Println("m")
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
+	log.Println("n")
 	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
+	log.Println("o")
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
+	log.Println("p")
 
 	c.Cache[taskKey].LastUpdateTimestamp = time.Now()
+	log.Println("q", c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask)
 	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
 }
 
