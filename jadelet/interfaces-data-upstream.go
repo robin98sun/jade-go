@@ -22,8 +22,16 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			if msg.Status == scheduler.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
+			j.log.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
+				msg.SubtaskKey, msg.TaskKey,
+				msg.Node.Key(),
+			)
 			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat)
-			j.log.Printf("[app message collector] processed result for subtask[%v]", subtask)
+			j.log.Printf("[app message collector] instance subtask[%v] for subtask[%v] of task[%v], from pod[%v]:",
+				subtask,
+				msg.SubtaskKey, msg.TaskKey,
+				msg.Node.Key(),
+			)
 			if subtask != nil && subtask.Pod != nil {
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				j.DoneRequest(w, r, "message received")
