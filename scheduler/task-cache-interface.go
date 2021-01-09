@@ -7,6 +7,10 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
+func (c *TaskCache) CollectTrace() {
+
+}
+
 func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
 	if c == nil {
 		return
