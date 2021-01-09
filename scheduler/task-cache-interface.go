@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"log"
 	"strconv"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
@@ -76,52 +75,73 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	if c == nil {
 		return nil
 	}
-	log.Println("a")
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Println("b")
 	task := c.GetTask(taskKey)
-	log.Println("c")
 	if task == nil {
 		return nil
 	}
-	log.Println("d")
 	subtask := task.Task.GetSubtask(subtaskKey)
-	log.Println("f", subtask)
 	if subtask == nil {
 		return nil
 	}
-	log.Println("g")
 
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
-	log.Println("h")
 
 	subtaskItem.status = status
-	log.Println("i")
 
 	if task.Options != nil && task.Options.SaveResultInCache {
-		log.Println("j")
 		subtaskItem.updates = result
 	}
-	log.Println("k")
 
 	subtaskItem.FinishTimestamp = time.Now()
 	subtaskItem.ForwardingTime = stat.Forwarding
 	subtaskItem.ServiceTime = stat.Service
-	log.Println("l")
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
-	log.Println("m")
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
-	log.Println("n")
 	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
-	log.Println("o")
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
-	log.Println("p")
 
 	c.Cache[taskKey].LastUpdateTimestamp = time.Now()
-	log.Println("q", c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask)
 	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
+}
+
+func (c *TaskCache) SaveStatOfModule(
+	appName string, moduleName string,
+	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
+) {
+	if c == nil || subtaskItem == nil {
+		return
+	}
+
+	if _, ok := c.Stat[appName]; !ok {
+		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
+	}
+	appItem := c.Stat[appName]
+
+	if _, ok := appItem[moduleName]; !ok {
+		appItem[moduleName] = make(map[string]*jadesdk.Stat)
+	}
+	fanouts := appItem[moduleName]
+
+	realFanoutDegree := fanoutDegree
+	if realFanoutDegree <= 0 {
+		realFanoutDegree = 1
+	}
+	fanoutKey := strconv.Itoa(realFanoutDegree)
+	if _, ok := fanouts[fanoutKey]; !ok {
+		fanouts[fanoutKey] = jadesdk.NewStat()
+	}
+
+	stat := fanouts[fanoutKey]
+	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
+	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
+	stat.Service.AddDuration(subtaskItem.ServiceTime)
+	stat.Request.AddDuration(subtaskItem.RequestTime)
+	stat.RTT.AddDuration(subtaskItem.RTT)
+	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
+	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
 }
 
 type TaskResult struct {
@@ -338,43 +358,4 @@ func (c *TaskCache) DispatchedSubtask(taskKey string, subtaskKey string) {
 			// subtask.DispatchTimestamp = time.Now()
 		}
 	}
-}
-
-func (c *TaskCache) SaveStatOfModule(
-	appName string, moduleName string,
-	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
-) {
-	if c == nil || subtaskItem == nil {
-		return
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if _, ok := c.Stat[appName]; !ok {
-		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
-	}
-	appItem := c.Stat[appName]
-
-	if _, ok := appItem[moduleName]; !ok {
-		appItem[moduleName] = make(map[string]*jadesdk.Stat)
-	}
-	fanouts := appItem[moduleName]
-
-	realFanoutDegree := fanoutDegree
-	if realFanoutDegree <= 0 {
-		realFanoutDegree = 1
-	}
-	fanoutKey := strconv.Itoa(realFanoutDegree)
-	if _, ok := fanouts[fanoutKey]; !ok {
-		fanouts[fanoutKey] = jadesdk.NewStat()
-	}
-
-	stat := fanouts[fanoutKey]
-	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
-	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
-	stat.Service.AddDuration(subtaskItem.ServiceTime)
-	stat.Request.AddDuration(subtaskItem.RequestTime)
-	stat.RTT.AddDuration(subtaskItem.RTT)
-	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
-	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
 }
