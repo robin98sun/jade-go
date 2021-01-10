@@ -130,6 +130,11 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						continue
 					}
 					// enqueue the subtask
+					if estimatedServiceTime > 0 {
+						j.log.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model"
+							estimatedServiceTime, options.EstimatedServiceTimeModel,
+						)
+					}
 					done := queue.Enqueue(
 						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 						task.QueuingMechanism, budget,
