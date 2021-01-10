@@ -52,6 +52,7 @@ func main() {
 		// for stat
 		rest.Get("/dumpStat", j.DumpStat),
 		rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
+		rest.Delete("/podCache", j.ClearPodCache),
 		// for debugging
 		rest.Get("/debug/jadelet", j.ShowJadelet),
 		rest.Get("/debug/configurations", j.ShowConfigurations),
@@ -95,8 +96,8 @@ func main() {
 	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
 	// UI
 	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
-	http.Handle("/debug", http.FileServer(http.Dir("/ui")))
 	http.Handle("/", http.FileServer(http.Dir("/ui")))
+	http.Handle("/debug", http.FileServer(http.Dir("/ui")))
 	// Start HTTP server
 	port := 8080
 	fmt.Println("JADE is listening on port", port)
