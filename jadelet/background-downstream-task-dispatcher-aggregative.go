@@ -36,15 +36,17 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
-	j.TaskCache.DispatchedSubtask(queueItem.TaskKey, queueItem.SubtaskKey)
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem)
+	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 	_, reqlen, _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
 	)
-	queueItem.PackageSize = reqlen
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem)
+	if workerSubtaskCacheItem != nil {
+		workerSubtaskCacheItem.SendPackageSize = reqlen
+	}
 }
 
 func (j *JADE) checkTaskStatus(taskKey string) {
@@ -68,14 +70,21 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 					// Save the dispatching timestamp and fanout degree
 					aggregator.Subtask.Fanout = len(workerSubtasks)
-					j.TaskCache.DispatchedSubtask(taskKey, aggregator.Subtask.GetKey())
+					aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
+					if aggregatorSubtaskCacheItem != nil {
+						aggregatorSubtaskCacheItem.EnqueueTimestamp = time.Now()
+						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
+					}
 					// dispatch the aggregator subtask
-					j.HTTPCommunicate(
+					_, reqlen, _ := j.HTTPCommunicate(
 						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
 						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 						msg,
 						0, 10,
 					)
+					if aggregatorSubtaskCacheItem != nil {
+						aggregatorSubtaskCacheItem.SendPackageSize = reqlen
+					}
 				}
 				// 2. dispatch the subtask to each worker,
 				//    together with the aggregator's address
@@ -114,8 +123,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							if options.EstimatedMeanServiceTime > 0 {
 								estimatedServiceTime = int64(poissonDist.Rand())
 							}
-						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedServiceTime > 0 {
-							estimatedServiceTime = options.EstimatedServiceTime
+						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
+							estimatedServiceTime = options.EstimatedMeanServiceTime
 						}
 					}
 					// generate request payload for the subtask

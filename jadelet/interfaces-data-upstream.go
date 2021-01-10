@@ -27,11 +27,6 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.Node.Key(),
 			)
 			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat)
-			j.log.Printf("[app message collector] instance subtask[%v] for subtask[%v] of task[%v], from pod[%v]:",
-				subtask,
-				msg.SubtaskKey, msg.TaskKey,
-				msg.Node.Key(),
-			)
 			if subtask != nil && subtask.Pod != nil {
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				j.DoneRequest(w, r, "message received")
@@ -43,7 +38,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				return
 			}
 		}
-		j.log.Printf("[app message collector] the subtask[%v] of task[%v] claimed by a message from pod[%v] is not pre-cached",
+		j.log.Printf("[app message collector] ERROR: the subtask[%v] of task[%v] claimed by a message from pod[%v] is not recognized",
 			msg.SubtaskKey, msg.TaskKey,
 			msg.Node.Key(),
 		)

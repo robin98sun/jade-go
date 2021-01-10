@@ -46,7 +46,6 @@ type PodQueueItem struct {
 	ArrivalTime          time.Time
 	Deadline             time.Time
 	DispatchTime         time.Time
-	PackageSize          int
 	Key                  string
 	enqueueTime          int64
 	dequeueTime          int64

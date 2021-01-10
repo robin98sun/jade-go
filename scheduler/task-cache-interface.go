@@ -469,10 +469,11 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem) 
 				if subtaskCache, exists := dispatchedNodeItem.modules[pod.ModuleName]; exists {
 					if subtaskItem, exists := subtaskCache.subtasks[item.SubtaskKey]; exists {
 						subtaskItem.EnqueueTimestamp = item.ArrivalTime
-						subtaskItem.DispatchTimestamp = item.DispatchTime
+						if subtaskItem.DispatchTimestamp.IsZero() {
+							subtaskItem.DispatchTimestamp = item.DispatchTime
+						}
 						subtaskItem.QueueingTime = item.DispatchTime.Sub(item.ArrivalTime)
 						subtaskItem.QueueLength = item.QueueLength
-						subtaskItem.SendPackageSize = item.PackageSize
 					}
 				}
 			}
@@ -480,15 +481,22 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem) 
 	}
 }
 
-func (c *TaskCache) DispatchedSubtask(taskKey string, subtaskKey string) {
+func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCacheSubtaskItem {
 	if c == nil || len(c.Cache) == 0 {
-		return
+		return nil
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if cacheItem, ok := c.Cache[taskKey]; ok {
-		if subtask := cacheItem.task.Task.GetSubtask(subtaskKey); subtask != nil {
-			// subtask.DispatchTimestamp = time.Now()
+		if subtask := cacheItem.task.Task.GetSubtask(subtaskKey); subtask != nil && subtask.Pod != nil {
+			if dispatchedNodeItem, exists := cacheItem.dispatchedNodes[subtask.Pod.NodeKey]; exists {
+				if subtaskCache, exists := dispatchedNodeItem.modules[subtask.Pod.ModuleName]; exists {
+					if subtaskItem, exists := subtaskCache.subtasks[subtask.GetKey()]; exists {
+						return subtaskItem
+					}
+				}
+			}
 		}
 	}
+	return nil
 }
