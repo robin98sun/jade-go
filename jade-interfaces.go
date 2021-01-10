@@ -94,7 +94,7 @@ func main() {
 			}
 		})
 	}
-	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
+	http.Handle("/$jade$/", gziphandler.GzipHandler(middleware(http.StripPrefix("/$jade$", api.MakeHandler()))))
 	// UI
 	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
 	http.Handle("/", gziphandler.GzipHandler(http.FileServer(http.Dir("/ui"))))
