@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/Azure/go-autorest/autorest v0.11.1 // indirect
+	github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46
 	github.com/StephanDollberg/go-json-rest-middleware-jwt v0.0.0-20160723210644-be2a0500d9b3
 	github.com/ant0ine/go-json-rest v3.3.2+incompatible
 	github.com/ant0ine/go-json-rest-middleware-statsd v0.0.0-20160102230551-d75044bee493

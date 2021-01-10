@@ -4,6 +4,7 @@ package main
 
 import (
 	// RESTful Server
+	"github.com/NYTimes/gziphandler"
 	"github.com/ant0ine/go-json-rest/rest"
 	"log"
 	"net/http"
@@ -96,8 +97,8 @@ func main() {
 	http.Handle("/$jade$/", middleware(http.StripPrefix("/$jade$", api.MakeHandler())))
 	// UI
 	// http.Handle("/ui/", http.StripPrefix("/ui", http.FileServer(http.Dir("/ui"))))
-	http.Handle("/", http.FileServer(http.Dir("/ui")))
-	http.Handle("/debug", http.FileServer(http.Dir("/ui")))
+	http.Handle("/", gziphandler.GzipHandler(http.FileServer(http.Dir("/ui"))))
+	// http.Handle("/debug", gziphandler.GzipHandler(http.FileServer(http.Dir("/ui"))))
 	// Start HTTP server
 	port := 8080
 	fmt.Println("JADE is listening on port", port)
