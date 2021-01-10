@@ -8,34 +8,36 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CollectTraces() []string {
+func (c *TaskCache) CollectTraces() [][]string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if c == nil {
 		return nil
 	}
-	traces := []string{}
-	headline := "Status Task_ID Fanout_Degree Subtask_ID Module_Name Node_ID"
-	headline += " Task_Arrival_Timestamp Task_Start_Timestamp Task_Finish_Timestamp"
-	headline += " Subtask_Arrival_Timestamp Subtask_Enqueue_Timestamp Subtask_Dispatch_Timestamp Subtask_Finish_Timestamp"
-	headline += " Task_Total_Time(ms) Task_Provision_Time(ms) Task_Execution_Time(ms)"
-	headline += " Subtask_Request_Time(ms) Subtask_Queueing_Time(ms)"
-	headline += " Queue_Length"
-	headline += " Subtask_Service_Time(ms)"
-	headline += " Subtask_Round_Trip_Time(ms) Subtask_Upward_Trip_Time(ms)"
-	headline += " Subtask_Downward_Package_Size Subtask_Upward_Package_Size"
+	traces := [][]string{}
+	headline := []string{}
+	headline = append(headline, "Status", "Task_ID", "Fanout_Degree", "Subtask_ID", "Module_Name Node_ID")
+	headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
+	headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
+	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
+	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
+	headline = append(headline, "Queue_Length")
+	headline = append(headline, "Subtask_Service_Time(ms)")
+	headline = append(headline, "Subtask_Round_Trip_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
+	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	traces = append(traces, headline)
 	for _, taskItem := range c.Cache {
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
 			for moduleName, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
 					// keys
-					line := "" + string(taskItem.status)
-					line += " " + taskItem.task.Task.GetKey()
-					line += " " + strconv.FormatInt(taskItem.Fanout, 10)
-					line += " " + subtaskItem.subtask.GetKey()
-					line += " " + moduleName
-					line += " " + dispatchedNode.node.Key()
+					line := []string{}
+					line = append(line, string(taskItem.status))
+					line = append(line, taskItem.task.Task.GetKey())
+					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
+					line = append(line, subtaskItem.subtask.GetKey())
+					line = append(line, moduleName)
+					line = append(line, dispatchedNode.node.Key())
 
 					// timestamps
 					timeArr := [...]time.Time{
@@ -49,9 +51,9 @@ func (c *TaskCache) CollectTraces() []string {
 					}
 					for _, ts := range timeArr {
 						if ts.IsZero() {
-							line += " " + "N/A"
+							line = append(line, "N/A")
 						} else {
-							line += " " + strings.Replace(ts.String(), " ", "_", -1)
+							line = append(line, strings.Replace(ts.String(), " ", "_", -1))
 						}
 					}
 
@@ -61,44 +63,43 @@ func (c *TaskCache) CollectTraces() []string {
 					if !timeArr[0].IsZero() && !timeArr[2].IsZero() {
 						dur = int64(timeArr[2].Sub(timeArr[0]) / time.Millisecond)
 					}
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 
 					// Task_Provision_Time(ms)
 					dur = int64(0)
 					if !timeArr[0].IsZero() && !timeArr[1].IsZero() {
 						dur = int64(timeArr[1].Sub(timeArr[0]) / time.Millisecond)
 					}
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 
 					// Task_Execution_Time(ms)
 					dur = int64(0)
 					if !timeArr[1].IsZero() && !timeArr[2].IsZero() {
 						dur = int64(timeArr[2].Sub(timeArr[1]) / time.Millisecond)
 					}
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 
 					// Subtask_Request_Time(ms)
 					dur = int64(subtaskItem.RequestTime / time.Millisecond)
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 					// Subtask_Queueing_Time(ms)
 					dur = int64(subtaskItem.QueueingTime / time.Millisecond)
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 					// Queue_Length
-					line += " " + strconv.FormatInt(subtaskItem.QueueLength, 10)
+					line = append(line, strconv.FormatInt(subtaskItem.QueueLength, 10))
 					// Subtask_Service_Time(ms)
 					dur = int64(subtaskItem.ServiceTime / time.Millisecond)
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 					// Subtask_Round_Trip_Time(ms)
 					dur = int64(subtaskItem.RTT / time.Millisecond)
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 					// Subtask_Upward_Trip_Time(ms)
 					dur = int64(subtaskItem.ForwardingTime / time.Millisecond)
-					line += " " + strconv.FormatInt(dur, 10)
+					line = append(line, strconv.FormatInt(dur, 10))
 					// Subtask_Downward_Package_Size
-					line += " " + strconv.Itoa(subtaskItem.SendPackageSize)
+					line = append(line, strconv.Itoa(subtaskItem.SendPackageSize))
 					// Subtask_Upward_Package_Size
-					line += " " + strconv.Itoa(subtaskItem.ReceivePackageSize)
-					line += "\n"
+					line = append(line, strconv.Itoa(subtaskItem.ReceivePackageSize))
 					traces = append(traces, line)
 				}
 			}
