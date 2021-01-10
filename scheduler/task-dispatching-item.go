@@ -86,6 +86,10 @@ func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
 	if t.Budgets != nil {
 		inst.Budgets = t.Budgets
 	}
+	if t.Options != nil {
+		inst.Options = t.Options
+	}
+	inst.arriveTimestamp = t.arriveTimestamp
 	if withReport {
 		if t.ReportTo != nil && len(t.ReportTo) > 0 {
 			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)

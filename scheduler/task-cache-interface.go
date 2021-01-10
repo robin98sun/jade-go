@@ -351,7 +351,9 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 		}
 		if result := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf); result {
 			if desiredStatus == TaskStatusDone {
-
+				if taskItem.FinishTimestamp.IsZero() {
+					taskItem.FinishTimestamp = time.Now()
+				}
 			}
 			return result
 		}
@@ -368,9 +370,13 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = status
 		if status == TaskStatusRunning {
-			taskItem.DispatchTimestamp = time.Now()
+			if taskItem.DispatchTimestamp.IsZero() {
+				taskItem.DispatchTimestamp = time.Now()
+			}
 		} else if status == TaskStatusDone || status == TaskStatusFailed {
-			taskItem.FinishTimestamp = time.Now()
+			if taskItem.FinishTimestamp.IsZero() {
+				taskItem.FinishTimestamp = time.Now()
+			}
 		}
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			nodeItem.status = status
@@ -415,6 +421,9 @@ func (c *TaskCache) FailTask(taskKey string) {
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = TaskStatusFailed
+		if taskItem.FinishTimestamp.IsZero() {
+			taskItem.FinishTimestamp = time.Now()
+		}
 	}
 }
 
