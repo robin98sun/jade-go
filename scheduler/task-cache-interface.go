@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"strconv"
-	"strings"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
@@ -53,7 +52,7 @@ func (c *TaskCache) CollectTraces() [][]string {
 						if ts.IsZero() {
 							line = append(line, "N/A")
 						} else {
-							line = append(line, strings.Replace(ts.String(), " ", "_", -1))
+							line = append(line, ts.String())
 						}
 					}
 
