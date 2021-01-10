@@ -8,22 +8,23 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CollectTraces() string {
+func (c *TaskCache) CollectTraces() []string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if c == nil {
-		return ""
+		return nil
 	}
-	traces := "Status Task_ID Fanout_Degree Subtask_ID Module_Name Node_ID"
-	traces += " Task_Arrival_Timestamp Task_Start_Timestamp Task_Finish_Timestamp"
-	traces += " Subtask_Arrival_Timestamp Subtask_Enqueue_Timestamp Subtask_Dispatch_Timestamp Subtask_Finish_Timestamp"
-	traces += " Task_Total_Time(ms) Task_Provision_Time(ms) Task_Execution_Time(ms)"
-	traces += " Subtask_Request_Time(ms) Subtask_Queueing_Time(ms)"
-	traces += " Queue_Length"
-	traces += " Subtask_Service_Time(ms)"
-	traces += " Subtask_Round_Trip_Time(ms) Subtask_Upward_Trip_Time(ms)"
-	traces += " Subtask_Downward_Package_Size Subtask_Upward_Package_Size"
-	traces += "\n"
+	traces := []string{}
+	headline := "Status Task_ID Fanout_Degree Subtask_ID Module_Name Node_ID"
+	headline += " Task_Arrival_Timestamp Task_Start_Timestamp Task_Finish_Timestamp"
+	headline += " Subtask_Arrival_Timestamp Subtask_Enqueue_Timestamp Subtask_Dispatch_Timestamp Subtask_Finish_Timestamp"
+	headline += " Task_Total_Time(ms) Task_Provision_Time(ms) Task_Execution_Time(ms)"
+	headline += " Subtask_Request_Time(ms) Subtask_Queueing_Time(ms)"
+	headline += " Queue_Length"
+	headline += " Subtask_Service_Time(ms)"
+	headline += " Subtask_Round_Trip_Time(ms) Subtask_Upward_Trip_Time(ms)"
+	headline += " Subtask_Downward_Package_Size Subtask_Upward_Package_Size"
+	traces = append(traces, headline)
 	for _, taskItem := range c.Cache {
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
 			for moduleName, moduleItem := range dispatchedNode.modules {
@@ -98,7 +99,7 @@ func (c *TaskCache) CollectTraces() string {
 					// Subtask_Upward_Package_Size
 					line += " " + strconv.Itoa(subtaskItem.ReceivePackageSize)
 					line += "\n"
-					traces += line
+					traces = append(traces, line)
 				}
 			}
 		}
