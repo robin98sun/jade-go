@@ -20,7 +20,9 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 	if _, exists := j.Subnodes[nodekey]; exists {
 		// j.DoneRequest(w, r, "already registered")
 		// return
-		j.log.Printf("updating information for subnode[%v]", nodekey)
+		j.log.Printf("updating information for existing subnode[%v]", nodekey)
+	} else {
+		j.log.Printf("registering information for new subnode[%v]", nodekey)
 	}
 
 	// Save the sub node in its sub node array
