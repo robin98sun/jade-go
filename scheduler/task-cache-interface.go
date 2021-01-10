@@ -85,22 +85,22 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 					// task durations milliseconds
 					// Task_Total_Time(ms)
 					dur := int64(0)
-					if !timeArr[0].IsZero() && !timeArr[2].IsZero() {
-						dur = int64(timeArr[2].Sub(timeArr[0]) / time.Millisecond)
+					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
+						dur = int64(taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime()) / time.Millisecond)
 					}
 					line = append(line, strconv.FormatInt(dur, 10))
 
 					// Task_Provision_Time(ms)
 					dur = int64(0)
-					if !timeArr[0].IsZero() && !timeArr[1].IsZero() {
-						dur = int64(timeArr[1].Sub(timeArr[0]) / time.Millisecond)
+					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.DispatchTimestamp.IsZero() {
+						dur = int64(taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime()) / time.Millisecond)
 					}
 					line = append(line, strconv.FormatInt(dur, 10))
 
 					// Task_Execution_Time(ms)
 					dur = int64(0)
-					if !timeArr[1].IsZero() && !timeArr[2].IsZero() {
-						dur = int64(timeArr[2].Sub(timeArr[1]) / time.Millisecond)
+					if !taskItem.DispatchTimestamp.IsZero() && !taskItem.FinishTimestamp.IsZero() {
+						dur = int64(taskItem.FinishTimestamp.Sub(taskItem.DispatchTimestamp) / time.Millisecond)
 					}
 					line = append(line, strconv.FormatInt(dur, 10))
 
