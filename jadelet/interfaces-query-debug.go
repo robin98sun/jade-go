@@ -144,7 +144,7 @@ func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.TaskCache.CollectTraces())
+	w.WriteJson(j.TaskCache.CollectTraces("concise"))
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {

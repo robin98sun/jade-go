@@ -53,9 +53,6 @@ func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
 	if j.TaskCache != nil {
 		j.TaskCache.Clear()
 	}
-	if j.PodCache != nil {
-		j.PodCache.Clear()
-	}
 	j.DoneRequest(w, r, "OK")
 }
 

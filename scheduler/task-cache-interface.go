@@ -7,7 +7,7 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CollectTraces() [][]string {
+func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if c == nil {
@@ -15,9 +15,17 @@ func (c *TaskCache) CollectTraces() [][]string {
 	}
 	traces := [][]string{}
 	headline := []string{}
-	headline = append(headline, "Status", "Task_ID", "Fanout_Degree", "Subtask_ID", "Module_Name Node_ID")
-	headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
-	headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
+	if traceTyle == "full" {
+		headline = append(headline, "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID", "Pod_ID")
+		headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
+		headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
+	} else if traceTyle == "concise" {
+		headline = append(headline, "Task_Index")
+		headline = append(headline, "Fanout_Degree")
+		headline = append(headline, "Module_Name")
+		headline = append(headline, "Task_Arrival_Timestamp")
+		headline = append(headline, "Subtask_Arrival_Timestamp")
+	}
 	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
 	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
 	headline = append(headline, "Queue_Length")
@@ -25,34 +33,52 @@ func (c *TaskCache) CollectTraces() [][]string {
 	headline = append(headline, "Subtask_Round_Trip_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	traces = append(traces, headline)
+	taskIndex := -1
 	for _, taskItem := range c.Cache {
+		taskIndex++
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
-			for moduleName, moduleItem := range dispatchedNode.modules {
+			for _, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
 					// keys
 					line := []string{}
-					line = append(line, string(taskItem.status))
-					line = append(line, taskItem.task.Task.GetKey())
-					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
-					line = append(line, subtaskItem.subtask.GetKey())
-					line = append(line, moduleName)
-					line = append(line, dispatchedNode.node.Key())
+					if traceTyle == "full" {
+						line = append(line, string(taskItem.status))
+						line = append(line, taskItem.task.Task.GetKey())
+						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
+						line = append(line, string(subtaskItem.status))
+						line = append(line, subtaskItem.subtask.GetKey())
+						line = append(line, subtaskItem.subtask.ModuleName)
+						line = append(line, subtaskItem.subtask.NodeKey)
+						line = append(line, subtaskItem.subtask.PodKey)
+					} else if traceTyle == "concise" {
+						line = append(line, strconv.Itoa(taskIndex))
+						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
+						line = append(line, subtaskItem.subtask.ModuleName)
+					}
 
 					// timestamps
-					timeArr := [...]time.Time{
-						taskItem.task.GetArriveTime(),
-						taskItem.DispatchTimestamp,
-						taskItem.FinishTimestamp,
-						subtaskItem.ArriveTimestamp,
-						subtaskItem.EnqueueTimestamp,
-						subtaskItem.DispatchTimestamp,
-						subtaskItem.FinishTimestamp,
+					timeArr := []time.Time{}
+					if traceTyle == "full" {
+						timeArr = append(timeArr,
+							taskItem.task.GetArriveTime(),
+							taskItem.DispatchTimestamp,
+							taskItem.FinishTimestamp,
+							subtaskItem.ArriveTimestamp,
+							subtaskItem.EnqueueTimestamp,
+							subtaskItem.DispatchTimestamp,
+							subtaskItem.FinishTimestamp,
+						)
+					} else if traceTyle == "concise" {
+						timeArr = append(timeArr,
+							taskItem.task.GetArriveTime(),
+							subtaskItem.ArriveTimestamp,
+						)
 					}
 					for _, ts := range timeArr {
 						if ts.IsZero() {
 							line = append(line, "N/A")
 						} else {
-							line = append(line, ts.String())
+							line = append(line, strconv.FormatInt(ts.UnixNano(), 10))
 						}
 					}
 

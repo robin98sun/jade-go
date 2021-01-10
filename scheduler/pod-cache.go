@@ -47,7 +47,7 @@ func NewPodCache() *PodCache {
 }
 
 type PodCacheNodeItem struct {
-	Cache map[string]*PodCacheAppModuleItem // appName+ModuleName: pod instance
+	AppModules map[string]*PodCacheAppModuleItem // appName+ModuleName: pod instance
 }
 
 type PodCacheAppModuleItem struct {
@@ -65,7 +65,7 @@ func NewPodCacheAppModuleItem() *PodCacheAppModuleItem {
 
 func NewPodCacheNodeItem() *PodCacheNodeItem {
 	inst := &PodCacheNodeItem{
-		Cache: make(map[string]*PodCacheAppModuleItem),
+		AppModules: make(map[string]*PodCacheAppModuleItem),
 	}
 	return inst
 }
@@ -106,7 +106,7 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool) {
 	}
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-		if appModuleItem, e := nodeItem.Cache[key]; e && len(appModuleItem.List) > 0 {
+		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
 				podItem.IsIdle = idle
 			}
@@ -122,7 +122,7 @@ func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-		if appModuleItem, e := nodeItem.Cache[key]; e && len(appModuleItem.List) > 0 {
+		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
 				return podItem.IsIdle
 			}
@@ -138,12 +138,9 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 	p.Lock()
 	defer p.Unlock()
 
-	if _, e := p.Nodes[nodeKey]; !e {
-		return nil
-	}
 	if nodeItem, e := p.Nodes[nodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
-		if appModuleItem, e := nodeItem.Cache[key]; e && len(appModuleItem.List) > 0 {
+		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			for _, podItem := range appModuleItem.List {
 				if podItem.Allocation.MinimumCapacity.GE(alloc.MinimumCapacity) {
 					return podItem.Pod
@@ -163,7 +160,7 @@ func (p *PodCache) GetPodQueue(pod *kernel.Pod) *PodQueue {
 
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-		if appModuleItem, e := nodeItem.Cache[key]; e && len(appModuleItem.List) > 0 {
+		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
 				return podItem.Queue
 			}
@@ -192,33 +189,33 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application,
 	nodeItem := p.Nodes[nodeKey]
 	key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
 
-	if _, e := nodeItem.Cache[key]; !e {
-		nodeItem.Cache[key] = NewPodCacheAppModuleItem()
+	if _, e := nodeItem.AppModules[key]; !e {
+		nodeItem.AppModules[key] = NewPodCacheAppModuleItem()
 	}
 
 	podItem := NewPodCacheItem(app, moduleName, alloc, pod)
-	if _, e := nodeItem.Cache[key].Cache[pod.GetKey()]; e {
+	if _, e := nodeItem.AppModules[key].Cache[pod.GetKey()]; e {
 		idx := -1
-		for i, item := range nodeItem.Cache[key].List {
+		for i, item := range nodeItem.AppModules[key].List {
 			if item.Pod.GetKey() == pod.GetKey() {
 				idx = i
 				break
 			}
 		}
 		if idx >= 0 {
-			remainingPart := nodeItem.Cache[key].List[idx+1:]
-			nodeItem.Cache[key].List = nodeItem.Cache[key].List[0:idx]
-			nodeItem.Cache[key].List = append(nodeItem.Cache[key].List, remainingPart...)
+			remainingPart := nodeItem.AppModules[key].List[idx+1:]
+			nodeItem.AppModules[key].List = nodeItem.AppModules[key].List[0:idx]
+			nodeItem.AppModules[key].List = append(nodeItem.AppModules[key].List, remainingPart...)
 		}
 	}
-	nodeItem.Cache[key].List = append(nodeItem.Cache[key].List, podItem)
-	sort.Slice(nodeItem.Cache[key].List, func(i, j int) bool {
-		if nodeItem.Cache[key].List[j].Allocation.MinimumCapacity.GE(nodeItem.Cache[key].List[i].Allocation.MinimumCapacity) {
+	nodeItem.AppModules[key].List = append(nodeItem.AppModules[key].List, podItem)
+	sort.Slice(nodeItem.AppModules[key].List, func(i, j int) bool {
+		if nodeItem.AppModules[key].List[j].Allocation.MinimumCapacity.GE(nodeItem.AppModules[key].List[i].Allocation.MinimumCapacity) {
 			return true
 		}
-		return nodeItem.Cache[key].List[j].Allocation.MaximumCapacity.GE(nodeItem.Cache[key].List[i].Allocation.MaximumCapacity)
+		return nodeItem.AppModules[key].List[j].Allocation.MaximumCapacity.GE(nodeItem.AppModules[key].List[i].Allocation.MaximumCapacity)
 	})
-	nodeItem.Cache[key].Cache[pod.GetKey()] = podItem
+	nodeItem.AppModules[key].Cache[pod.GetKey()] = podItem
 	if enqueue {
 		if p.QueuingPods == nil {
 			p.QueuingPods = make(map[string]*kernel.Pod)
