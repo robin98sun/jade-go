@@ -29,6 +29,7 @@ type JADE struct {
 	PodCache        *scheduler.PodCache  `json:"podCache"`
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
+	dist            *scheduler.Dist
 }
 
 func NewJadelet() *JADE {

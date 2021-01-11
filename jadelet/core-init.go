@@ -21,6 +21,7 @@ func (j *JADE) Init() {
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
+	j.dist = scheduler.NewDist()
 	// read environment variables into config
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()

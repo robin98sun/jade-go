@@ -1,7 +1,6 @@
 package jadelet
 
 import (
-	"gonum.org/v1/gonum/stat/distuv"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
@@ -96,19 +95,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
 				}
 
-				// backdoor for fake service time
-				poissonMean := float64(1)
-				if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
-					options := taskItem.Options
-					if options.EstimatedServiceTimeModel == "exponential" || options.EstimatedServiceTimeModel == "poission" {
-						if options.EstimatedMeanServiceTime > 0 {
-							poissonMean = float64(options.EstimatedMeanServiceTime)
-						}
-					}
-				}
-				poissonDist := distuv.Poisson{
-					Lambda: poissonMean,
-				}
 				// enqueue each subtask
 				for _, worker := range workerSubtasks {
 					j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
@@ -121,7 +107,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						options := taskItem.Options
 						if options.EstimatedServiceTimeModel == "exponential" || options.EstimatedServiceTimeModel == "poission" {
 							if options.EstimatedMeanServiceTime > 0 {
-								estimatedServiceTime = int64(poissonDist.Rand())
+								estimatedServiceTime = int64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
 							}
 						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
 							estimatedServiceTime = options.EstimatedMeanServiceTime
