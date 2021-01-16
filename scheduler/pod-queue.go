@@ -78,9 +78,10 @@ func (q *PodQueue) Enqueue(
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	q.Lock()
 	defer q.Unlock()
-	log.Printf("[pod queue][%v] an item is enqueued at the queue clock: %v",
+	log.Printf("[pod queue][%v] an item is enqueued at the queue clock %v, there are %v items in queue right now",
 		q.Pod.GetKey(),
 		newItem.enqueueTime,
+		len(q.Queue),
 	)
 	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
 		q.Queue = append(q.Queue, newItem)
@@ -122,7 +123,7 @@ func (q *PodQueue) Dequeue() *PodQueueItem {
 		} else {
 			item.QueueLength = math.MaxInt64 - item.enqueueTime + item.dequeueTime
 		}
-		log.Printf("[pod queue][%v] dequeued an item at queue clock %v, which queue length is %v, and queueing time is %v",
+		log.Printf("[pod queue][%v] dequeued an item at queue clock %v, which waited %v previous items, and queueing time is %v",
 			q.Pod.GetKey(),
 			q.dequeueClock,
 			item.QueueLength,
@@ -134,9 +135,10 @@ func (q *PodQueue) Dequeue() *PodQueueItem {
 		} else {
 			q.dequeueClock++
 		}
-		log.Printf("[pod queue][%v] after dequeuing the item, the queue clock changed to %v",
+		log.Printf("[pod queue][%v] after dequeuing the item, the queue clock changed to %v, and there are %v items in queue right now",
 			q.Pod.GetKey(),
 			q.dequeueClock,
+			len(q.Queue),
 		)
 		return item
 	}
