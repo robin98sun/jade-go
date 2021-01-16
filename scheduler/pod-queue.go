@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -77,7 +78,10 @@ func (q *PodQueue) Enqueue(
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	q.Lock()
 	defer q.Unlock()
-
+	log.Printf("[pod queue][%v] an item is enqueued at the queue clock: %v",
+		q.Pod.GetKey(),
+		newItem.enqueueTime,
+	)
 	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
 		q.Queue = append(q.Queue, newItem)
 	} else if queueType == kernel.TaskQueuingDDL {
@@ -118,13 +122,22 @@ func (q *PodQueue) Dequeue() *PodQueueItem {
 		} else {
 			item.QueueLength = math.MaxInt64 - item.enqueueTime + item.dequeueTime
 		}
+		log.Printf("[pod queue][%v] dequeued an item at queue clock %v, which queue length is %v, and queueing time is %v",
+			q.Pod.GetKey(),
+			q.dequeueClock,
+			item.QueueLength,
+			item.DispatchTime.Sub(item.ArrivalTime)/time.Millisecond,
+		)
 		// move dequeue clock
 		if q.dequeueClock == math.MaxInt64 {
 			q.dequeueClock = 1
 		} else {
 			q.dequeueClock++
 		}
-
+		log.Printf("[pod queue][%v] after dequeuing the item, the queue clock changed to %v",
+			q.Pod.GetKey(),
+			q.dequeueClock,
+		)
 		return item
 	}
 	return nil
