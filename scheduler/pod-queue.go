@@ -78,10 +78,11 @@ func (q *PodQueue) Enqueue(
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	q.Lock()
 	defer q.Unlock()
-	log.Printf("[pod queue][%v] an item is enqueued at the queue clock %v, there are %v items in queue right now",
+	log.Printf("[pod queue][%v] an item is enqueuing at the queue clock %v, there are %v items in queue and %v in cache right now",
 		q.Pod.GetKey(),
 		newItem.enqueueTime,
 		len(q.Queue),
+		len(q.ItemsInQueue),
 	)
 	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
 		q.Queue = append(q.Queue, newItem)
@@ -105,6 +106,12 @@ func (q *PodQueue) Enqueue(
 		}
 	}
 	q.ItemsInQueue[key] = newItem
+	log.Printf("[pod queue][%v] the item is enqueued at the queue clock %v, there are %v items in queue and %v in cache right now",
+		q.Pod.GetKey(),
+		newItem.enqueueTime,
+		len(q.Queue),
+		len(q.ItemsInQueue),
+	)
 	return true
 }
 
