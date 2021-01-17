@@ -130,6 +130,12 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
 						)
 					}
+					j.log.Printf("[task dispatcher] pod[%v] is enqueuing subtask [%v] using queuing mechanism [%v] (string: %v)",
+						worker.Subtask.Pod.GetKey(),
+						worker.Subtask.GetKey(),
+						task.QueuingMechanism,
+						string(task.QueuingMechanism),
+					)
 					done := queue.Enqueue(
 						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 						task.QueuingMechanism, budget,
