@@ -28,7 +28,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 	j.PodCache.SetPodBusy(pod)
 	queue := j.PodCache.GetPodQueue(pod)
-	queueItem := queue.Dequeue()
+	queueItem := queue.Dequeue(j.log.Printf)
 	if queueItem == nil {
 		j.PodCache.SetPodIdle(pod)
 		return
@@ -130,19 +130,14 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
 						)
 					}
-					j.log.Printf("[task dispatcher] pod[%v] is enqueuing subtask [%v] using queuing mechanism [%v] (string: %v)",
-						worker.Subtask.Pod.GetKey(),
-						worker.Subtask.GetKey(),
-						task.QueuingMechanism,
-						string(task.QueuingMechanism),
-					)
 					done := queue.Enqueue(
 						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 						task.QueuingMechanism, budget,
 						estimatedServiceTime,
+						j.log.Printf,
 					)
 					if done {
-						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v]", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey())
+						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
 					} else {
 						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 					}
