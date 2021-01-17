@@ -85,10 +85,10 @@ func (q *PodQueue) Enqueue(
 		len(q.ItemsInQueue),
 	)
 	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
-		log.Printf("[pod queue][%v] enqueuing the new item using FIFO Queuing", q.Pod.GetKey())
+		log.Printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", q.Pod.GetKey(), queueType)
 		q.Queue = append(q.Queue, newItem)
 	} else if queueType == kernel.TaskQueuingDDL {
-		log.Printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing", q.Pod.GetKey())
+		log.Printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", q.Pod.GetKey(), queueType)
 		point := -1
 		for i := 0; i < len(q.Queue); i++ {
 			item := q.Queue[i]
