@@ -7,13 +7,21 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
+func (c *TaskCache) GetJobIdList() []string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	jobs := []string{}
+	for _, taskItem := range c.Cache {
+		jobs = append(jobs, taskItem.task.Task.JobKey)
+	}
+	return jobs
+}
+
 // traceType: full / concise; jobKey: the id of which job you want to fetch, "" for all
 func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if c == nil {
-		return nil
-	}
+
 	traces := [][]string{}
 	headline := []string{}
 	if traceType == "full" {
@@ -41,7 +49,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
 			for _, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
-					if jobKey != "" && jobKey != taskItem.task.Task.JobKey {
+					if jobKey != "" && jobKey != "all" && jobKey != taskItem.task.Task.JobKey {
 						continue
 					}
 					// keys

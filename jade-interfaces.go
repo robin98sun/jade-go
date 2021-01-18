@@ -54,6 +54,7 @@ func main() {
 		rest.Get("/dumpStat", j.DumpStat),
 		rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
 		rest.Delete("/podCache", j.ClearPodCache),
+		rest.Get("/jobs", j.GetJobIdList),
 		// for debugging
 		rest.Get("/debug/jadelet", j.ShowJadelet),
 		rest.Get("/debug/configurations", j.ShowConfigurations),
