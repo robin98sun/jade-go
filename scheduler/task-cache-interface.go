@@ -11,8 +11,12 @@ func (c *TaskCache) GetJobIdList() []string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	jobs := []string{}
+	jobCache := make(map[string]bool)
 	for _, taskItem := range c.Cache {
-		jobs = append(jobs, taskItem.task.Task.JobKey)
+		if _, e := jobCache[taskItem.task.Task.JobKey]; !e {
+			jobs = append(jobs, taskItem.task.Task.JobKey)
+			jobCache[taskItem.task.Task.JobKey] = true
+		}
 	}
 	return jobs
 }
