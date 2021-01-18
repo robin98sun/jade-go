@@ -144,7 +144,19 @@ func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.TaskCache.CollectTraces("concise"))
+	query := make(map[string]string)
+	err := r.DecodeJsonPayload(&query)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if jobKey, e := query["jobId"]; e {
+		j.log.Printf("fetch traces for job[%v]", jobKey)
+		w.WriteJson(j.TaskCache.CollectTraces("concise", jobKey))
+	} else {
+		j.log.Printf("fetch traces for all jobs")
+		w.WriteJson(j.TaskCache.CollectTraces("concise", ""))
+	}
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {

@@ -7,7 +7,8 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
-func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
+// traceType: full / concise; jobKey: the id of which job you want to fetch, "" for all
+func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if c == nil {
@@ -15,11 +16,12 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 	}
 	traces := [][]string{}
 	headline := []string{}
-	if traceTyle == "full" {
-		headline = append(headline, "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID", "Pod_ID")
+	if traceType == "full" {
+		headline = append(headline, "Job_ID", "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID", "Pod_ID")
 		headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
 		headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
-	} else if traceTyle == "concise" {
+	} else if traceType == "concise" {
+		headline = append(headline, "Job_ID")
 		headline = append(headline, "Task_Index")
 		headline = append(headline, "Fanout_Degree")
 		headline = append(headline, "Module_Name")
@@ -39,9 +41,13 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
 			for _, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
+					if jobKey != "" && jobKey != taskItem.task.Task.JobKey {
+						continue
+					}
 					// keys
 					line := []string{}
-					if traceTyle == "full" {
+					if traceType == "full" {
+						line = append(line, taskItem.task.Task.JobKey)
 						line = append(line, string(taskItem.status))
 						line = append(line, taskItem.task.Task.GetKey())
 						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
@@ -50,7 +56,8 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 						line = append(line, subtaskItem.subtask.ModuleName)
 						line = append(line, subtaskItem.subtask.NodeKey)
 						line = append(line, subtaskItem.subtask.PodKey)
-					} else if traceTyle == "concise" {
+					} else if traceType == "concise" {
+						line = append(line, taskItem.task.Task.JobKey)
 						line = append(line, strconv.Itoa(taskIndex))
 						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
 						line = append(line, subtaskItem.subtask.ModuleName)
@@ -58,7 +65,7 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 
 					// timestamps
 					timeArr := []time.Time{}
-					if traceTyle == "full" {
+					if traceType == "full" {
 						timeArr = append(timeArr,
 							taskItem.task.GetArriveTime(),
 							taskItem.DispatchTimestamp,
@@ -68,7 +75,7 @@ func (c *TaskCache) CollectTraces(traceTyle string) [][]string {
 							subtaskItem.DispatchTimestamp,
 							subtaskItem.FinishTimestamp,
 						)
-					} else if traceTyle == "concise" {
+					} else if traceType == "concise" {
 						timeArr = append(timeArr,
 							taskItem.task.GetArriveTime(),
 							subtaskItem.ArriveTimestamp,

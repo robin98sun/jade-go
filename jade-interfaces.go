@@ -63,7 +63,7 @@ func main() {
 		rest.Get("/debug/externalIP", j.ShowExternalIP),
 		rest.Get("/debug/node", j.ShowNode),
 		rest.Get("/debug/subnodes", j.ShowSubnodes),
-		rest.Get("/debug/collectTraces", j.ShowTraces),
+		rest.Post("/debug/collectTraces", j.ShowTraces),
 		rest.Get("/debug/podCache", j.ShowPodCache),
 		rest.Get("/debug/capabilityCache", j.ShowCapabilityCache),
 		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),

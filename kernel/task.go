@@ -17,6 +17,7 @@ type Task struct {
 	MasterNode                  *Node                `json:"masterNode,omitempty"`
 	ForceUpdateNetworkStructure bool                 `json:"forceUpdateNetworkStructure,omitempty"`
 	QueuingMechanism            TaskQueuingMechanism `json:"queuingMechanism,omitempty"`
+	JobKey                      string               `json:"jobId,omitempty"`
 }
 
 func (t *Task) CopyForSubtask() *Task {
