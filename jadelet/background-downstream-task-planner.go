@@ -2,6 +2,7 @@ package jadelet
 
 import (
 	"strconv"
+
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 )
@@ -30,25 +31,31 @@ func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDis
 
 func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
 	envVars := []map[string]string{
-		map[string]string{
+		{
 			"name":  "JADE_APP_NAME",
 			"value": appName,
-		}, map[string]string{
+		},
+		{
 			"name":  "JADE_APP_VERSION",
 			"value": appVersion,
-		}, map[string]string{
+		},
+		{
 			"name":  "JADE_APP_MODULE",
 			"value": moduleName,
-		}, map[string]string{
+		},
+		{
 			"name":  "JADE_MASTERNODE_ADDR",
 			"value": masterNode.Address,
-		}, map[string]string{
+		},
+		{
 			"name":  "JADE_MASTERNODE_PORT",
 			"value": strconv.Itoa(masterNode.Port),
-		}, map[string]string{
+		},
+		{
 			"name":  "JADE_MASTERNODE_PROTOCOL",
 			"value": masterNode.Protocol,
-		}, map[string]string{
+		},
+		{
 			// to force the k3s to truely re-provision a container
 			"name":  "JADE_PROVISIONING_TASK",
 			"value": taskKey,

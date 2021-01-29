@@ -18,6 +18,7 @@ require (
 	github.com/yvasiyarov/go-metrics v0.0.0-20150112132944-c25f46c4b940
 	github.com/yvasiyarov/gorelic v0.0.7
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20160601141957-9c099fbc30e9 // indirect
+	golang.org/x/exp v0.0.0-20191227195350-da58074b4299
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	gonum.org/v1/gonum v0.8.2
 	gopkg.in/tylerb/graceful.v1 v1.2.15
