@@ -12,14 +12,14 @@ func (l *Logger) Println(args ...interface{}) {
 	if !l.Enable {
 		return
 	}
-	golog.Println(args...)
+	// golog.Println(args...)
 }
 
 func (l *Logger) Printf(template string, args ...interface{}) {
 	if !l.Enable {
 		return
 	}
-	golog.Printf(template, args...)
+	// golog.Printf(template, args...)
 }
 
 func (l *Logger) Panic(args ...interface{}) {
