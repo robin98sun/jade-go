@@ -63,6 +63,9 @@ func (q *PodQueue) Enqueue(
 	if payload == nil || key == "" {
 		return false
 	}
+	q.Lock()
+	defer q.Unlock()
+	
 	if _, e := q.ItemsInQueue[key]; e {
 		return false
 	}
@@ -77,8 +80,6 @@ func (q *PodQueue) Enqueue(
 		EstimatedServiceTime: estimatedServiceTime,
 	}
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
-	q.Lock()
-	defer q.Unlock()
 	if printf != nil {
 		printf("[pod queue][%v] an item is enqueuing at the queue clock %v, there are %v items in queue and %v in cache right now",
 			q.Pod.GetKey(),
