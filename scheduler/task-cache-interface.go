@@ -222,7 +222,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	task := c.GetTask(taskKey)
+	task := c.GetTask(taskKey, false)
 	if task == nil {
 		return nil
 	}
@@ -301,7 +301,7 @@ func (c *TaskCache) GetResultOfTask(taskKey string, moduleName string) []*TaskRe
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	task := c.GetTask(taskKey)
+	task := c.GetTask(taskKey, false)
 	if task == nil {
 		return nil
 	}

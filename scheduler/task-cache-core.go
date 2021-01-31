@@ -60,10 +60,16 @@ func (c *TaskCache) Describe() map[string]interface{} {
 	return cache
 }
 
-func (c *TaskCache) GetTask(taskID string) *TaskDispatchingItem {
+func (c *TaskCache) GetTask(taskID string, lock bool) *TaskDispatchingItem {
 	if taskID == "" {
 		return nil
 	}
+
+	if lock {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+	}
+
 	if item, exists := c.Cache[taskID]; exists {
 		return item.task
 	}
@@ -132,6 +138,7 @@ func (t *TaskCacheTaskItem) CheckStatus() TaskStatus {
 	if t == nil {
 		return TaskStatusInvalid
 	}
+
 	items := []*ObjWithTaskStatus{}
 	for _, s := range t.dispatchedNodes {
 		items = append(items, &ObjWithTaskStatus{status: s.status})

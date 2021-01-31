@@ -56,7 +56,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
 		// dispatching the task
-		taskItem := j.TaskCache.GetTask(taskKey)
+		taskItem := j.TaskCache.GetTask(taskKey, true)
 		task := taskItem.Task
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
