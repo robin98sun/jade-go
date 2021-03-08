@@ -54,6 +54,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 	// defer j.Unlock()
 	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, j.log.Printf) {
 		j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
+		// set the task as running
+		// at the meanwhile the task record the timestamp as the beginning of ddispatching
 		j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
 		// dispatching the task
 		taskItem := j.TaskCache.GetTask(taskKey, true)
@@ -64,6 +66,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
 			aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
 			if len(aggregatorSubtasks) > 0 {
+				// only for valid aggregative tasks
 				for _, aggregator := range aggregatorSubtasks {
 					msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()

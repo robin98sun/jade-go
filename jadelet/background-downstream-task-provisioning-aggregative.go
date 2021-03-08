@@ -69,6 +69,10 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				rejectTaskCache[task.GetKey()] = taskItem
 			} else {
 				newTaskItem := taskItem.Copy(false)
+				// the reportTo is very tricky here
+				// it's different for aggregator and worker module
+				// please think carefully why they are different
+				// that's critical of testing whether your understandings of dataflow are correct
 				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
 				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
@@ -130,6 +134,11 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 		if reportTo == nil {
 			j.log.Printf("ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
 			continue
+			// very weird right? 
+			// please see line 72
+			// that's where the reportTo is defined or setup for the original request
+			// so at this point, the reportTo must not be empty
+			// unless the request is illegally initiated to a worker node
 		}
 		// 1. search all required sub-nodes
 		availableNodes := []string{}
