@@ -2,7 +2,7 @@ package jadelet
 
 import (
 	"time"
-
+	"sort"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 )
@@ -99,8 +99,18 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
 				}
 
+				// sort available subnodes if needed
+				if taskItem.Options != nil && taskItem.Options.SortSubnodes {
+					sort.Slice(workerSubtasks, func(i, j int) bool {
+						if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
+							return true
+						}
+						return i < j
+					})
+				}
+
 				// enqueue each subtask
-				for _, worker := range workerSubtasks {
+				for i, worker := range workerSubtasks {
 					j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
 						worker.Subtask.Pod.GetKey(), worker.Node.Key(),
 						taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
@@ -119,6 +129,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							}
 						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
 							estimatedServiceTime = options.EstimatedMeanServiceTime
+						} else if options.EstimatedServiceTimeModel == "custom" && len(workerSubtasks) == len(options.ServiceTimeList) {
+							estimatedServiceTime = options.ServiceTimeList[i]
 						}
 					}
 					// generate request payload for the subtask

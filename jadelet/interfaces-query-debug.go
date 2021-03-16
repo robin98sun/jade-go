@@ -150,12 +150,16 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	traceType := "concise"
+	if t, e := query["type"]; e {
+		traceType = t
+	}
 	if jobKey, e := query["jobId"]; e {
 		j.log.Printf("fetch traces for job[%v]", jobKey)
-		w.WriteJson(j.TaskCache.CollectTraces("concise", jobKey))
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, jobKey))
 	} else {
 		j.log.Printf("fetch traces for all jobs")
-		w.WriteJson(j.TaskCache.CollectTraces("concise", ""))
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, ""))
 	}
 }
 

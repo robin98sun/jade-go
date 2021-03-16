@@ -28,6 +28,8 @@ type TaskDispatchingOptions struct {
 	PersistCache              bool   `json:"persistCache,omitempty"`
 	EstimatedServiceTimeModel string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
 	EstimatedMeanServiceTime  int64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
+	ServiceTimeList        []double `json:"serviceTimeList,omitempty"` // in milliseconds
+	SortSubnodes bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 }
 
 type TaskDispatchingItemReportTo struct {
