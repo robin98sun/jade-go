@@ -116,21 +116,21 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
 					)
 					// backdoor for fake service time
-					estimatedServiceTime := int64(-1)
+					estimatedServiceTime := float64(-1)
 					if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
 						options := taskItem.Options
 						if options.EstimatedServiceTimeModel == "poission" {
 							if options.EstimatedMeanServiceTime > 0 {
-								estimatedServiceTime = int64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
+								estimatedServiceTime = float64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
 							}
 						} else if options.EstimatedServiceTimeModel == "exponential" {
 							if options.EstimatedMeanServiceTime > 0 {
-								estimatedServiceTime = int64(j.dist.ExponentialRand(float64(options.EstimatedMeanServiceTime)))
+								estimatedServiceTime = float64(j.dist.ExponentialRand(float64(options.EstimatedMeanServiceTime)))
 							}
 						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
-							estimatedServiceTime = options.EstimatedMeanServiceTime
+							estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
 						} else if options.EstimatedServiceTimeModel == "custom" && len(workerSubtasks) == len(options.ServiceTimeList) {
-							estimatedServiceTime = options.ServiceTimeList[i]
+							estimatedServiceTime = float64(options.ServiceTimeList[i])
 						}
 					}
 					// generate request payload for the subtask
@@ -201,7 +201,7 @@ func NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatchingItem, subt
 func NewAggregativeWorkerTask(
 	taskItem *scheduler.TaskDispatchingItem,
 	worker *scheduler.SubtaskOnNode,
-	protocol string, input interface{}, estimatedServiceTime int64,
+	protocol string, input interface{}, estimatedServiceTime float64,
 ) *Request {
 	task := taskItem.Task
 	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
@@ -251,7 +251,7 @@ type InterfaceSpec struct {
 }
 
 type RequestOptions struct {
-	EstimatedServiceTime int64 `json:"est,omit"`
+	EstimatedServiceTime float64 `json:"estimatedServiceTime,omitempty"`
 }
 
 // Request message of request

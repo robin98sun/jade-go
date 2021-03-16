@@ -27,8 +27,8 @@ type TaskDispatchingOptions struct {
 	SaveResultInCache         bool   `json:"saveResultInCache,omitempty"`
 	PersistCache              bool   `json:"persistCache,omitempty"`
 	EstimatedServiceTimeModel string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
-	EstimatedMeanServiceTime  int64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
-	ServiceTimeList        []double `json:"serviceTimeList,omitempty"` // in milliseconds
+	EstimatedMeanServiceTime  float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
+	ServiceTimeList        []float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 }
 

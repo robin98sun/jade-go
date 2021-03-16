@@ -51,13 +51,13 @@ type PodQueueItem struct {
 	enqueueTime          int64
 	dequeueTime          int64
 	QueueLength          int64
-	EstimatedServiceTime int64
+	EstimatedServiceTime float64
 }
 
 func (q *PodQueue) Enqueue(
 	key string, taskKey string, subtaskKey string, payload interface{},
 	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64,
-	estimatedServiceTime int64, // milliseconds
+	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
 ) bool {
 	if payload == nil || key == "" {
