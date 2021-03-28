@@ -7,19 +7,24 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 )
 
-func (j *JADE) routimeForPodQueues(intervalMicroseconds int) {
+func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
 	for {
 		time.Sleep(time.Duration(intervalMicroseconds) * time.Millisecond)
 		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
 			continue
 		}
 		// j.PodCache.Lock()
+		startTime := time.Now()
+		j.log.Printf("[pod queue routine] start checking pod queues")
 		for _, pod := range j.PodCache.QueuingPods {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
 				time.Sleep(time.Duration(intervalMicroseconds) * time.Microsecond)
 			}
 		}
+		endTime := time.Now()
+		duration := endTime.Sub(startTime)
+		j.log.Printf("[pod queue routine] end of checking pod queues, duration: {%v}microseconds", duration)
 		// j.PodCache.Unlock()
 	}
 }
