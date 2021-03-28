@@ -13,14 +13,14 @@ func (j *JADE) routimeForPodQueues(intervalMicroseconds int) {
 		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
 			continue
 		}
-		j.PodCache.Lock()
+		// j.PodCache.Lock()
 		for _, pod := range j.PodCache.QueuingPods {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
 				time.Sleep(time.Duration(intervalMicroseconds) * time.Microsecond)
 			}
 		}
-		j.PodCache.Unlock()
+		// j.PodCache.Unlock()
 	}
 }
 
