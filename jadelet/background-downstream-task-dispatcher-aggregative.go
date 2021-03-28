@@ -15,7 +15,6 @@ func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
 		}
 		// j.PodCache.Lock()
 		startTime := time.Now()
-		j.log.Printf("[pod queue routine] start checking pod queues")
 		for _, pod := range j.PodCache.QueuingPods {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
@@ -24,7 +23,9 @@ func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
 		}
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
-		j.log.Printf("[pod queue routine] end of checking pod queues, duration: {%v}microseconds", duration)
+		if duration/time.Millisecond > 10 {
+			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", duration/time.Millisecond)
+		}
 		// j.PodCache.Unlock()
 	}
 }
