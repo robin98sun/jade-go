@@ -87,6 +87,8 @@ func (c *TaskCache) Clear() {
 	for k := range c.Cache {
 		delete(c.Cache, k)
 	}
+	c.Cache = make(map[string]*TaskCacheTaskItem)
+
 
 	if c.Stat == nil {
 		return
@@ -95,6 +97,7 @@ func (c *TaskCache) Clear() {
 	for k := range c.Stat {
 		delete(c.Stat, k)
 	}
+	c.Stat = make(map[string]map[string]map[string]*jadesdk.Stat)
 }
 
 type TaskCacheTaskItem struct {
