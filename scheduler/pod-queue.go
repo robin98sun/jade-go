@@ -108,10 +108,19 @@ func (q *PodQueue) Enqueue(
 		}
 		if point < 0 {
 			q.Queue = append(q.Queue, newItem)
+			print("[pod queue][%v] enqueued the new item at the end of the queue, , queueType: %v", q.Pod.GetKey())
 		} else {
-			newQueue := q.Queue[0:point]
+			// newQueue := q.Queue[0:point]
+			// newQueue = append(newQueue, newItem)
+			// newQueue = append(newQueue, q.Queue[point:]...)
+			newQueue := []*PodQueueItem{}
+			for i:=0; i<point; i++ {
+				newQueue = append(newQueue, q.Queue[i])
+			}
 			newQueue = append(newQueue, newItem)
-			newQueue = append(newQueue, q.Queue[point:]...)
+			for i:=point; i<len(q.Queue); i++ {
+				newQueue = append(newQueue, q.Queue[i])
+			}
 			q.Queue = newQueue
 		}
 	}
