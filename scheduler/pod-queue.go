@@ -113,6 +113,7 @@ func (q *PodQueue) Enqueue(
 			// newQueue := q.Queue[0:point]
 			// newQueue = append(newQueue, newItem)
 			// newQueue = append(newQueue, q.Queue[point:]...)
+			originalLength = len(q.Queue)
 			newQueue := []*PodQueueItem{}
 			for i:=0; i<point; i++ {
 				newQueue = append(newQueue, q.Queue[i])
@@ -122,6 +123,7 @@ func (q *PodQueue) Enqueue(
 				newQueue = append(newQueue, q.Queue[i])
 			}
 			q.Queue = newQueue
+			print("[pod queue][%v] enqueued the new item at index {%v} of the queue original length {%v} and new length {%v} , queueType: %v", q.Pod.GetKey(), point, originalLength, len(q.Queue))
 		}
 	}
 	q.ItemsInQueue[key] = newItem
