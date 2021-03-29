@@ -147,6 +147,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.Itoa(subtaskItem.ReceivePackageSize))
 					// Subtask_Enqueuing_Overhead 
 					dur = float64(float64(subtaskItem.EnqueuingOverhead) / float64(time.Millisecond))
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Amount_Preempted
 					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
 
