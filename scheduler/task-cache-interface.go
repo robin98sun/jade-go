@@ -245,7 +245,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
 	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
-	subtaskItem.RequestTime -= subtaskItem.RTT / 2
+	// subtaskItem.RequestTime -= subtaskItem.RTT / 2
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 
