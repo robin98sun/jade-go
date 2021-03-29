@@ -10,10 +10,11 @@ import (
 func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
 	for {
 		time.Sleep(time.Duration(intervalMicroseconds) * time.Millisecond)
+		j.PodCache.LockMeta()
 		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
+			j.PodCache.UnlockMeta()
 			continue
 		}
-		// j.PodCache.Lock()
 		startTime := time.Now()
 		for _, pod := range j.PodCache.QueuingPods {
 			if j.PodCache.IsPodIdle(pod) {
@@ -26,7 +27,7 @@ func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
 		if duration/time.Millisecond > 10 {
 			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", duration/time.Millisecond)
 		}
-		// j.PodCache.Unlock()
+		j.PodCache.UnlockMeta()
 	}
 }
 

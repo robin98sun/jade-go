@@ -8,23 +8,35 @@ import (
 
 type PodCache struct {
 	Nodes                      map[string]*PodCacheNodeItem // nodekey: cacheItem
-	mutex                      *sync.Mutex
+	dataMutex                  *sync.Mutex
+	metaMutex				   *sync.Mutex
 	Pods                       map[string]*kernel.Pod
 	QueuingPods                map[string]*kernel.Pod
 	IsBackgroundRoutineStarted bool
 }
 
-func (p *PodCache) Lock() {
-	p.mutex.Lock()
+func (p *PodCache) LockData() {
+	p.dataMutex.Lock()
 }
 
-func (p *PodCache) Unlock() {
-	p.mutex.Unlock()
+func (p *PodCache) UnlockData() {
+	p.dataMutex.Unlock()
+}
+
+func (p *PodCache) LockMeta() {
+	p.metaMutex.Lock()
+}
+
+func (p *PodCache) UnlockMeta() {
+	p.metaMutex.Unlock()
 }
 
 func (p *PodCache) Clear() {
-	p.Lock()
-	defer p.Unlock()
+	p.LockData()
+	defer p.UnlockData()
+	p.LockMeta()
+	defer p.UnlockMeta()
+
 	for key := range p.Nodes {
 		delete(p.Nodes, key)
 	}
@@ -41,7 +53,8 @@ func (p *PodCache) Clear() {
 func NewPodCache() *PodCache {
 	inst := &PodCache{
 		Nodes: make(map[string]*PodCacheNodeItem),
-		mutex: &sync.Mutex{},
+		dataMutex: &sync.Mutex{},
+		metaMutex: &sync.Mutex{},
 	}
 	return inst
 }
@@ -99,8 +112,8 @@ func (p *PodCache) SetPodBusy(pod *kernel.Pod) {
 	p.setPodIdleOrNot(pod, false)
 }
 func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool) {
-	p.Lock()
-	defer p.Unlock()
+	p.LockData()
+	defer p.UnlockData()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return
 	}
@@ -114,8 +127,8 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool) {
 	}
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
-	p.Lock()
-	defer p.Unlock()
+	p.LockData()
+	defer p.UnlockData()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return false
 	}
@@ -135,8 +148,8 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 	if p == nil {
 		return nil
 	}
-	p.Lock()
-	defer p.Unlock()
+	p.LockMeta()
+	defer p.UnlockMeta()
 
 	if nodeItem, e := p.Nodes[nodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
@@ -155,8 +168,8 @@ func (p *PodCache) GetPodQueue(pod *kernel.Pod) *PodQueue {
 	if pod == nil {
 		return nil
 	}
-	p.Lock()
-	defer p.Unlock()
+	p.LockData()
+	defer p.UnlockData()
 
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
@@ -174,8 +187,8 @@ func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName stri
 }
 
 func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod, enqueue bool) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	p.LockMeta()
+	defer p.UnlockMeta()
 	if _, e := p.Pods[pod.GetKey()]; e {
 		return
 	}

@@ -36,8 +36,8 @@ func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
 	j.DoneRequest(w, r, nil)
 	// start the pod queue
 	if j.IsCoordinator() {
-		j.PodCache.Lock()
-		defer j.PodCache.Unlock()
+		// j.PodCache.Lock()
+		// defer j.PodCache.Unlock()
 		if !j.PodCache.IsBackgroundRoutineStarted {
 			j.PodCache.IsBackgroundRoutineStarted = true
 			go j.routineForPodQueues(1)
