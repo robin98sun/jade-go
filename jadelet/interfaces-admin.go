@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
+	"runtime"
 )
 
 // UpdateConfigurations to configure JADE at runtime
@@ -52,6 +53,7 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
 	if j.TaskCache != nil {
 		j.TaskCache.Clear()
+		runtime.GC()
 	}
 	j.DoneRequest(w, r, "OK")
 }
@@ -59,6 +61,7 @@ func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) ClearPodCache(w rest.ResponseWriter, r *rest.Request) {
 	if j.PodCache != nil {
 		j.PodCache.Clear()
+		runtime.GC()
 	}
 	j.DoneRequest(w, r, "OK")
 }
