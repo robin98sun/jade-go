@@ -52,6 +52,8 @@ type PodQueueItem struct {
 	dequeueTime          int64
 	QueueLength          int64
 	EstimatedServiceTime float64
+	EnqueuingOverhead    time.Duration
+	AmountPreempted      int
 }
 
 func (q *PodQueue) Enqueue(
@@ -60,14 +62,15 @@ func (q *PodQueue) Enqueue(
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
 ) bool {
+	result := false
 	if payload == nil || key == "" {
-		return false
+		return result
 	}
 	q.Lock()
 	defer q.Unlock()
 	
 	if _, e := q.ItemsInQueue[key]; e {
-		return false
+		return result
 	}
 	newItem := &PodQueueItem{
 		Payload:              payload,
@@ -78,7 +81,11 @@ func (q *PodQueue) Enqueue(
 		enqueueTime:          q.dequeueClock,
 		dequeueTime:          0,
 		EstimatedServiceTime: estimatedServiceTime,
+		EnqueuingOverhead:      time.Duration(0),
+		AmountPreempted:      0,
 	}
+	enqueueStart := time.Now()
+
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
 	if printf != nil {
 		printf("[pod queue][%v] an item is enqueuing at the queue clock %v, there are %v items in queue and %v in cache right now",
@@ -88,7 +95,7 @@ func (q *PodQueue) Enqueue(
 			len(q.ItemsInQueue),
 		)
 	}
-	if queueType == kernel.TaskQueuingFIFO || len(q.Queue) == 0 {
+	if queueType == kernel.TaskQueuingFIFO {
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", q.Pod.GetKey(), queueType)
 		}
@@ -97,33 +104,39 @@ func (q *PodQueue) Enqueue(
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", q.Pod.GetKey(), queueType)
 		}
-		point := -1
-		for i := 0; i < len(q.Queue); i++ {
-			item := q.Queue[i]
-			if item.Deadline.Sub(newItem.Deadline) <= 0 {
-				continue
-			} else {
-				point = i
-			}
-		}
-		if point < 0 {
+		if len(q.Queue) == 0 {
 			q.Queue = append(q.Queue, newItem)
-			print("[pod queue][%v] enqueued the new item at the end of the queue, , queueType: %v", q.Pod.GetKey())
+			printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because the queue is empty, queueType: %v", q.Pod.GetKey(), queueType)
 		} else {
-			// newQueue := q.Queue[0:point]
-			// newQueue = append(newQueue, newItem)
-			// newQueue = append(newQueue, q.Queue[point:]...)
-			originalLength := len(q.Queue)
-			newQueue := []*PodQueueItem{}
-			for i:=0; i<point; i++ {
-				newQueue = append(newQueue, q.Queue[i])
+			point := -1
+			for i := 0; i < len(q.Queue); i++ {
+				item := q.Queue[i]
+				if item.Deadline.Sub(newItem.Deadline) <= 0 {
+					continue
+				} else {
+					point = i
+				}
 			}
-			newQueue = append(newQueue, newItem)
-			for i:=point; i<len(q.Queue); i++ {
-				newQueue = append(newQueue, q.Queue[i])
+			if point < 0 {
+				q.Queue = append(q.Queue, newItem)
+				print("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueType: %v", q.Pod.GetKey(), queueType)
+			} else {
+				// newQueue := q.Queue[0:point]
+				// newQueue = append(newQueue, newItem)
+				// newQueue = append(newQueue, q.Queue[point:]...)
+				originalLength := len(q.Queue)
+				newQueue := []*PodQueueItem{}
+				for i:=0; i<point; i++ {
+					newQueue = append(newQueue, q.Queue[i])
+				}
+				newQueue = append(newQueue, newItem)
+				for i:=point; i<len(q.Queue); i++ {
+					newQueue = append(newQueue, q.Queue[i])
+				}
+				q.Queue = newQueue
+				print("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueType: %v", q.Pod.GetKey(), point, originalLength - point, queueType)
+				newItem.AmountPreempted = originalLength - point
 			}
-			q.Queue = newQueue
-			print("[pod queue][%v] enqueued the new item at index {%v} of the queue original length {%v} and new length {%v} , queueType: %v", q.Pod.GetKey(), point, originalLength, len(q.Queue))
 		}
 	}
 	q.ItemsInQueue[key] = newItem
@@ -140,7 +153,10 @@ func (q *PodQueue) Enqueue(
 			len(q.Queue), len(q.ItemsInQueue),
 		)
 	}
-	return true
+	result = true
+	enqueueEnd := time.Now()
+	newItem.EnqueuingOverhead = enqueueEnd.Sub(enqueueStart)
+	return result
 }
 
 func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {

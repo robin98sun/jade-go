@@ -46,6 +46,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Service_Time(ms)")
 	headline = append(headline, "Subtask_Round_Trip_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
+	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Preempted")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -135,7 +136,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					dur = float64(float64(subtaskItem.ServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Round_Trip_Time(ms)
-					dur = float64(float64(subtaskItem.RTT) / float64(time.Millisecond))
+					dur = float64(float64(subtaskItem.CommunicationTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Upward_Trip_Time(ms)
 					dur = float64(float64(subtaskItem.ForwardingTime) / float64(time.Millisecond))
@@ -144,6 +145,12 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.Itoa(subtaskItem.SendPackageSize))
 					// Subtask_Upward_Package_Size
 					line = append(line, strconv.Itoa(subtaskItem.ReceivePackageSize))
+					// Subtask_Enqueuing_Overhead 
+					dur = float64(float64(subtaskItem.EnqueuingOverhead) / float64(time.Millisecond))
+					// Subtask_Amount_Preempted
+					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
+
+					// end of trace
 					traces = append(traces, line)
 				}
 			}
@@ -244,8 +251,8 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.ServiceTime = stat.Service
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
-	subtaskItem.RTT = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
-	// subtaskItem.RequestTime -= subtaskItem.RTT / 2
+	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
+	// subtaskItem.RequestTime -= subtaskItem.CommunicationTime / 2
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 
@@ -285,7 +292,7 @@ func (c *TaskCache) SaveStatOfModule(
 	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
 	stat.Service.AddDuration(subtaskItem.ServiceTime)
 	stat.Request.AddDuration(subtaskItem.RequestTime)
-	stat.RTT.AddDuration(subtaskItem.RTT)
+	stat.RTT.AddDuration(subtaskItem.CommunicationTime)
 	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
 	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
 }
@@ -518,6 +525,8 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem) 
 						}
 						subtaskItem.QueueingTime = item.DispatchTime.Sub(item.ArrivalTime)
 						subtaskItem.QueueLength = item.QueueLength
+						subtaskItem.EnqueuingOverhead = item.EnqueuingOverhead
+						subtaskItem.AmountPreempted = item.AmountPreempted
 					}
 				}
 			}
