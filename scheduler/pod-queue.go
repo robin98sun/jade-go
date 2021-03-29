@@ -119,7 +119,7 @@ func (q *PodQueue) Enqueue(
 			}
 			if point < 0 {
 				q.Queue = append(q.Queue, newItem)
-				print("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueType: %v", q.Pod.GetKey(), queueType)
+				printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueType: %v", q.Pod.GetKey(), queueType)
 			} else {
 				// newQueue := q.Queue[0:point]
 				// newQueue = append(newQueue, newItem)
@@ -134,7 +134,12 @@ func (q *PodQueue) Enqueue(
 					newQueue = append(newQueue, q.Queue[i])
 				}
 				q.Queue = newQueue
-				print("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueType: %v", q.Pod.GetKey(), point, originalLength - point, queueType)
+				printf("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueType: %v", 
+					q.Pod.GetKey(), 
+					point, 
+					originalLength - point, 
+					queueType,
+				)
 				newItem.AmountPreempted = originalLength - point
 			}
 		}
