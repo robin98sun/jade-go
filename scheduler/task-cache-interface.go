@@ -47,6 +47,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Round_Trip_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Preempted")
+	headline = append(headline, "Subtask_Execution_Time", "Subtask_PreService_Time", "Subtask_PostService_Time")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -150,6 +151,15 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Amount_Preempted
 					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
+					// Subtask_Execution_Time 
+					dur = float64(float64(subtaskItem.ExecutionTime) / float64(time.Millisecond))
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+					// Subtask_PreService_Time 
+					dur = float64(float64(subtaskItem.PreServiceTime) / float64(time.Millisecond))
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+					// Subtask_PostService_Time 
+					dur = float64(float64(subtaskItem.PostServiceTime) / float64(time.Millisecond))
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// end of trace
 					traces = append(traces, line)
@@ -248,8 +258,11 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	}
 
 	subtaskItem.FinishTimestamp = time.Now()
-	subtaskItem.ForwardingTime = stat.Forwarding
 	subtaskItem.ServiceTime = stat.Service
+	subtaskItem.ForwardingTime = stat.Forwarding
+	subtaskItem.PreServiceTime = stat.PreService
+	subtaskItem.PostServiceTime = stat.PostService
+	subtaskItem.ExecutionTime = stat.Execution
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
 	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
@@ -289,11 +302,12 @@ func (c *TaskCache) SaveStatOfModule(
 	}
 
 	stat := fanouts[fanoutKey]
+	stat.PreService.AddDuration(subtaskItem.PreServiceTime)
 	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
 	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
 	stat.Service.AddDuration(subtaskItem.ServiceTime)
 	stat.Request.AddDuration(subtaskItem.RequestTime)
-	stat.RTT.AddDuration(subtaskItem.CommunicationTime)
+	stat.Communication.AddDuration(subtaskItem.CommunicationTime)
 	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
 	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
 }

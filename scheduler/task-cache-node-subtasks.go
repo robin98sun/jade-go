@@ -41,7 +41,10 @@ type TaskCacheSubtaskItem struct {
 	DispatchTimestamp  time.Time     `json:"dispatchTimestamp,omitempty"`
 	FinishTimestamp    time.Time     `json:"finishTimestamp,omitempty"`
 	QueueingTime       time.Duration `json:"queueingTime,omitempty"`
-	ServiceTime        time.Duration `json:"serviceTime,omitempty"`
+	PreServiceTime     time.Duration `json:"preServiceTime,omitempty"` // for aggregator it is cumulative pre-service time
+	ExecutionTime      time.Duration `json:"executionTime,omitempty"` // for aggregator cumulative execution time, for worker it is the same as service time
+	ServiceTime        time.Duration `json:"serviceTime,omitempty"`  // for aggregator it is from the arrival time to the overall finish time, for worker it is the same as execution time
+	PostServiceTime    time.Duration `json:"postServiceTime,omitempty"`
 	RequestTime        time.Duration `json:"requestTime,omitempty"`
 	ForwardingTime     time.Duration `json:"forwardingTime,omitempty"`
 	CommunicationTime  time.Duration `json:"communicationTime,omitempty"`

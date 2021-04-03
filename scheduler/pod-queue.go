@@ -4,7 +4,6 @@ import (
 	"math"
 	"sync"
 	"time"
-
 	"uta.edu/aces/jade-go/kernel"
 )
 
