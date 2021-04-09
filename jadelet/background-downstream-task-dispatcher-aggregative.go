@@ -159,7 +159,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
 						)
 					}
-					done := queue.Enqueue(
+					done,_,_ := queue.Enqueue(
 						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 						task.QueuingMechanism, budget,
 						estimatedServiceTime,
