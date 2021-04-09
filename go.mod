@@ -15,6 +15,7 @@ require (
 	github.com/jinzhu/gorm v1.9.16
 	github.com/peterbourgon/g2s v0.0.0-20170223122336-d4e7ad98afea // indirect
 	github.com/shykes/spdy-go v0.0.0-20130118032238-0ee95b1b8e48
+	github.com/stretchr/testify v1.4.0
 	github.com/yvasiyarov/go-metrics v0.0.0-20150112132944-c25f46c4b940
 	github.com/yvasiyarov/gorelic v0.0.7
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20160601141957-9c099fbc30e9 // indirect

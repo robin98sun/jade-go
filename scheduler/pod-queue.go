@@ -53,6 +53,7 @@ type PodQueueItem struct {
 	EstimatedServiceTime float64
 	EnqueuingOverhead    time.Duration
 	AmountPreempted      int
+	Budget               int64
 }
 
 func (q *PodQueue) Enqueue(
@@ -60,16 +61,16 @@ func (q *PodQueue) Enqueue(
 	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
-) bool {
+) (bool, *PodQueueItem, int) {
 	result := false
 	if payload == nil || key == "" {
-		return result
+		return result, nil, 0
 	}
 	q.Lock()
 	defer q.Unlock()
 	
 	if _, e := q.ItemsInQueue[key]; e {
-		return result
+		return result, nil, 0
 	}
 	newItem := &PodQueueItem{
 		Payload:              payload,
@@ -82,13 +83,19 @@ func (q *PodQueue) Enqueue(
 		EstimatedServiceTime: estimatedServiceTime,
 		EnqueuingOverhead:      time.Duration(0),
 		AmountPreempted:      0,
+		Budget:               maxQueuingTime,
 	}
 	enqueueStart := time.Now()
+	index_in_queue := len(q.Queue)
 
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
+	podKey := "PodKey=N/A"
+	if q.Pod != nil {
+		podKey = q.Pod.GetKey()
+	}
 	if printf != nil {
 		printf("[pod queue][%v] an item is enqueuing at the queue clock %v, there are %v items in queue and %v in cache right now",
-			q.Pod.GetKey(),
+			podKey,
 			newItem.enqueueTime,
 			len(q.Queue),
 			len(q.ItemsInQueue),
@@ -96,16 +103,18 @@ func (q *PodQueue) Enqueue(
 	}
 	if queueType == kernel.TaskQueuingFIFO {
 		if printf != nil {
-			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", q.Pod.GetKey(), queueType)
+			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", podKey, queueType)
 		}
 		q.Queue = append(q.Queue, newItem)
 	} else if queueType == kernel.TaskQueuingDDL {
 		if printf != nil {
-			printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", q.Pod.GetKey(), queueType)
+			printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", podKey, queueType)
 		}
 		if len(q.Queue) == 0 {
 			q.Queue = append(q.Queue, newItem)
-			printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because the queue is empty, queueType: %v", q.Pod.GetKey(), queueType)
+			if printf != nil {
+				printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because the queue is empty, queueType: %v", podKey, queueType)
+			}
 		} else {
 			point := -1
 			for i := 0; i < len(q.Queue); i++ {
@@ -114,11 +123,19 @@ func (q *PodQueue) Enqueue(
 					continue
 				} else {
 					point = i
+					// the folloing piece of "break" had been forgotten for months 
+					// that ruined the whole damn experiments
+					// whenever and no matter how stringent the timeline is
+					// it's critical to write a unit test!
+					// that could save months of hard work from becoming non-sense!
+					break
 				}
 			}
 			if point < 0 {
 				q.Queue = append(q.Queue, newItem)
-				printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueType: %v", q.Pod.GetKey(), queueType)
+				if printf != nil {
+					printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueType: %v", podKey, queueType)
+				}
 			} else {
 				// newQueue := q.Queue[0:point]
 				// newQueue = append(newQueue, newItem)
@@ -133,20 +150,23 @@ func (q *PodQueue) Enqueue(
 					newQueue = append(newQueue, q.Queue[i])
 				}
 				q.Queue = newQueue
-				printf("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueType: %v", 
-					q.Pod.GetKey(), 
-					point, 
-					originalLength - point, 
-					queueType,
-				)
+				if printf != nil {
+					printf("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueType: %v", 
+						podKey, 
+						point, 
+						originalLength - point, 
+						queueType,
+					)
+				}
 				newItem.AmountPreempted = originalLength - point
+				index_in_queue = point
 			}
 		}
 	}
 	q.ItemsInQueue[key] = newItem
 	if printf != nil {
 		printf("[pod queue][%v] the item is enqueued at the queue clock %v, there are %v items in queue and %v in cache right now",
-			q.Pod.GetKey(),
+			podKey,
 			newItem.enqueueTime,
 			len(q.Queue),
 			len(q.ItemsInQueue),
@@ -160,13 +180,17 @@ func (q *PodQueue) Enqueue(
 	result = true
 	enqueueEnd := time.Now()
 	newItem.EnqueuingOverhead = enqueueEnd.Sub(enqueueStart)
-	return result
+	return result, newItem, index_in_queue
 }
 
 func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 	q.Lock()
 	defer q.Unlock()
 	if len(q.Queue) > 0 {
+		podKey := "PodKey=N/A"
+		if q.Pod != nil {
+			podKey = q.Pod.GetKey()
+		}
 		item := q.Queue[0]
 		q.Queue = q.Queue[1:]
 		delete(q.ItemsInQueue, item.Key)
@@ -180,7 +204,7 @@ func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 		}
 		if printf != nil {
 			printf("[pod queue][%v] dequeued an item at queue clock %v, which waited %v previous items, and queueing time is %v",
-				q.Pod.GetKey(),
+				podKey,
 				q.dequeueClock,
 				item.QueueLength,
 				item.DispatchTime.Sub(item.ArrivalTime)/time.Millisecond,
@@ -194,7 +218,7 @@ func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 		}
 		if printf != nil {
 			printf("[pod queue][%v] after dequeuing the item, the queue clock changed to %v, and there are %v items in queue right now",
-				q.Pod.GetKey(),
+				podKey,
 				q.dequeueClock,
 				len(q.Queue),
 			)
