@@ -54,11 +54,61 @@ type PodQueueItem struct {
 	EnqueuingOverhead    time.Duration
 	AmountPreempted      int
 	Budget               int64
+	Priority             int
+}
+
+func (q *PodQueue) search_insertion_place(low int, high int, ddl time.Time, pri int) int {
+	qlen := len(q.Queue)
+	if pri >= 0 {
+		if pri >= q.Queue[qlen-1].Priority {
+			return -1
+		} else if pri < q.Queue[0].Priority {
+			return 0
+		}
+	} else if !ddl.IsZero() {
+		if ddl.Sub(q.Queue[qlen-1].Deadline) >= 0 {
+			return -1
+		} else if ddl.Sub(q.Queue[0].Deadline) < 0 {
+			return 0
+		}
+	}
+	
+	if low >= high {
+		target := low
+		if high >=0 {
+			target = high
+		}
+		if pri >= 0 {
+			if pri == q.Queue[target].Priority{
+				target += 1
+			}
+		} else if !ddl.IsZero() {
+			if ddl.Sub(q.Queue[target].Deadline) == 0 {
+				target += 1
+			}
+		}
+		return target
+	}
+	median := int((low+high)/2)
+	if pri >=0 {
+		if pri >= q.Queue[median].Priority {
+			return q.search_insertion_place(median+1, high, ddl, pri)
+		} else {
+			return q.search_insertion_place(low, median-1, ddl, pri)
+		}
+	} else if !ddl.IsZero() {
+		if ddl.Sub(q.Queue[median].Deadline) >= 0 {
+			return q.search_insertion_place(median+1, high, ddl, pri)
+		} else {
+			return q.search_insertion_place(low, median-1, ddl, pri)
+		}
+	}
+	return -1
 }
 
 func (q *PodQueue) Enqueue(
 	key string, taskKey string, subtaskKey string, payload interface{},
-	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64,
+	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64, priority int,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
 ) (bool, *PodQueueItem, int) {
@@ -84,6 +134,7 @@ func (q *PodQueue) Enqueue(
 		EnqueuingOverhead:      time.Duration(0),
 		AmountPreempted:      0,
 		Budget:               maxQueuingTime,
+		Priority:             priority,
 	}
 	enqueueStart := time.Now()
 	index_in_queue := len(q.Queue)
@@ -106,31 +157,52 @@ func (q *PodQueue) Enqueue(
 			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", podKey, queueType)
 		}
 		q.Queue = append(q.Queue, newItem)
-	} else if queueType == kernel.TaskQueuingDDL {
+	} else if queueType == kernel.TaskQueuingDDL || queueType == kernel.TaskQueuingPRQ {
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", podKey, queueType)
 		}
-		if len(q.Queue) == 0 {
+		qlen := len(q.Queue)
+		if qlen == 0 {
 			q.Queue = append(q.Queue, newItem)
 			if printf != nil {
 				printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because the queue is empty, queueType: %v", podKey, queueType)
 			}
 		} else {
 			point := -1
-			for i := 0; i < len(q.Queue); i++ {
-				item := q.Queue[i]
-				if item.Deadline.Sub(newItem.Deadline) <= 0 {
-					continue
-				} else {
-					point = i
-					// the folloing piece of "break" had been forgotten for months 
-					// that ruined the whole damn experiments
-					// whenever and no matter how stringent the timeline is
-					// it's critical to write a unit test!
-					// that could save months of hard work from becoming non-sense!
-					break
-				}
+			if queueType == kernel.TaskQueuingDDL {
+				point = q.search_insertion_place(0, qlen, newItem.Deadline, -1)
+
+				// this is for the sanity check, to use the most simplest formation
+				// however, most simplest is the easist to be ignored when reviewing
+				// for i := 0; i < len(q.Queue); i++ {
+				// 	item := q.Queue[i]
+				// 	if item.Deadline.Sub(newItem.Deadline) <= 0 {
+				// 		continue
+				// 	} else {
+				// 		point = i
+				// 		// the folloing piece of "break" had been forgotten for months 
+				// 		// that ruined the whole damn experiments
+				// 		// whenever and no matter how stringent the timeline is
+				// 		// it's critical to write a unit test!
+				// 		// that could save months of hard work from becoming non-sense!
+				// 		break
+				// 	}
+				// }
+			} else if queueType == kernel.TaskQueuingPRQ {
+				point = q.search_insertion_place(0, qlen, newItem.Deadline, newItem.Priority)
+
+				// this is for the sanity check, to use the most simplest formation
+				// however, most simplest is the easist to be ignored when reviewing
+				// for i := 0; i<len(q.Queue); i++ {
+				// 	item := q.Queue[i]
+				// 	if item.Priority > newItem.Priority {
+				// 		point = i
+				// 		break
+				// 	}
+				// }
 			}
+			
+			// got the position to insert the task
 			if point < 0 {
 				q.Queue = append(q.Queue, newItem)
 				if printf != nil {
@@ -162,7 +234,7 @@ func (q *PodQueue) Enqueue(
 				index_in_queue = point
 			}
 		}
-	}
+	} 
 	q.ItemsInQueue[key] = newItem
 	if printf != nil {
 		printf("[pod queue][%v] the item is enqueued at the queue clock %v, there are %v items in queue and %v in cache right now",

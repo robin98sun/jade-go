@@ -10,6 +10,7 @@ type TaskDispatchingItem struct {
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
+	Priority	    int                                     `json:"priority,omitempty"`
 	arriveTimestamp time.Time
 }
 

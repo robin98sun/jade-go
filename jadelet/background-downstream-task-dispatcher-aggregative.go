@@ -107,6 +107,10 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				if budget > 0 {
 					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
 				}
+				priority := taskItem.Priority
+				if priority == 0 {
+					priority = kernel.TaskDefaultPriority
+				}
 
 				// sort available subnodes if needed
 				if taskItem.Options != nil && taskItem.Options.SortSubnodes {
@@ -161,7 +165,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					}
 					done,_,_ := queue.Enqueue(
 						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
-						task.QueuingMechanism, budget,
+						task.QueuingMechanism, budget, priority,
 						estimatedServiceTime,
 						j.log.Printf,
 					)

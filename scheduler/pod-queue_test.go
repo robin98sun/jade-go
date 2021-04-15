@@ -4,7 +4,7 @@ package scheduler
 
 import (
 	// "log"
-	// "strconv"
+	"strconv"
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"time"
@@ -31,6 +31,7 @@ type Payload struct {
 	QueueType kernel.TaskQueuingMechanism
 	MaximumQueueingTime int64
 	EstimatedServiceTime float64
+	Priority int
 }
 
 func TestScheduler_Enqueuing_FIFO(t *testing.T) {
@@ -45,7 +46,7 @@ func TestScheduler_Enqueuing_FIFO(t *testing.T) {
 		}
 		q.Enqueue(
 			p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
-			0, 0, 
+			0, 0, 0,
 			nil,
 		)
 	}
@@ -64,7 +65,7 @@ func TestScheduler_Dequeuing_FIFO(t *testing.T) {
 		}
 		q.Enqueue(
 			p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
-			0, 0, 
+			0, 0, 0,
 			nil,
 		)
 	}
@@ -90,102 +91,133 @@ func TestScheduler_Dequeuing_FIFO(t *testing.T) {
 
 }
 
-func TestScheduler_Queueing_DDL(t *testing.T) {
-	intervals := []int64{
-		0,
-		100,
-		10,
-		13,
-		1,
-		20,
-		3,
-		9,
-		56,
-		209,
+func TestScheduler_Queueing_DDL_AND_PRQ(t *testing.T) {
+	intervals := []int64{ 
+		0, 660, 10, 13, 1, 20, 3, 9, 56, 209,
 	}
-	budgets := []int64{
-		10000,
-		10000,
-		10000,
-		10000,
-		10000,
-		3000,
-		3000,
-		10000,
-		10000,
-		3000,
+	budgets_and_priorities_before_enqueuing := []int64{
+		1000, 1000, 1000, 1000, 1000, 300, 300, 1000, 1000, 300,
 	}
-	preemptions := []int{
+	budgets_after_enqueuing := []int64{
+		1000, 300, 300, 300, 1000, 1000, 1000, 1000, 1000, 1000, 
+	}
+	priorities_after_enqueuing := []int{
+		300, 300, 300, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
+	}
+	preemptions_ddl := []int{
+		0,0,0,0,0,
+		4,4,0,0,6,
+	}
+	idx_after_enqueuing_ddl := []int{
+		0,1,2,3,4,
+		1,2,7,8,3,
+	}
+	preemptions_prq := []int{
 		0,0,0,0,0,
 		5,5,0,0,7,
 	}
-	idx_after_enqueuing := []int{
+	idx_after_enqueuing_prq := []int{
 		0,1,2,3,4,
 		0,1,7,8,2,
 	}
-	q := NewPodQueue()
-	for i := 0; i<len(intervals); i++ {
-		interval := intervals[i]
-		budget := budgets[i]
-		time.Sleep(time.Duration(interval)*time.Millisecond)
-		p := &Payload{
-			EnqueueingTimestamp: time.Now(),
-			Key: genKey(10),
-			TaskKey: genKey(10), 
-			SubtaskKey: genKey(10),
-			QueueType: kernel.TaskQueuingDDL,
-			MaximumQueueingTime: budget,
-		}
-		_, queue_item, idx := q.Enqueue(
-			p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
-			p.MaximumQueueingTime, 0, 
-			// log.Printf,
-			nil,
-		)
-		// log.Println(queue_item.Deadline, queue_item.Budget, idx, len(q.Queue), queue_item.AmountPreempted)
-		assert.Equal(
-			t, 
-			queue_item.AmountPreempted, 
-			preemptions[i], 
-			"the preemption should be that value",
-		)
-		assert.Equal(
-			t, 
-			idx, 
-			idx_after_enqueuing[i], 
-			"the index should be that value",
-		)
-	}
-	assert.Equal(t, len(q.Queue), len(budgets), "queue length should be exactly 10")
-
-	queue_item := q.Dequeue(nil)
-	idx := 0
-	var pre_item *PodQueueItem = nil
-	for queue_item != nil {
-		budget := int64(10000)
-		if idx < 3 {
-			budget = int64(3000)
-		}
-		assert.Equal(
-			t, 
-			queue_item.Budget, 
-			budget, 
-			"the budget should be that value",
-		)
-		if pre_item != nil && pre_item.Budget == queue_item.Budget {
-			assert.Greater(
+	for _, queueType := range []string{"ddl", "prq"} {
+		q := NewPodQueue()
+		for i := 0; i<len(intervals); i++ {
+			interval := intervals[i]
+			budget := budgets_and_priorities_before_enqueuing[i]
+			if queueType == "ddl" {
+				time.Sleep(time.Duration(interval)*time.Millisecond)
+			}
+			p := &Payload{
+				EnqueueingTimestamp: time.Now(),
+				Key: genKey(10),
+				TaskKey: genKey(10), 
+				SubtaskKey: genKey(10),
+				QueueType: kernel.TaskQueuingMechanism(queueType),
+				MaximumQueueingTime: budget,
+				Priority: int(budget),
+			}
+			_, queue_item, idx := q.Enqueue(
+				p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
+				p.MaximumQueueingTime, p.Priority, 0, 
+				// log.Printf,
+				nil,
+			)
+			// log.Println(queue_item.Deadline, queue_item.Budget, idx, len(q.Queue), queue_item.AmountPreempted)
+			preemption_list := preemptions_prq
+			if queueType == "ddl" {
+				preemption_list = preemptions_ddl
+			}
+			idx_after_enqueuing_list := idx_after_enqueuing_prq
+			if queueType == "ddl" {
+				idx_after_enqueuing_list = idx_after_enqueuing_ddl
+			}
+			assert.Equal(
 				t, 
-				int64((queue_item.Payload.(*Payload)).EnqueueingTimestamp.Sub(
-					(pre_item.Payload.(*Payload)).EnqueueingTimestamp,
-				)), 
-				int64(0),
-				"the later one should be younger than previous one",
+				preemption_list[i], 
+				queue_item.AmountPreempted, 
+				"the preemption should be "+strconv.Itoa(preemption_list[i])+", but actual is "+strconv.Itoa(queue_item.AmountPreempted)+", for item["+strconv.Itoa(i)+"], queue type: " + queueType,
+			)
+			assert.Equal(
+				t, 
+				idx_after_enqueuing_list[i], 
+				idx, 
+				"the index should be "+strconv.Itoa(idx_after_enqueuing_list[i])+", but actual is "+strconv.Itoa(idx)+", for item["+strconv.Itoa(i)+"], queue type: " + queueType,
 			)
 		}
+		assert.Equal(t, len(q.Queue), len(budgets_and_priorities_before_enqueuing), "queue length should be exactly 10")
 
-		idx += 1
-		pre_item = queue_item
-		queue_item = q.Dequeue(nil)
+		queue_item := q.Dequeue(nil)
+		idx := 0
+		var pre_item *PodQueueItem = nil
+		for queue_item != nil {
+			budget := budgets_after_enqueuing[idx]
+			priority := priorities_after_enqueuing[idx]
+			if queueType == "ddl" {
+				assert.Equal(
+					t, 
+					budget, 
+					queue_item.Budget, 
+					"the budget should be that value",
+				)
+			} else {
+				assert.Equal(
+					t, 
+					priority, 
+					queue_item.Priority, 
+					"the priority should be that value",
+				)
+			}
+			
+			if queueType == "ddl" {
+				if pre_item != nil && pre_item.Budget == queue_item.Budget {
+					assert.Greater(
+						t, 
+						int64((queue_item.Payload.(*Payload)).EnqueueingTimestamp.Sub(
+							(pre_item.Payload.(*Payload)).EnqueueingTimestamp,
+						)), 
+						int64(0),
+						"the later one should be younger than previous one at index["+strconv.Itoa(idx)+"]",
+					)
+				}
+			} else {
+				if pre_item != nil && pre_item.Priority == queue_item.Priority {
+					assert.Greater(
+						t, 
+						int64((queue_item.Payload.(*Payload)).EnqueueingTimestamp.Sub(
+							(pre_item.Payload.(*Payload)).EnqueueingTimestamp,
+						)), 
+						int64(0),
+						"the later one should be younger than previous one at index["+strconv.Itoa(idx)+"], previous priority: " + strconv.Itoa(pre_item.Priority) + ", the later one priority: "+strconv.Itoa(queue_item.Priority),
+					)
+				}
+			}
+
+			idx += 1
+			pre_item = queue_item
+			queue_item = q.Dequeue(nil)
+		}
+		assert.Equal(t, idx, len(budgets_and_priorities_before_enqueuing), "queue length should be exactly 10")
 	}
-	assert.Equal(t, idx, len(budgets), "queue length should be exactly 10")
 }
+
