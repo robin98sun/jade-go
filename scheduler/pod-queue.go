@@ -159,7 +159,7 @@ func (q *PodQueue) Enqueue(
 		q.Queue = append(q.Queue, newItem)
 	} else if queueType == kernel.TaskQueuingDDL || queueType == kernel.TaskQueuingPRQ {
 		if printf != nil {
-			printf("[pod queue][%v] enqueuing the new item using Deadline Based Queuing, queueType: %v", podKey, queueType)
+			printf("[pod queue][%v] enqueuing the new item using queueType: %v, budget: %v, priority: %v", podKey, queueType, newItem.Budget, newItem.Priority)
 		}
 		qlen := len(q.Queue)
 		if qlen == 0 {
@@ -188,7 +188,7 @@ func (q *PodQueue) Enqueue(
 				// 		break
 				// 	}
 				// }
-			} else if queueType == kernel.TaskQueuingPRQ {
+			} else if queueType == kernel.TaskQueuingPRQ && newItem.Priority >= 0 {
 				point = q.search_insertion_place(0, qlen, newItem.Deadline, newItem.Priority)
 
 				// this is for the sanity check, to use the most simplest formation

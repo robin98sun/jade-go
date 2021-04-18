@@ -48,6 +48,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Preempted")
 	headline = append(headline, "Subtask_Execution_Time", "Subtask_PreService_Time", "Subtask_PostService_Time")
+	headline = append(headline, "Task_Budget", "Task_Priority")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -160,7 +161,10 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					// Subtask_PostService_Time 
 					dur = float64(float64(subtaskItem.PostServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-
+					// Task_Budget
+					line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
+					// Task_Priority
+					line = append(line, strconv.Itoa(subtaskItem.Priority))
 					// end of trace
 					traces = append(traces, line)
 				}
@@ -542,6 +546,8 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem) 
 						subtaskItem.QueueLength = item.QueueLength
 						subtaskItem.EnqueuingOverhead = item.EnqueuingOverhead
 						subtaskItem.AmountPreempted = item.AmountPreempted
+						subtaskItem.Priority = item.Priority
+						subtaskItem.Budget = item.Budget
 					}
 				}
 			}

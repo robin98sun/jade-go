@@ -50,6 +50,8 @@ type TaskCacheSubtaskItem struct {
 	CommunicationTime  time.Duration `json:"communicationTime,omitempty"`
 	EnqueuingOverhead  time.Duration `json:"enqueuingOverhead,omitempty"`
 	AmountPreempted    int           `json:"amountPreempted,omitempty"`
+	Budget             int64         `json:"budget,omitempty"`
+	Priority           int           `json:"priority,omitempty"`
 }
 
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {
