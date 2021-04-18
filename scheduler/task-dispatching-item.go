@@ -5,6 +5,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 )
 
+const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
 	Task            *kernel.Task                            `json:"task,omitempty"`
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
@@ -12,6 +13,35 @@ type TaskDispatchingItem struct {
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
 	arriveTimestamp time.Time
+}
+
+func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
+	inst := &TaskDispatchingItem{}
+	if t.Task != nil {
+		inst.Task = t.Task
+	}
+	if t.Budgets != nil {
+		inst.Budgets = t.Budgets
+	}
+	if t.Options != nil {
+		inst.Options = t.Options
+	}
+	inst.arriveTimestamp = t.arriveTimestamp
+	if withReport {
+		if t.ReportTo != nil && len(t.ReportTo) > 0 {
+			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
+			for k, v := range t.ReportTo {
+				inst.ReportTo[k] = v.Copy()
+			}
+		}
+	}
+	if t.Priority != 0 {
+		inst.Priority = t.Priority
+	}
+	if !t.arriveTimestamp.IsZero() {
+		inst.arriveTimestamp = t.arriveTimestamp
+	}
+	return inst
 }
 
 func (t *TaskDispatchingItem) Arrived() {
@@ -78,29 +108,6 @@ func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispa
 		return reportTo
 	}
 	return nil
-}
-
-func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
-	inst := &TaskDispatchingItem{}
-	if t.Task != nil {
-		inst.Task = t.Task
-	}
-	if t.Budgets != nil {
-		inst.Budgets = t.Budgets
-	}
-	if t.Options != nil {
-		inst.Options = t.Options
-	}
-	inst.arriveTimestamp = t.arriveTimestamp
-	if withReport {
-		if t.ReportTo != nil && len(t.ReportTo) > 0 {
-			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
-			for k, v := range t.ReportTo {
-				inst.ReportTo[k] = v.Copy()
-			}
-		}
-	}
-	return inst
 }
 
 func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) int64 {

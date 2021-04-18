@@ -8,8 +8,6 @@ const (
 	TaskQueuingPRQ						 = "prq"
 )
 
-const TaskDefaultPriority = 1000
-
 type Task struct {
 	Application                 *Application         `json:"application,omitempty"`
 	Requirements                *Requirements        `json:"requirements,omitempty"`

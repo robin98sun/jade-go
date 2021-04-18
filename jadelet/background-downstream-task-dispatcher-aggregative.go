@@ -109,7 +109,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 				priority := taskItem.Priority
 				if priority == 0 {
-					priority = kernel.TaskDefaultPriority
+					priority = scheduler.TaskDefaultPriority
 				}
 
 				// sort available subnodes if needed
