@@ -132,6 +132,8 @@ const (
 	TaskStatusRejected            = "rejected"
 	TaskStatusDone                = "done"
 	TaskStatusRunning             = "running"
+	TaskStatusAggregatorReady     = "aggregator_ready"
+	TaskStatusWorkerReady         = "worker_ready"
 	TaskStatusPending             = "pending"
 	TaskStatusFailed              = "failed"
 	TaskStatusInvalid             = "invalid"

@@ -52,6 +52,6 @@ func (j *JADE) Register(retryCnt int) {
 	j.sdk.HTTPCommunicate(
 		"register to master node",
 		sn.Protocol, "PUT", "/$jade$/registerNode",
-		un.GetSDKNode(), payload, 0, -1,
+		un.GetSDKNode(), payload, 0, -1, time.Time{},
 	)
 }

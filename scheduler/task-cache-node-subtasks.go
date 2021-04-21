@@ -54,6 +54,8 @@ type TaskCacheSubtaskItem struct {
 	Priority           int           `json:"priority,omitempty"`
 	RetryCountOfSending int64        `json:"retryCountOfSending,omitempty"`
 	RetryCountOfReceiving int64      `json:"retryCountOfReceiving,omitempty"`
+	PreDispatchingTime time.Duration `json:"preDispatchingTime,omitempty"`
+	ReportProcessingTime time.Duration `json:"reportProcessingTime,omitempty"`
 }
 
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {

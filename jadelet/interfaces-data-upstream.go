@@ -7,9 +7,11 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
 	"strconv"
+	"time"
 )
 
 func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
+	timestampReceving := time.Now()
 	msg := &jadesdk.ReportMessage{}
 	err := r.DecodeJsonPayload(msg)
 	retryCountStr := r.Header.Get("retry-count")
@@ -32,15 +34,23 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.SubtaskKey, msg.TaskKey,
 				msg.Node.Key(),
 			)
-			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat, retryCount)
+			subtask := j.TaskCache.VerifySubtaskFromApp(msg.TaskKey, msg.SubtaskKey)
+			// for un-recognized subtasks, just leave it along with non-response
+			// it's to keep quit to attacks
 			if subtask != nil && subtask.Pod != nil {
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
+				
 				j.DoneRequest(w, r, "message received")
+				// save result and stat
+				j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat, retryCount, timestampReceving)
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
+
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
-				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, j.log.Printf)
+				if j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, j.log.Printf) {
+					j.TaskCache.SetTaskFinalSubtaskFinishTimestamp(msg.TaskKey, timestampReceving)
+				}
 				return
 			}
 		}

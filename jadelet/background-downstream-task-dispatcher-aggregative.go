@@ -45,14 +45,14 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem)
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
-	_, reqlen, _ := j.HTTPCommunicate(
+	_, reqlen, timestampSending, _,  _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
 	)
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, timestampSending)
 	if workerSubtaskCacheItem != nil {
 		workerSubtaskCacheItem.SendPackageSize = reqlen
 	}
@@ -88,7 +88,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
 					}
 					// dispatch the aggregator subtask
-					_, reqlen, _ := j.HTTPCommunicate(
+					_, reqlen, _ , _, _ := j.HTTPCommunicate(
 						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
 						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 						msg,
@@ -121,6 +121,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						return i < j
 					})
 				}
+				j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
+
 
 				// enqueue each subtask
 				for i, worker := range workerSubtasks {
@@ -175,6 +177,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 					}
 				}
+				j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
 			}
 		}
 	}

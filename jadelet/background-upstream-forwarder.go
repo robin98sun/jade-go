@@ -25,7 +25,7 @@ func NewTaskProvisioningResult(nodekey string, taskkey string, moduleName string
 func (j *JADE) feedbackProvisioning(result *TaskProvisioningResult) {
 	if j.HasUpperNode() {
 		payload := j.GeneratePayloadOfRequest(nil, result, nil, nil)
-		res, _, err := j.HTTPCommunicate("feedback task provisioning", "POST", "/$jade$/collectProvisioning", j.Config.UpperNode, payload, 0, 10)
+		res, _, _, _, err := j.HTTPCommunicate("feedback task provisioning", "POST", "/$jade$/collectProvisioning", j.Config.UpperNode, payload, 0, 10)
 		if err != nil {
 			j.log.Println("ERROR when feedback task provisioning:", err.Error())
 		} else {
