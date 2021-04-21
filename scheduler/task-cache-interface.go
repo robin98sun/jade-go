@@ -44,7 +44,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
 	headline = append(headline, "Queue_Length")
 	headline = append(headline, "Subtask_Service_Time(ms)")
-	headline = append(headline, "Subtask_Round_Trip_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
+	headline = append(headline, "Subtask_Communication_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Skipped")
 	headline = append(headline, "Subtask_Execution_Time(ms)", "Subtask_PreService_Time(ms)", "Subtask_PostService_Time(ms)")
@@ -614,9 +614,7 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, 
 				if subtaskCache, exists := dispatchedNodeItem.modules[pod.ModuleName]; exists {
 					if subtaskItem, exists := subtaskCache.subtasks[item.SubtaskKey]; exists {
 						subtaskItem.EnqueueTimestamp = item.ArrivalTime
-						if subtaskItem.DispatchTimestamp.IsZero() {
-							subtaskItem.DispatchTimestamp = timestampSending
-						}
+						subtaskItem.DispatchTimestamp = timestampSending
 						// the DispatchTime in queue means the moment the item been dequeued
 						// so, item.DispatchTime actually means subtaskItem.DequeuingTimestamp
 						// the ArrivalTime in queue actually means the moment the item been enqueued
