@@ -278,10 +278,14 @@ func (c *TaskCache) SaveResultFromApp(
 	subtaskItem.ExecutionTime = stat.Execution
 	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
-	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
-	// subtaskItem.RequestTime -= subtaskItem.CommunicationTime / 2
 	subtaskItem.RetryCountOfSending = stat.RetryCountOfArrivalComm
 	subtaskItem.RetryCountOfReceiving = retryCount
+
+	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime - subtaskItem.PostServiceTime
+
+	if subtask.ModuleName == kernel.AppModuleWorker {
+		subtaskItem.CommunicationTime -= subtaskItem.PreServiceTime
+	}
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 
