@@ -46,13 +46,16 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
-	_, reqlen, timestampSending, _,  _ := j.HTTPCommunicate(
+
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	_, reqlen, timestamp, _,  _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
 	)
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, timestampSending)
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, timestamp)
+	
 	if workerSubtaskCacheItem != nil {
 		workerSubtaskCacheItem.SendPackageSize = reqlen
 	}
