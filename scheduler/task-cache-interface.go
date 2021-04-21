@@ -261,24 +261,6 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 	}
 }
 
-func (c *TaskCache) VerifySubtaskFromApp(taskKey string, subtaskKey string) *kernel.SubTask {
-	if c == nil {
-		return nil
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	task := c.GetTask(taskKey, false)
-	if task == nil {
-		return nil
-	}
-	subtask := task.Task.GetSubtask(subtaskKey)
-	if subtask == nil {
-		return nil
-	}
-
-	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
-}
-
 func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}, 
 	stat *jadesdk.StatItem, retryCount int64, timestampReceiving time.Time,
 ) *kernel.SubTask {
@@ -615,6 +597,7 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, 
 					if subtaskItem, exists := subtaskCache.subtasks[item.SubtaskKey]; exists {
 						subtaskItem.EnqueueTimestamp = item.ArrivalTime
 						subtaskItem.DispatchTimestamp = timestampSending
+						// subtaskItem.DispatchTimestamp = item.DispatchTime
 						// the DispatchTime in queue means the moment the item been dequeued
 						// so, item.DispatchTime actually means subtaskItem.DequeuingTimestamp
 						// the ArrivalTime in queue actually means the moment the item been enqueued
