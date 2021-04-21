@@ -48,14 +48,13 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
 	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
-	_, reqlen, timestamp, _,  _ := j.HTTPCommunicate(
+	_, reqlen, _, _,  _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
 	)
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, timestamp)
-	
+
 	if workerSubtaskCacheItem != nil {
 		workerSubtaskCacheItem.SendPackageSize = reqlen
 	}
