@@ -499,6 +499,14 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 			if taskItem.FinishTimestamp.IsZero() {
 				taskItem.FinishTimestamp = time.Now()
 			}
+		} else if status == TaskStatusAggregatorReady {
+			if taskItem.AggregatorReadyTimestamp.IsZero() {
+				taskItem.AggregatorReadyTimestamp = time.Now()
+			}
+		} else if status == TaskStatusWorkerReady {
+			if taskItem.WorkerReadyTimestamp.IsZero() {
+				taskItem.WorkerReadyTimestamp = time.Now()
+			}
 		}
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			nodeItem.status = status
