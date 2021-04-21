@@ -29,7 +29,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	traces := [][]string{}
 	headline := []string{}
 	if traceType == "full" {
-		headline = append(headline, "Job_ID", "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID", "Pod_ID")
+		headline = append(headline, "Job_ID", "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID")
 		headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
 		headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
 	} else if traceType == "concise" {
@@ -49,6 +49,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Preempted")
 	headline = append(headline, "Subtask_Execution_Time", "Subtask_PreService_Time", "Subtask_PostService_Time")
 	headline = append(headline, "Task_Budget", "Task_Priority")
+	headline = append(headline, "Pod_ID", "Retry_Count_Sending", "Retry_Count_Receiving")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -70,7 +71,6 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 						line = append(line, subtaskItem.subtask.GetKey())
 						line = append(line, subtaskItem.subtask.ModuleName)
 						line = append(line, subtaskItem.subtask.NodeKey)
-						line = append(line, subtaskItem.subtask.PodKey)
 					} else if traceType == "concise" {
 						line = append(line, taskItem.task.Task.JobKey)
 						line = append(line, strconv.Itoa(taskIndex))
@@ -165,6 +165,12 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
 					// Task_Priority
 					line = append(line, strconv.Itoa(subtaskItem.Priority))
+					// Pod_ID
+					line = append(line, subtaskItem.subtask.PodKey)
+					// Retry_Count_Sending
+					line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
+					// Retry_Count_Receiving
+					line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfReceiving, 10))
 					// end of trace
 					traces = append(traces, line)
 				}
@@ -238,7 +244,10 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}, stat *jadesdk.StatItem) *kernel.SubTask {
+func (c *TaskCache) SaveResultFromApp(
+	taskKey string, subtaskKey string, status TaskStatus, result interface{}, 
+	stat *jadesdk.StatItem, retryCount int64,
+) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -271,6 +280,8 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp)
 	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime
 	// subtaskItem.RequestTime -= subtaskItem.CommunicationTime / 2
+	subtaskItem.RetryCountOfSending = stat.RetryCountOfArrivalComm
+	subtaskItem.RetryCountOfReceiving = retryCount
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 

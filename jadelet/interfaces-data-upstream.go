@@ -6,11 +6,17 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
+	"strconv"
 )
 
 func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 	msg := &jadesdk.ReportMessage{}
 	err := r.DecodeJsonPayload(msg)
+	retryCountStr := r.Header.Get("retry-count")
+	var retryCount int64 = 0
+	if retryCountStr != "" {
+		retryCount, _ = strconv.ParseInt(retryCountStr, 10, 64)
+	}
 	if err == nil {
 		// bs, _ := json.MarshalIndent(msg, "", "    ")
 		// j.log.Println("[app message collector] Received application message:", string(bs))
@@ -26,7 +32,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.SubtaskKey, msg.TaskKey,
 				msg.Node.Key(),
 			)
-			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat)
+			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat, retryCount)
 			if subtask != nil && subtask.Pod != nil {
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				j.DoneRequest(w, r, "message received")
