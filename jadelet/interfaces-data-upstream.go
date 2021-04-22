@@ -34,10 +34,10 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.SubtaskKey, msg.TaskKey,
 				msg.Node.Key(),
 			)
-			j.DoneRequest(w, r, "message received")
 			// save result and stat
 			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg.Updates, msg.Stat, retryCount, timestampReceving)
 			if subtask != nil && subtask.Pod != nil {
+				j.DoneRequest(w, r, "message received")
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				
 				// then dequeue or release the pod queue
