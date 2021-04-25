@@ -48,7 +48,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
 	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
-	_, reqlen, _, _,  _ := j.HTTPCommunicate(
+	_, reqlen, _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
@@ -90,7 +90,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
 					}
 					// dispatch the aggregator subtask
-					_, reqlen, _ , _, _ := j.HTTPCommunicate(
+					_, reqlen, _ := j.HTTPCommunicate(
 						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
 						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 						msg,

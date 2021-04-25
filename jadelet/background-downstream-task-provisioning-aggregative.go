@@ -114,10 +114,10 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 			Protocol: j.Config.SelfNode.Protocol,
 		},
 	}
-	_, _, _, _, err := j.sdk.HTTPCommunicate(
+	_, _, err := j.sdk.HTTPCommunicate(
 		"update configuration", j.Config.SelfNode.Protocol,
 		"PUT", "/$jade$/config", newConf.SelfNode, newConf,
-		0, 200, time.Time{},
+		0, 200,
 	)
 
 	return err
