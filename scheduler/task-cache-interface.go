@@ -29,7 +29,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	traces := [][]string{}
 	headline := []string{}
 	if traceType == "full" {
-		headline = append(headline, "Job_ID", "Task_Status", "Task_ID", "Fanout_Degree", "Subtask_Status", "Subtask_ID", "Module_Name", "Node_ID")
+		headline = append(headline, "Job_ID", "Task_Status", "Fanout_Degree", "Subtask_Status", "Module_Name", "Node_ID")
 		headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
 		headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
 	} else if traceType == "concise" {
@@ -52,6 +52,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Pod_ID", "Retry_Count_Sending", "Retry_Count_Receiving")
 	headline = append(headline, "Subtask_Pre_Dispatching_Time(ms)", "Subtask_Report_Processing_Time(ms)")
 	headline = append(headline, "Task_Notifying_Aggregator_Time(ms)", "Task_Enqueuing_Worker_Time(ms)", "Task_Post_Execution_Time(ms)")
+	headline = append(headline, "Task_ID", "Subtask_ID")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -67,10 +68,8 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					if traceType == "full" {
 						line = append(line, taskItem.task.Task.JobKey)
 						line = append(line, string(taskItem.status))
-						line = append(line, taskItem.task.Task.GetKey())
 						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
 						line = append(line, string(subtaskItem.status))
-						line = append(line, subtaskItem.subtask.GetKey())
 						line = append(line, subtaskItem.subtask.ModuleName)
 						line = append(line, subtaskItem.subtask.NodeKey)
 					} else if traceType == "concise" {
@@ -188,6 +187,10 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					// Task_Post_Execution_Time(ms) 
 					dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+					// Task_ID
+					line = append(line, taskItem.task.Task.GetKey())
+					// Subtask_ID
+					line = append(line, subtaskItem.subtask.GetKey())
 					// end of trace
 					traces = append(traces, line)
 				}
@@ -449,7 +452,10 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 	if taskItem, e := c.Cache[taskKey]; e {
 		if taskItem.status == TaskStatusRejected ||
 			taskItem.status == TaskStatusDone ||
-			taskItem.status == TaskStatusFailed {
+			taskItem.status == TaskStatusFailed {	
+			if taskItem.FinishTimestamp.IsZero() {
+				taskItem.FinishTimestamp = time.Now()
+			}
 			printf("[task cache] task[%v] is {%v}, won't check deeper", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
