@@ -286,6 +286,9 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
 
 	subtaskItem.status = status
+	// if status != TaskStatusDone {
+	// 	printf("[task cache] WARNING: update from app is not DONE but {%v} for subtask {%v} of task {%v}", status, subtaskKey, taskKey)
+	// }
 
 	if task.Options != nil && task.Options.SaveResultInCache {
 		subtaskItem.updates = result
@@ -445,7 +448,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 	return false
 }
 
-func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
+func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
 	if c == nil {
 		return false
 	}
@@ -458,7 +461,7 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 			if taskItem.FinishTimestamp.IsZero() {
 				taskItem.FinishTimestamp = time.Now()
 			}
-			printf("[task cache] task[%v] is {%v}, won't check deeper", taskKey, taskItem.status)
+			printf("[task cache] task[%v] is already {%v}, stop checking subtasks", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
 		if result := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf); result {
@@ -466,9 +469,18 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, printf f
 				if taskItem.FinishTimestamp.IsZero() {
 					taskItem.FinishTimestamp = time.Now()
 				}
+				if taskItem.LastSubtaskFinishTimestamp.IsZero() {
+					taskItem.LastSubtaskFinishTimestamp = timestamp
+				}
+			} else if desiredStatus == TaskStatusAccepted {
+				if taskItem.AcceptTimestamp.IsZero() {
+					taskItem.AcceptTimestamp = timestamp
+				}
 			}
 			return result
 		}
+	} else {
+		printf("[task cache] ERROR: task[%v] is not in cache", taskKey)
 	}
 	return false
 }
@@ -506,21 +518,6 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 					subtaskItem.status = status
 				}
 			}
-		}
-	}
-}
-
-func (c *TaskCache) SetTaskFinalSubtaskFinishTimestamp(taskKey string, timestamp time.Time) {
-	if c == nil {
-		return
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	if taskItem, e := c.Cache[taskKey]; e {
-		if taskItem.LastSubtaskFinishTimestamp.IsZero() {
-			taskItem.LastSubtaskFinishTimestamp = timestamp
-		} else if timestamp.Sub(taskItem.LastSubtaskFinishTimestamp) > 0 {
-			taskItem.LastSubtaskFinishTimestamp = timestamp
 		}
 	}
 }

@@ -45,9 +45,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
-				if j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, j.log.Printf) {
-					j.TaskCache.SetTaskFinalSubtaskFinishTimestamp(msg.TaskKey, timestampReceving)
-				}
+				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Printf)
 				return
 			}
 		}

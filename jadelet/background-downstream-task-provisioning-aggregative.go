@@ -104,7 +104,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 }
 
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
-	seconds := 5
+	seconds := 30
 	j.log.Printf("waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
 	newConf := &jadesdk.Conf{

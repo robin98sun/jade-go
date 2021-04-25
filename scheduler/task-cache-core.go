@@ -111,6 +111,7 @@ type TaskCacheTaskItem struct {
 	LastSubtaskFinishTimestamp time.Time `json:"lastSubtaskFinishTimestamp,omitempty"`
 	FinishTimestamp     time.Time `json:"finishTimestamp,omitempty"`
 	Fanout              int64     `json:"fanout,omitempty"`
+	AcceptTimestamp    time.Time     `json:"acceptTimestamp,omitempty"`
 }
 
 func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {

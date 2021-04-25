@@ -63,7 +63,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 func (j *JADE) checkTaskStatus(taskKey string) {
 	// j.Lock()
 	// defer j.Unlock()
-	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, j.log.Printf) {
+	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf) {
 		j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		// set the task as running
 		// at the meanwhile the task record the timestamp as the beginning of ddispatching
