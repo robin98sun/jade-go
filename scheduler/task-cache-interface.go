@@ -67,9 +67,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line := []string{}
 					if traceType == "full" {
 						line = append(line, taskItem.task.Task.JobKey)
-						line = append(line, string(taskItem.status))
 						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
-						line = append(line, string(subtaskItem.status))
 						line = append(line, subtaskItem.subtask.ModuleName)
 						line = append(line, subtaskItem.subtask.NodeKey)
 					} else if traceType == "concise" {
@@ -166,8 +164,6 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
 					// Task_Priority
 					line = append(line, strconv.Itoa(subtaskItem.Priority))
-					// Pod_ID
-					line = append(line, subtaskItem.subtask.PodKey)
 					// Retry_Count_Sending
 					line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
 					// Retry_Count_Receiving
@@ -187,10 +183,16 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					// Task_Post_Execution_Time(ms) 
 					dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+					// Pod_ID
+					line = append(line, subtaskItem.subtask.PodKey)
 					// Task_ID
 					line = append(line, taskItem.task.Task.GetKey())
+					// Task_status
+					line = append(line, string(taskItem.status))	
 					// Subtask_ID
 					line = append(line, subtaskItem.subtask.GetKey())
+					// Subtask_status
+					line = append(line, string(subtaskItem.status))
 					// end of trace
 					traces = append(traces, line)
 				}
