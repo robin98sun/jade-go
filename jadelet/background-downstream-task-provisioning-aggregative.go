@@ -104,7 +104,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 }
 
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
-	seconds := 30
+	seconds := 5
 	j.log.Printf("waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
 	newConf := &jadesdk.Conf{
@@ -117,7 +117,7 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	_, _, err := j.sdk.HTTPCommunicate(
 		"update configuration", j.Config.SelfNode.Protocol,
 		"PUT", "/$jade$/config", newConf.SelfNode, newConf,
-		0, 200,
+		0, 2000,
 	)
 
 	return err
