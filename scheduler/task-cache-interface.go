@@ -49,10 +49,10 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Skipped")
 	headline = append(headline, "Subtask_Execution_Time(ms)", "Subtask_PreService_Time(ms)", "Subtask_PostService_Time(ms)")
 	headline = append(headline, "Task_Budget(ms)", "Task_Priority")
-	headline = append(headline, "Pod_ID", "Retry_Count_Sending", "Retry_Count_Receiving")
+	headline = append(headline, "Retry_Count_Sending", "Retry_Count_Receiving")
 	headline = append(headline, "Subtask_Pre_Dispatching_Time(ms)", "Subtask_Report_Processing_Time(ms)")
 	headline = append(headline, "Task_Notifying_Aggregator_Time(ms)", "Task_Enqueuing_Worker_Time(ms)", "Task_Post_Execution_Time(ms)")
-	headline = append(headline, "Task_ID", "Subtask_ID")
+	headline = append(headline, "Pod_ID", "Task_ID", "Task_Status", "Subtask_ID", "Subtask_Status")
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {

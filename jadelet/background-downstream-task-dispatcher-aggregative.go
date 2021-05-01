@@ -45,9 +45,10 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
+	
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
 	_, reqlen, _ := j.HTTPCommunicate(
 		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
@@ -123,7 +124,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						return i < j
 					})
 				}
-				j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
+				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
 
 
 				// enqueue each subtask
@@ -179,7 +180,13 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 					}
 				}
-				j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
+				// it will fail if it has chance to fail
+				// the status was set after the message is sent
+				// that make it possible that the message arrives the destination
+				// before the status was changed
+				// even possible that the whole task is finished before the status was changed
+				// so that the tasks completed extremely fast would got overwritten status back to incomplete
+				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
 			}
 		}
 	}
