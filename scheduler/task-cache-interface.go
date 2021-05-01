@@ -485,6 +485,26 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestam
 	return false
 }
 
+// record timestamps for some status which is complicated for status sync in distributed env
+func (c *TaskCache) SetTaskTimestamp(taskKey string, status TaskStatus) {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if taskItem, e := c.Cache[taskKey]; e {
+		if status == TaskStatusAggregatorReady {
+			if taskItem.AggregatorReadyTimestamp.IsZero() {
+				taskItem.AggregatorReadyTimestamp = time.Now()
+			}
+		} else if status == TaskStatusWorkerReady {
+			if taskItem.WorkerReadyTimestamp.IsZero() {
+				taskItem.WorkerReadyTimestamp = time.Now()
+			}
+		}
+	}
+}
+
 func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 	if c == nil {
 		return
@@ -500,14 +520,6 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 		} else if status == TaskStatusDone || status == TaskStatusFailed {
 			if taskItem.FinishTimestamp.IsZero() {
 				taskItem.FinishTimestamp = time.Now()
-			}
-		} else if status == TaskStatusAggregatorReady {
-			if taskItem.AggregatorReadyTimestamp.IsZero() {
-				taskItem.AggregatorReadyTimestamp = time.Now()
-			}
-		} else if status == TaskStatusWorkerReady {
-			if taskItem.WorkerReadyTimestamp.IsZero() {
-				taskItem.WorkerReadyTimestamp = time.Now()
 			}
 		}
 		for _, nodeItem := range taskItem.dispatchedNodes {

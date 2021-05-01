@@ -125,6 +125,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					})
 				}
 				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
+				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
 
 
 				// enqueue each subtask
@@ -180,6 +181,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 					}
 				}
+				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
 				// it will fail if it has chance to fail
 				// the status was set after the message is sent
 				// that make it possible that the message arrives the destination
