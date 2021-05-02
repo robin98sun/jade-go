@@ -92,6 +92,17 @@ type PodCacheItem struct {
 	IsIdle      bool
 }
 
+
+func (p *PodCache) GetAllPods() []*kernel.Pod {
+	p.LockMeta()
+	defer p.UnlockMeta()
+	pod_list := []*kernel.Pod {}
+	for _, pod := range p.Pods {
+		pod_list = append(pod_list, pod)
+	}
+	return pod_list
+}
+
 func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod) *PodCacheItem {
 	inst := &PodCacheItem{
 		Application: app,

@@ -17,6 +17,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 )
 
 func main() {
@@ -33,12 +34,18 @@ func main() {
 	// construt JADE RESTful API server
 	j := jadelet.NewJadelet()
 	j.Init()
-	j.Verbose(false)
-	//
+	PRINT_LOGS := false
+	j.Verbose(PRINT_LOGS)
+	// disable GC at runtime
+	debug.SetGCPercent(-1)
 
 	// APIs
 	api := rest.NewApi()
-	api.Use(rest.DefaultDevStack...)
+	if PRINT_LOGS {
+		api.Use(rest.DefaultDevStack...)
+	} else {
+		api.Use(rest.DefaultCommonStack...)
+	}
 	router, err := rest.MakeRouter(
 		// Control path upstream
 		rest.Put("/registerNode", j.RegisterNode),
@@ -81,7 +88,7 @@ func main() {
 			// allow cross domain AJAX requests
 			if origin := r.Header.Get("Origin"); origin != "" {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
-				log.Printf("CORS origin: %v", origin)
+				// log.Printf("CORS origin: %v", origin)
 			}
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
