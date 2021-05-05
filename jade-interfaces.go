@@ -17,7 +17,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime/debug"
+	// "runtime/debug"
 )
 
 func main() {
