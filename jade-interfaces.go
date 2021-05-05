@@ -37,7 +37,7 @@ func main() {
 	PRINT_LOGS := false
 	j.Verbose(PRINT_LOGS)
 	// disable GC at runtime
-	debug.SetGCPercent(-1)
+	// debug.SetGCPercent(-1)
 
 	// APIs
 	api := rest.NewApi()
