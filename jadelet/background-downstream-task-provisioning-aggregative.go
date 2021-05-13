@@ -114,6 +114,9 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 			Protocol: j.Config.SelfNode.Protocol,
 		},
 	}
+	if j.Config != nil && j.Config.Capabilities != nil && len(j.Config.Capabilities) > 0 {
+		newConf.Capabilities = j.Config.Capabilities
+	}
 	_, _, err := j.sdk.HTTPCommunicate(
 		"update configuration", j.Config.SelfNode.Protocol,
 		"PUT", "/$jade$/config", newConf.SelfNode, newConf,
