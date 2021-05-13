@@ -17,7 +17,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	// "runtime/debug"
 )
 
 func main() {
@@ -34,10 +33,8 @@ func main() {
 	// construt JADE RESTful API server
 	j := jadelet.NewJadelet()
 	j.Init()
-	PRINT_LOGS := true
+	PRINT_LOGS := false
 	j.Verbose(PRINT_LOGS)
-	// disable GC at runtime
-	// debug.SetGCPercent(-1)
 
 	// APIs
 	api := rest.NewApi()
