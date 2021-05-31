@@ -28,18 +28,14 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 
 	traces := [][]string{}
 	headline := []string{}
-	if traceType == "full" {
-		headline = append(headline, "Job_ID", "Task_Status", "Fanout_Degree", "Subtask_Status", "Module_Name", "Node_ID")
-		headline = append(headline, "Task_Arrival_Timestamp", "Task_Start_Timestamp", "Task_Finish_Timestamp")
-		headline = append(headline, "Subtask_Arrival_Timestamp", "Subtask_Enqueue_Timestamp", "Subtask_Dispatch_Timestamp", "Subtask_Finish_Timestamp")
-	} else if traceType == "concise" {
-		headline = append(headline, "Job_ID")
-		headline = append(headline, "Task_Index")
-		headline = append(headline, "Fanout_Degree")
-		headline = append(headline, "Module_Name")
-		headline = append(headline, "Task_Arrival_Timestamp")
-		headline = append(headline, "Subtask_Arrival_Timestamp")
-	}
+	
+	headline = append(headline, "Job_ID")
+	headline = append(headline, "Task_Index")
+	headline = append(headline, "Fanout_Degree")
+	headline = append(headline, "Module_Name")
+	headline = append(headline, "Task_Arrival_Timestamp")
+	headline = append(headline, "Subtask_Arrival_Timestamp")
+
 	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
 	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
 	headline = append(headline, "Queue_Length")
@@ -48,11 +44,14 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
 	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Skipped")
 	headline = append(headline, "Subtask_Execution_Time(ms)", "Subtask_PreService_Time(ms)", "Subtask_PostService_Time(ms)")
-	headline = append(headline, "Task_Budget(ms)", "Task_Priority")
-	headline = append(headline, "Retry_Count_Sending", "Retry_Count_Receiving")
-	headline = append(headline, "Subtask_Pre_Dispatching_Time(ms)", "Subtask_Report_Processing_Time(ms)")
-	headline = append(headline, "Task_Notifying_Aggregator_Time(ms)", "Task_Enqueuing_Worker_Time(ms)", "Task_Post_Execution_Time(ms)")
-	headline = append(headline, "Pod_ID", "Task_ID", "Task_Status", "Subtask_ID", "Subtask_Status")
+	if traceType == "full" {
+		headline = append(headline, "Task_Budget(ms)", "Task_Priority")
+		headline = append(headline, "Retry_Count_Sending", "Retry_Count_Receiving")
+		headline = append(headline, "Subtask_Pre_Dispatching_Time(ms)", "Subtask_Report_Processing_Time(ms)")
+		headline = append(headline, "Task_Notifying_Aggregator_Time(ms)", "Task_Enqueuing_Worker_Time(ms)", "Task_Post_Execution_Time(ms)")
+		headline = append(headline, "Pod_ID", "Task_ID", "Task_Status", "Subtask_ID", "Subtask_Status")
+		
+	}
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
@@ -65,36 +64,18 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					}
 					// keys
 					line := []string{}
-					if traceType == "full" {
-						line = append(line, taskItem.task.Task.JobKey)
-						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
-						line = append(line, subtaskItem.subtask.ModuleName)
-						line = append(line, subtaskItem.subtask.NodeKey)
-					} else if traceType == "concise" {
-						line = append(line, taskItem.task.Task.JobKey)
-						line = append(line, strconv.Itoa(taskIndex))
-						line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
-						line = append(line, subtaskItem.subtask.ModuleName)
-					}
+					
+					line = append(line, taskItem.task.Task.JobKey)
+					line = append(line, strconv.Itoa(taskIndex))
+					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
+					line = append(line, subtaskItem.subtask.ModuleName)
 
 					// timestamps
 					timeArr := []time.Time{}
-					if traceType == "full" {
-						timeArr = append(timeArr,
-							taskItem.task.GetArriveTime(),
-							taskItem.DispatchTimestamp,
-							taskItem.FinishTimestamp,
-							subtaskItem.ArriveTimestamp,
-							subtaskItem.EnqueueTimestamp,
-							subtaskItem.DispatchTimestamp,
-							subtaskItem.FinishTimestamp,
-						)
-					} else if traceType == "concise" {
-						timeArr = append(timeArr,
-							taskItem.task.GetArriveTime(),
-							subtaskItem.ArriveTimestamp,
-						)
-					}
+					timeArr = append(timeArr,
+						taskItem.task.GetArriveTime(),
+						subtaskItem.ArriveTimestamp,
+					)
 					for _, ts := range timeArr {
 						if ts.IsZero() {
 							line = append(line, "N/A")
@@ -160,39 +141,43 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					// Subtask_PostService_Time 
 					dur = float64(float64(subtaskItem.PostServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Task_Budget
-					line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
-					// Task_Priority
-					line = append(line, strconv.Itoa(subtaskItem.Priority))
-					// Retry_Count_Sending
-					line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
-					// Retry_Count_Receiving
-					line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfReceiving, 10))
-					// Subtask_Pre_Dispatching_Time(ms) 
-					dur = float64(float64(subtaskItem.PreDispatchingTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Report_Processing_Time(ms) 
-					dur = float64(float64(subtaskItem.ReportProcessingTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Task_Notifying_Aggregator_Time(ms) 
-					dur = float64(float64(taskItem.AggregatorReadyTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Task_Enqueuing_Worker_Time(ms) 
-					dur = float64(float64(taskItem.WorkerReadyTimestamp.Sub(taskItem.AggregatorReadyTimestamp)) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Task_Post_Execution_Time(ms) 
-					dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Pod_ID
-					line = append(line, subtaskItem.subtask.PodKey)
-					// Task_ID
-					line = append(line, taskItem.task.Task.GetKey())
-					// Task_status
-					line = append(line, string(taskItem.status))	
-					// Subtask_ID
-					line = append(line, subtaskItem.subtask.GetKey())
-					// Subtask_status
-					line = append(line, string(subtaskItem.status))
+
+					if traceType == "full" {
+						// Task_Budget
+						line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
+						// Task_Priority
+						line = append(line, strconv.Itoa(subtaskItem.Priority))
+						// Retry_Count_Sending
+						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
+						// Retry_Count_Receiving
+						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfReceiving, 10))
+						// Subtask_Pre_Dispatching_Time(ms) 
+						dur = float64(float64(subtaskItem.PreDispatchingTime) / float64(time.Millisecond))
+						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						// Subtask_Report_Processing_Time(ms) 
+						dur = float64(float64(subtaskItem.ReportProcessingTime) / float64(time.Millisecond))
+						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						// Task_Notifying_Aggregator_Time(ms) 
+						dur = float64(float64(taskItem.AggregatorReadyTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
+						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						// Task_Enqueuing_Worker_Time(ms) 
+						dur = float64(float64(taskItem.WorkerReadyTimestamp.Sub(taskItem.AggregatorReadyTimestamp)) / float64(time.Millisecond))
+						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						// Task_Post_Execution_Time(ms) 
+						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
+						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						// Pod_ID
+						line = append(line, subtaskItem.subtask.PodKey)
+						// Task_ID
+						line = append(line, taskItem.task.Task.GetKey())
+						// Task_status
+						line = append(line, string(taskItem.status))	
+						// Subtask_ID
+						line = append(line, subtaskItem.subtask.GetKey())
+						// Subtask_status
+						line = append(line, string(subtaskItem.status))
+					}
+					
 					// end of trace
 					traces = append(traces, line)
 				}
