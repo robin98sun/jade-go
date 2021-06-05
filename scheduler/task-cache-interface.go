@@ -21,172 +21,6 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-// traceType: full / concise; jobKey: the id of which job you want to fetch, "" for all
-func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	traces := [][]string{}
-	headline := []string{}
-	
-	headline = append(headline, "Job_ID")
-	headline = append(headline, "Task_Index")
-	headline = append(headline, "Fanout_Degree")
-	headline = append(headline, "Module_Name")
-	headline = append(headline, "Task_Arrival_Timestamp")
-	headline = append(headline, "Subtask_Arrival_Timestamp")
-
-	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
-	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
-	headline = append(headline, "Queue_Length")
-	headline = append(headline, "Subtask_Service_Time(ms)")
-	headline = append(headline, "Subtask_Communication_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
-	headline = append(headline, "Subtask_Downward_Package_Size", "Subtask_Upward_Package_Size")
-	headline = append(headline, "Subtask_Enqueuing_Overhead", "Subtask_Amount_Skipped")
-	headline = append(headline, "Subtask_Execution_Time(ms)", "Subtask_PreService_Time(ms)", "Subtask_PostService_Time(ms)")
-	if traceType == "full" {
-		headline = append(headline, "Task_Budget(ms)", "Task_Priority")
-		headline = append(headline, "Retry_Count_Sending", "Retry_Count_Receiving")
-		headline = append(headline, "Subtask_Pre_Dispatching_Time(ms)", "Subtask_Report_Processing_Time(ms)")
-		headline = append(headline, "Task_Notifying_Aggregator_Time(ms)", "Task_Enqueuing_Worker_Time(ms)", "Task_Post_Execution_Time(ms)")
-		headline = append(headline, "Pod_ID", "Task_ID", "Task_Status", "Subtask_ID", "Subtask_Status")
-		
-	}
-	traces = append(traces, headline)
-	taskIndex := -1
-	for _, taskItem := range c.Cache {
-		taskIndex++
-		for _, dispatchedNode := range taskItem.dispatchedNodes {
-			for _, moduleItem := range dispatchedNode.modules {
-				for _, subtaskItem := range moduleItem.subtasks {
-					if jobKey != "" && jobKey != "all" && jobKey != taskItem.task.Task.JobKey {
-						continue
-					}
-					// keys
-					line := []string{}
-					
-					line = append(line, taskItem.task.Task.JobKey)
-					line = append(line, strconv.Itoa(taskIndex))
-					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
-					line = append(line, subtaskItem.subtask.ModuleName)
-
-					// timestamps
-					timeArr := []time.Time{}
-					timeArr = append(timeArr,
-						taskItem.task.GetArriveTime(),
-						subtaskItem.ArriveTimestamp,
-					)
-					for _, ts := range timeArr {
-						if ts.IsZero() {
-							line = append(line, "N/A")
-						} else {
-							line = append(line, strconv.FormatInt(ts.UnixNano(), 10))
-						}
-					}
-
-					// task durations milliseconds
-					// Task_Total_Time(ms)
-					dur := float64(0)
-					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
-						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
-					}
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-
-					// Task_Provision_Time(ms)
-					dur = float64(0)
-					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.DispatchTimestamp.IsZero() {
-						dur = float64(float64(taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
-					}
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-
-					// Task_Execution_Time(ms)
-					dur = float64(0)
-					if !taskItem.WorkerReadyTimestamp.IsZero() && !taskItem.LastSubtaskFinishTimestamp.IsZero() {
-						dur = float64(float64(taskItem.LastSubtaskFinishTimestamp.Sub(taskItem.WorkerReadyTimestamp)) / float64(time.Millisecond))
-					}
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-
-					// Subtask_Request_Time(ms)
-					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Queueing_Time(ms)
-					dur = float64(float64(subtaskItem.QueueingTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Queue_Length
-					line = append(line, strconv.FormatInt(subtaskItem.QueueLength, 10))
-					// Subtask_Service_Time(ms)
-					dur = float64(float64(subtaskItem.ServiceTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Round_Trip_Time(ms)
-					dur = float64(float64(subtaskItem.CommunicationTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Upward_Trip_Time(ms)
-					dur = float64(float64(subtaskItem.ForwardingTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Downward_Package_Size
-					line = append(line, strconv.Itoa(subtaskItem.SendPackageSize))
-					// Subtask_Upward_Package_Size
-					line = append(line, strconv.Itoa(subtaskItem.ReceivePackageSize))
-					// Subtask_Enqueuing_Overhead 
-					dur = float64(float64(subtaskItem.EnqueuingOverhead) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Amount_Preempted
-					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
-					// Subtask_Execution_Time 
-					dur = float64(float64(subtaskItem.ExecutionTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_PreService_Time 
-					dur = float64(float64(subtaskItem.PreServiceTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_PostService_Time 
-					dur = float64(float64(subtaskItem.PostServiceTime) / float64(time.Millisecond))
-					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-
-					if traceType == "full" {
-						// Task_Budget
-						line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
-						// Task_Priority
-						line = append(line, strconv.Itoa(subtaskItem.Priority))
-						// Retry_Count_Sending
-						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
-						// Retry_Count_Receiving
-						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfReceiving, 10))
-						// Subtask_Pre_Dispatching_Time(ms) 
-						dur = float64(float64(subtaskItem.PreDispatchingTime) / float64(time.Millisecond))
-						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-						// Subtask_Report_Processing_Time(ms) 
-						dur = float64(float64(subtaskItem.ReportProcessingTime) / float64(time.Millisecond))
-						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-						// Task_Notifying_Aggregator_Time(ms) 
-						dur = float64(float64(taskItem.AggregatorReadyTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
-						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-						// Task_Enqueuing_Worker_Time(ms) 
-						dur = float64(float64(taskItem.WorkerReadyTimestamp.Sub(taskItem.AggregatorReadyTimestamp)) / float64(time.Millisecond))
-						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-						// Task_Post_Execution_Time(ms) 
-						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
-						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-						// Pod_ID
-						line = append(line, subtaskItem.subtask.PodKey)
-						// Task_ID
-						line = append(line, taskItem.task.Task.GetKey())
-						// Task_status
-						line = append(line, string(taskItem.status))	
-						// Subtask_ID
-						line = append(line, subtaskItem.subtask.GetKey())
-						// Subtask_status
-						line = append(line, string(subtaskItem.status))
-					}
-					
-					// end of trace
-					traces = append(traces, line)
-				}
-			}
-		}
-	}
-	return traces
-}
-
 func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
 	if c == nil {
 		return
@@ -251,12 +85,15 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, result interface{}, 
-	stat *jadesdk.StatItem, retryCount int64, timestampReceiving time.Time,
+func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
 ) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
+	result := msg.Updates 
+	stat := msg.Stat
+	metricsEnv := msg.MetricsEnv
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	task := c.GetTask(taskKey, false)
@@ -298,6 +135,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	if subtask.ModuleName == kernel.AppModuleWorker {
 		subtaskItem.CommunicationTime -= subtaskItem.PreServiceTime
 	}
+	subtaskItem.MetricsEnv = metricsEnv
 
 	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 

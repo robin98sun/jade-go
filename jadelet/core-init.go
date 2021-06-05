@@ -26,6 +26,8 @@ func (j *JADE) Init() {
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
+	// read env metrics if the addon is deployed
+	
 	// setup k8s client instance
 	clients := kube.NewKubeClient(j.log)
 	clients.Init()

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jadesdk"
 )
 
 type TaskCacheModuleItem struct {
@@ -56,6 +57,7 @@ type TaskCacheSubtaskItem struct {
 	RetryCountOfReceiving int64      `json:"retryCountOfReceiving,omitempty"`
 	PreDispatchingTime time.Duration `json:"preDispatchingTime,omitempty"`
 	ReportProcessingTime time.Duration `json:"reportProcessingTime,omitempty"`
+	MetricsEnv 		   *jadesdk.MetricsEnv `json:"metricsEnv,omitempty"`
 }
 
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {
