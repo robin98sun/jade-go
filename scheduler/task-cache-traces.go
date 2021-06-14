@@ -43,6 +43,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 		headline = append(headline, "IO_BlocksReceived", "IO_BlocksSent")
 		headline = append(headline, "System_Interrupts", "System_ContextSwitches")
 		headline = append(headline, "Processes_Runnable", "Processes_Sleeping")
+		headline = append(headline, "Voltage_Core", "Voltage_Sdram")
 	}
 	traces = append(traces, headline)
 	taskIndex := -1
@@ -322,6 +323,19 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 						}
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
+						// Voltage Core
+						floatValue = 0
+						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Voltage != nil {
+							floatValue = subtaskItem.MetricsEnv.Voltage.Core
+						}
+						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
+
+						// Voltage Sdram
+						floatValue = 0
+						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Voltage != nil {
+							floatValue = subtaskItem.MetricsEnv.Voltage.Sdram
+						}
+						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 					}
 					
 					// end of trace
