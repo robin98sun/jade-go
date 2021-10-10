@@ -21,6 +21,8 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 			if aggregatorPod == nil {
 				// provision an aggregator pod
+				containerSettings := task.Application.GetModule(string(kernel.AppModuleAggregator))
+				containerSettings.SetISAInImage(j.Config.ISA)
 				podName, nodePort, err := j.Provisioner.ProvisionTask(
 					j.Kube, j.Config.SelfNode,
 					j.newEnv(
@@ -31,7 +33,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 						task.GetKey(),
 					),
 					task.Application, string(kernel.AppModuleAggregator),
-					task.Application.GetModule(string(kernel.AppModuleAggregator)),
+					containerSettings,
 					task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
 					1,
 				)
@@ -162,6 +164,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				j.log.Printf("[%v] is a self-node", nodekey)
 				if workerPod == nil {
 					// provision a worker Pod for it
+					containerSettings := task.Application.GetModule(string(kernel.AppModuleWorker))
+					containerSettings.SetISAInImage(j.Config.ISA)
 					podName, nodePort, err := j.Provisioner.ProvisionTask(
 						j.Kube, j.Config.SelfNode,
 						j.newEnv(
@@ -172,7 +176,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 							task.GetKey(),
 						),
 						task.Application, string(kernel.AppModuleWorker),
-						task.Application.GetModule(string(kernel.AppModuleWorker)),
+						containerSettings,
 						task.Requirements.GetModule(string(kernel.AppModuleWorker)),
 						1,
 					)

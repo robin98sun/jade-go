@@ -6,6 +6,7 @@ import (
 
 // Conf configuration data structure in memory
 type Conf struct {
+	ISA 		 string 			   `json:"isa"` // instruction structure architecture of the host
 	Version      string                `json:"version"`
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`

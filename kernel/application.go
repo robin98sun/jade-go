@@ -65,6 +65,22 @@ func (c *Container) valid() bool {
 	return true
 }
 
+func (c *Container) SetISAInImage(isa string) {
+	if isa == "" || c.Image == "" {
+		return
+	}
+
+	parts := strings.Split(c.Image, ":")
+	if len(parts) > 1 {
+		new_image := ""
+		for i:=0;i<2;i++ {
+			new_image += parts[i] + ":"
+		}
+		new_image += isa
+		c.Image = new_image
+	}
+}
+
 // predefined module names
 type AppModule string
 

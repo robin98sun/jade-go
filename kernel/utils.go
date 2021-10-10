@@ -25,12 +25,17 @@ func ReadConfFromEnv() *Conf {
 			continue
 		}
 
+		// Jade runtime executable
+		if nameParts[1] == "JADELET" {
+			if nameParts[2] == "VERSION" {
+				c.Version = envValue
+			} else if nameParts[2] == "ISA" {
+				c.ISA = envValue
+			}
+		}
+			
 		// for UpperNode and SelfNode and version
 		switch nameParts[2] {
-		case "VERSION":
-			if nameParts[1] == "JADELET" {
-				c.Version = envValue
-			}
 		case "ADDRESS":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.Address = envValue
