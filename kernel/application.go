@@ -70,11 +70,13 @@ func (c *Container) SetISAInImage(isa string) {
 		return
 	}
 
-	parts := strings.Split(c.Image, ":")
+	separater := "|"
+	targetPosition := 1
+	parts := strings.Split(c.Image, separater)
 	if len(parts) > 1 {
 		new_image := ""
-		for i:=0;i<2;i++ {
-			new_image += parts[i] + ":"
+		for i:=0;i<targetPosition;i++ {
+			new_image += parts[i] + separater
 		}
 		new_image += isa
 		c.Image = new_image
