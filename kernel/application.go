@@ -70,7 +70,7 @@ func (c *Container) SetISAInImage(isa string) {
 		return
 	}
 
-	separater := "|"
+	separater := "--"
 	targetPosition := 1
 	parts := strings.Split(c.Image, separater)
 	if len(parts) > 1 {
