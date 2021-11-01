@@ -72,18 +72,16 @@ func (c *Container) SetISAInImage(isa string) {
 
 	separater := "--"
 	parts := strings.Split(c.Image, separater)
-	if len(parts) > 0 {
-		new_image := ""
-		targetPosition := 1
-		if len(parts) > 1 {
-			targetPosition = len(parts) - 1
-		}
-		for i:=0;i<targetPosition;i++ {
-			new_image += parts[i] + separater
-		}
-		new_image += isa
-		c.Image = new_image
+	new_image := ""
+	targetPosition := 1
+	if len(parts) > 1 {
+		targetPosition = len(parts) - 1
 	}
+	for i:=0;i<targetPosition;i++ {
+		new_image += parts[i] + separater
+	}
+	new_image += isa
+	c.Image = new_image
 }
 
 // predefined module names
