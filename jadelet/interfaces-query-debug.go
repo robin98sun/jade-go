@@ -167,6 +167,10 @@ func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.PodCache)
 }
 
+func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteJson(j.TaskCache)
+}
+
 func (j *JADE) GetJobIdList(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.TaskCache.GetJobIdList())
 }
