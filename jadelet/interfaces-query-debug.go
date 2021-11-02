@@ -164,7 +164,7 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.PodCache.Describe())
+	w.WriteJson(j.PodCache)
 }
 
 func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
