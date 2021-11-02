@@ -399,7 +399,7 @@ type SubtaskOnNode struct {
 	Node    *kernel.Node
 }
 
-func (c *TaskCache) GetSubtasks(taskKey string, moduleName string) []*SubtaskOnNode {
+func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) []*SubtaskOnNode {
 	if c == nil || c.Cache == nil {
 		return nil
 	}
@@ -408,7 +408,16 @@ func (c *TaskCache) GetSubtasks(taskKey string, moduleName string) []*SubtaskOnN
 	subtasks := []*SubtaskOnNode{}
 	if taskItem, e := c.Cache[taskKey]; e {
 		for _, nodeItem := range taskItem.dispatchedNodes {
-			if moduleItem, e := nodeItem.modules[moduleName]; e {
+			if exclusiveNodeKey != "" && exclusiveNodeKey != nodeItem.node.Key() {
+				continue
+			}
+			if exceptNodeKey != "" && exceptNodeKey != "none" && exceptNodeKey == nodeItem.node.Key() {
+				continue
+			}
+			for moduleNameInCache, moduleItem := range nodeItem.modules {
+				if moduleName != "" && moduleName != "all" && moduleName != moduleNameInCache {
+					continue
+				}
 				for _, subtaskItem := range moduleItem.subtasks {
 					subtasks = append(subtasks, &SubtaskOnNode{
 						Subtask: subtaskItem.subtask,

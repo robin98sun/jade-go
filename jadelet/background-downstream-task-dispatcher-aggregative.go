@@ -75,121 +75,120 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
 		//   a. collect the workers
-		if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
-			aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
-			if len(aggregatorSubtasks) > 0 {
-				// only for valid aggregative tasks
-				for _, aggregator := range aggregatorSubtasks {
-					msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
-					msg.SubtaskKey = aggregator.Subtask.GetKey()
-					j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
-					// Save the dispatching timestamp and fanout degree
-					aggregator.Subtask.Fanout = len(workerSubtasks)
-					aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
-					if aggregatorSubtaskCacheItem != nil {
-						aggregatorSubtaskCacheItem.EnqueueTimestamp = time.Now()
-						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
-					}
-					// dispatch the aggregator subtask
-					_, reqlen, _ := j.HTTPCommunicate(
-						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
-						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
-						msg,
-						0, 10,
-					)
-					if aggregatorSubtaskCacheItem != nil {
-						aggregatorSubtaskCacheItem.SendPackageSize = reqlen
-					}
+		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
+		if len(aggregatorSubtasks) > 0 {
+			// only for valid aggregative tasks
+			for _, aggregator := range aggregatorSubtasks {
+				workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
+				msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
+				msg.SubtaskKey = aggregator.Subtask.GetKey()
+				j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+				// Save the dispatching timestamp and fanout degree
+				aggregator.Subtask.Fanout = len(workerSubtasks)
+				aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
+				if aggregatorSubtaskCacheItem != nil {
+					aggregatorSubtaskCacheItem.EnqueueTimestamp = time.Now()
+					aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
 				}
-				// 2. dispatch the subtask to each worker,
-				//    together with the aggregator's address
-				fanoutDegree := len(workerSubtasks)
-				j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
-				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
-				budget := taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
-				if budget > 0 {
-					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
+				// dispatch the aggregator subtask
+				_, reqlen, _ := j.HTTPCommunicate(
+					"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
+					aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
+					msg,
+					0, 10,
+				)
+				if aggregatorSubtaskCacheItem != nil {
+					aggregatorSubtaskCacheItem.SendPackageSize = reqlen
 				}
-				priority := taskItem.Priority
-				if priority == 0 {
-					priority = scheduler.TaskDefaultPriority
-				}
-
-				// sort available subnodes if needed
-				if taskItem.Options != nil && taskItem.Options.SortSubnodes {
-					sort.Slice(workerSubtasks, func(i, j int) bool {
-						if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
-							return true
-						}
-						return i < j
-					})
-				}
-				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
-				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
-
-
-				// enqueue each subtask
-				for i, worker := range workerSubtasks {
-					j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
-						worker.Subtask.Pod.GetKey(), worker.Node.Key(),
-						taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
-					)
-					// backdoor for fake service time
-					estimatedServiceTime := float64(-1)
-					if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
-						options := taskItem.Options
-						if options.EstimatedServiceTimeModel == "poission" {
-							if options.EstimatedMeanServiceTime > 0 {
-								estimatedServiceTime = float64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
-							}
-						} else if options.EstimatedServiceTimeModel == "exponential" {
-							if options.EstimatedMeanServiceTime > 0 {
-								estimatedServiceTime = float64(j.dist.ExponentialRand(float64(options.EstimatedMeanServiceTime)))
-							}
-						} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
-							estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
-						} else if options.EstimatedServiceTimeModel == "custom" && len(workerSubtasks) == len(options.ServiceTimeList) {
-							estimatedServiceTime = float64(options.ServiceTimeList[i])
-						}
-					}
-					// generate request payload for the subtask
-					req := NewAggregativeWorkerTask(
-						taskItem, worker, j.Config.SelfNode.Protocol,
-						task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
-						estimatedServiceTime,
-					)
-					queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
-					if queue == nil {
-						j.log.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
-						continue
-					}
-					// enqueue the subtask
-					if estimatedServiceTime > 0 {
-						j.log.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
-							estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
-						)
-					}
-					done,_,_ := queue.Enqueue(
-						worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
-						task.QueuingMechanism, budget, priority,
-						estimatedServiceTime,
-						j.log.Printf,
-					)
-					if done {
-						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
-					} else {
-						j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
-					}
-				}
-				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
-				// it will fail if it has chance to fail
-				// the status was set after the message is sent
-				// that make it possible that the message arrives the destination
-				// before the status was changed
-				// even possible that the whole task is finished before the status was changed
-				// so that the tasks completed extremely fast would got overwritten status back to incomplete
-				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
 			}
+			// 2. dispatch the subtask to each worker,
+			//    together with the aggregator's address
+			fanoutDegree := len(workerSubtasks)
+			j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
+			j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
+			budget := taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+			if budget > 0 {
+				j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
+			}
+			priority := taskItem.Priority
+			if priority == 0 {
+				priority = scheduler.TaskDefaultPriority
+			}
+
+			// sort available subnodes if needed
+			if taskItem.Options != nil && taskItem.Options.SortSubnodes {
+				sort.Slice(workerSubtasks, func(i, j int) bool {
+					if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
+						return true
+					}
+					return i < j
+				})
+			}
+			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
+			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
+
+
+			// enqueue each subtask
+			for i, worker := range workerSubtasks {
+				j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
+					worker.Subtask.Pod.GetKey(), worker.Node.Key(),
+					taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
+				)
+				// backdoor for fake service time
+				estimatedServiceTime := float64(-1)
+				if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
+					options := taskItem.Options
+					if options.EstimatedServiceTimeModel == "poission" {
+						if options.EstimatedMeanServiceTime > 0 {
+							estimatedServiceTime = float64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
+						}
+					} else if options.EstimatedServiceTimeModel == "exponential" {
+						if options.EstimatedMeanServiceTime > 0 {
+							estimatedServiceTime = float64(j.dist.ExponentialRand(float64(options.EstimatedMeanServiceTime)))
+						}
+					} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
+						estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
+					} else if options.EstimatedServiceTimeModel == "custom" && len(workerSubtasks) == len(options.ServiceTimeList) {
+						estimatedServiceTime = float64(options.ServiceTimeList[i])
+					}
+				}
+				// generate request payload for the subtask
+				req := NewAggregativeWorkerTask(
+					taskItem, worker, j.Config.SelfNode.Protocol,
+					task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
+					estimatedServiceTime,
+				)
+				queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
+				if queue == nil {
+					j.log.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
+					continue
+				}
+				// enqueue the subtask
+				if estimatedServiceTime > 0 {
+					j.log.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
+						estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
+					)
+				}
+				done,_,_ := queue.Enqueue(
+					worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
+					task.QueuingMechanism, budget, priority,
+					estimatedServiceTime,
+					j.log.Printf,
+				)
+				if done {
+					j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+				} else {
+					j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
+				}
+			}
+			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
+			// it will fail if it has chance to fail
+			// the status was set after the message is sent
+			// that make it possible that the message arrives the destination
+			// before the status was changed
+			// even possible that the whole task is finished before the status was changed
+			// so that the tasks completed extremely fast would got overwritten status back to incomplete
+			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
 		}
 	}
 }
