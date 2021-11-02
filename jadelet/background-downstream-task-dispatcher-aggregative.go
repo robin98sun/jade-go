@@ -78,7 +78,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		//  for multiple tier network, there could be aggregators in middle-tier
 		//  so, must check all subtasks
 		// if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
-		workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker), "")
+		workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key())
 		aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator), j.Config.SelfNode.Key())
 		allSubtasks := workerSubtasks
 		if len(workerSubtasks) == 0 && len(aggregatorSubtasks) > 0 {
