@@ -78,8 +78,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
 		if len(aggregatorSubtasks) > 0 {
 			// only for valid aggregative tasks
+			workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
 			for _, aggregator := range aggregatorSubtasks {
-				workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
 				msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
 				msg.SubtaskKey = aggregator.Subtask.GetKey()
 				j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
