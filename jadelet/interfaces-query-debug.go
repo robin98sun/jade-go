@@ -164,11 +164,11 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.PodCache)
+	w.WriteJson(j.PodCache.Describe())
 }
 
 func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.TaskCache)
+	w.WriteJson(j.TaskCache.Describe())
 }
 
 func (j *JADE) GetJobIdList(w rest.ResponseWriter, r *rest.Request) {

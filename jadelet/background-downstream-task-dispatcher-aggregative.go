@@ -127,7 +127,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
 			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
 
-
 			// enqueue each subtask
 			for i, worker := range workerSubtasks {
 				j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
