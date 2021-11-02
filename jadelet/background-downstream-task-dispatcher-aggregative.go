@@ -75,8 +75,20 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
 		//   a. collect the workers
-		if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
-			aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
+		//  for multiple tier network, there could be aggregators in middle-tier
+		//  so, must check all subtasks
+		// if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
+		workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker))
+		aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
+		allSubtasks := nil
+		if len(workerSubtasks) == 0 && len(aggregatorSubtasks) > 0 {
+			allSubtasks = aggregatorSubtasks
+		} else if len(workerSubtasks) > 0 && len(aggregatorSubtasks) == 0 {
+			allSubtasks = workerSubtasks
+		} else if len(workerSubtasks) > 0 && len(aggregatorSubtasks) > 0 {
+			allSubtasks = append(workerSubtasks, aggregatorSubtasks)
+		}
+		if len(allSubtasks) > 0 {
 			if len(aggregatorSubtasks) > 0 {
 				// only for valid aggregative tasks
 				for _, aggregator := range aggregatorSubtasks {
