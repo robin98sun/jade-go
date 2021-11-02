@@ -80,13 +80,13 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		// if workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker)); len(workerSubtasks) > 0 {
 		workerSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleWorker))
 		aggregatorSubtasks := j.TaskCache.GetSubtasks(taskKey, string(kernel.AppModuleAggregator))
-		allSubtasks := nil
+		allSubtasks := workerSubtasks
 		if len(workerSubtasks) == 0 && len(aggregatorSubtasks) > 0 {
 			allSubtasks = aggregatorSubtasks
 		} else if len(workerSubtasks) > 0 && len(aggregatorSubtasks) == 0 {
 			allSubtasks = workerSubtasks
 		} else if len(workerSubtasks) > 0 && len(aggregatorSubtasks) > 0 {
-			allSubtasks = append(workerSubtasks, aggregatorSubtasks)
+			allSubtasks = append(workerSubtasks, aggregatorSubtasks...)
 		}
 		if len(allSubtasks) > 0 {
 			if len(aggregatorSubtasks) > 0 {
