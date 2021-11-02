@@ -238,7 +238,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
 				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
-				j.log.Printf("Found an aggregator pod or unknown type on node[%v]", nodeKey)
+				j.log.Printf("Found an aggregator pod or unknown type on node[%v]", nodekey)
 				if _, e := tasksGoingToDispatch[nodekey]; !e {
 					tasksGoingToDispatch[nodekey] = []*scheduler.TaskDispatchingItem{taskItem}
 				} else {
