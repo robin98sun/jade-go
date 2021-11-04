@@ -283,16 +283,15 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 		}
 	}
 	// acknowledge good tasks
-	if !j.IsCoordinator() {
-		for taskKey, pod := range readyTaskCache {
-			j.feedbackProvisioning(NewTaskProvisioningResult(
-				j.Config.SelfNode.Key(),
-				taskKey,
-				string(kernel.AppModuleWorker),
-				pod,
-			))
-		}
-	} else {
+	for taskKey, pod := range readyTaskCache {
+		j.feedbackProvisioning(NewTaskProvisioningResult(
+			j.Config.SelfNode.Key(),
+			taskKey,
+			string(kernel.AppModuleWorker),
+			pod,
+		))
+	}
+	if j.IsCoordinator() {
 		// check task status and enqueue them the task is ready
 		for taskKey := range readyTaskCache {
 			j.checkTaskStatus(taskKey)
