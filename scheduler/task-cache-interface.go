@@ -46,15 +46,15 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 		}
 	}
 	moduleName := realModuleName
-	if originalModuleName == "" || realModuleName == originalModuleName {
-		if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
+	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
+		if originalModuleName == "" || realModuleName == originalModuleName {
 			if taskItem == nil {
 				return nil
 			}
-			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
-				subtasks: nil,
-				status:   TaskStatusPending,
-			}
+		}
+		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
+			subtasks: nil,
+			status:   TaskStatusPending,
 		}
 	}
 	
