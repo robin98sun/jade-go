@@ -79,7 +79,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 		}
 
 		if subtask == nil {
-			subtask := c.Cache[taskKey].task.Task.NewSubtask(
+			subtask = c.Cache[taskKey].task.Task.NewSubtask(
 				moduleName,
 				subnode.Key(),
 				pod.GetKey(),
