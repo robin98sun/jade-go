@@ -10,6 +10,7 @@ import (
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
 func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+	ackAggregatorPods := make(map[string]*kernel.Pod) // taskKey: *kernel.Pod
 	// first, check or allocate itself's pod
 	// 1. if the node itself is a coordinator, then allocate an aggregator pod for it
 	goodTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
@@ -82,6 +83,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod)
 				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
 				goodTaskCache[task.GetKey()] = newTaskItem
+				ackAggregatorPods[task.GetKey()] = aggregatorPod
 			}
 		} else {
 			goodTaskCache[task.GetKey()] = taskItem
@@ -103,6 +105,18 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			))
 		}
 	}
+	// acknowledge good tasks
+	if j.HasUpperNode() && len(ackAggregatorPods) > 0 {
+		for taskKey, pod := range ackAggregatorPods {
+			j.feedbackProvisioning(NewTaskProvisioningResult(
+				j.Config.SelfNode.Key(),
+				taskKey,
+				string(kernel.AppModuleAggregator),
+				pod,
+			))
+		}
+	}
+	
 }
 
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {

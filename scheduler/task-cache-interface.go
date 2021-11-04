@@ -21,9 +21,9 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) *kernel.SubTask {
 	if c == nil {
-		return
+		return nil
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -34,7 +34,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 		if taskItem != nil && taskKey == taskItem.Task.GetKey() {
 			c.Cache[taskKey] = NewTaskCacheTaskItem(taskItem)
 		} else {
-			return
+			return nil
 		}
 	}
 	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()]; !e {
@@ -46,15 +46,15 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 	}
 	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
 		if taskItem == nil {
-			return
+			return nil
 		}
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
 			subtasks: nil,
 			status:   TaskStatusPending,
 		}
 	}
+	var subtask *kernel.SubTask
 	if pod != nil {
-		var subtask *kernel.SubTask
 		if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
 			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
 				if tmpst.subtask.PodKey == pod.GetKey() {
@@ -83,6 +83,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 			}
 		}
 	}
+	return subtask
 }
 
 func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
