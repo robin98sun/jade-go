@@ -5,6 +5,7 @@ import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
+	"log"
 )
 
 func (c *TaskCache) GetJobIdList() []string {
@@ -57,8 +58,11 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 	var subtask *kernel.SubTask
 	if pod != nil {
 		if originalModuleName != "" {
+			log.Printf("going[1] to delete original module[%v] from dispatched node[%v] for task[%v]", originalModuleName, subnode.Key(), taskkey)
 			if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName]; e {
+				log.Printf("going[2] to delete original module[%v] from dispatched node[%v] for task[%v]", originalModuleName, subnode.Key(), taskkey)
 				if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks) == 0 {
+					log.Printf("deleting original module[%v] from dispatched node[%v] for task[%v]", originalModuleName, subnode.Key(), taskkey)
 					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules, originalModuleName)
 				}
 			}
