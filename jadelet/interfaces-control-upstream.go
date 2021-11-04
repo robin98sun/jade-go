@@ -82,7 +82,7 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		})
 	} else {
 		j.log.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v], module[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey, feedback.ModuleName)
-		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod)
+		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(kernel.AppModuleWorker))
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey, true)
 		whetherEnqueue := true
 		if feedback.ModuleName == string(kernel.AppModuleAggregator) {

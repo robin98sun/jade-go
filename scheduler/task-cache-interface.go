@@ -21,7 +21,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, moduleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -44,6 +44,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 			status:  TaskStatusPending,
 		}
 	}
+	moduleName := realModuleName
 	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName]; !e {
 		if taskItem == nil {
 			return nil
@@ -55,6 +56,13 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, mo
 	}
 	var subtask *kernel.SubTask
 	if pod != nil {
+		if originalModuleName != "" {
+			if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName]; e {
+				if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks) == 0 {
+					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules, originalModuleName)
+				}
+			}
+		}
 		if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
 			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
 				if tmpst.subtask.PodKey == pod.GetKey() {
