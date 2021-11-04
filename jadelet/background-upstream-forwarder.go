@@ -10,14 +10,16 @@ type TaskProvisioningResult struct {
 	TaskKey    string      `json:"taskID,omitempty"`
 	ModuleName string      `json:"moduleName,omitempty"`
 	Pod        *kernel.Pod `json:"pod,omitempty"`
+	SubtaskKey string      `json:"subtaskId,omitempty"`
 }
 
-func NewTaskProvisioningResult(nodekey string, taskkey string, moduleName string, pod *kernel.Pod) *TaskProvisioningResult {
+func NewTaskProvisioningResult(nodekey string, taskkey string, moduleName string, pod *kernel.Pod, subtaskKey string) *TaskProvisioningResult {
 	inst := &TaskProvisioningResult{
 		NodeKey:    nodekey,
 		TaskKey:    taskkey,
 		ModuleName: moduleName,
 		Pod:        pod,
+		SubtaskKey: subtaskKey,
 	}
 	return inst
 }

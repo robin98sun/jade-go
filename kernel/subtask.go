@@ -22,7 +22,7 @@ func (t *SubTask) GetKey() string {
 	return t.Key
 }
 
-func NewSubtask(taskKey string, appName string, moduleName string, nodeKey string, podKey string) *SubTask {
+func NewSubtask(taskKey string, appName string, moduleName string, nodeKey string, podKey string, subtaskKey string) *SubTask {
 	newSubtask := &SubTask{
 		TaskKey:    taskKey,
 		AppName:    appName,
@@ -31,6 +31,8 @@ func NewSubtask(taskKey string, appName string, moduleName string, nodeKey strin
 		PodKey:     podKey,
 		Fanout:     1,
 	}
-	newSubtask.Key = newSubtask.GetKey()
+	if subtaskKey != "" {
+		newSubtask.Key = newSubtask.GetKey()
+	}
 	return newSubtask
 }

@@ -22,7 +22,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -77,11 +77,13 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 				}
 			}
 		}
+
 		if subtask == nil {
 			subtask := c.Cache[taskKey].task.Task.NewSubtask(
 				moduleName,
 				subnode.Key(),
 				pod.GetKey(),
+				subtaskKey,
 			)
 			subtask.Pod = pod
 			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {

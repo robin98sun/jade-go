@@ -37,14 +37,14 @@ func (t *Task) GetKey() string {
 	return t.Key
 }
 
-func (t *Task) NewSubtask(module string, nodeKey string, podKey string) *SubTask {
+func (t *Task) NewSubtask(module string, nodeKey string, podKey string, subtaskKey string) *SubTask {
 	if t == nil {
 		return nil
 	}
 	if t.Subtasks == nil {
 		t.Subtasks = make(map[string]*SubTask)
 	}
-	nst := NewSubtask(t.GetKey(), t.Application.Name, module, nodeKey, podKey)
+	nst := NewSubtask(t.GetKey(), t.Application.Name, module, nodeKey, podKey, subtaskKey)
 	t.Subtasks[nst.GetKey()] = nst
 	return nst
 }
