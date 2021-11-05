@@ -339,7 +339,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			taskKey,
 			string(kernel.AppModuleWorker),
 			pod,
-			j.TaskCache.GetTask(taskKey, true).Task.SubtaskKey,
+			"",
 		))
 	}
 	if j.IsCoordinator() {
