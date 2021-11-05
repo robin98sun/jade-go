@@ -7,6 +7,18 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
+type DispatchItemWithAggregator struct {
+	DispatchingItem *scheduler.TaskDispatchingItem
+	AggregatorPod *kernel.Pod
+	AggregatorSubtask *kernel.SubTask
+}
+
+type SubtasksForAggregator struct {
+	TaskKey string
+	AggregatorPod *kernel.Pod
+	SubtaskList []string
+}
+
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
 func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
@@ -14,7 +26,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	ackAggregatorSubtasks := make(map[string]string) // taskKey: subtaskKey
 	// first, check or allocate itself's pod
 	// 1. if the node itself is a coordinator, then allocate an aggregator pod for it
-	goodTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+	goodTaskCache := make(map[string]*DispatchItemWithAggregator) // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
 		if j.IsCoordinator() {
@@ -81,14 +93,22 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
-				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", "")
+				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey)
 				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
-				goodTaskCache[task.GetKey()] = newTaskItem
+				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
+					DispatchingItem: newTaskItem,
+					AggregatorPod: aggregatorPod,
+					AggregatorSubtask: subtask,
+				}
 				ackAggregatorPods[task.GetKey()] = aggregatorPod
 				ackAggregatorSubtasks[task.GetKey()] = subtask.GetKey()
 			}
 		} else {
-			goodTaskCache[task.GetKey()] = taskItem
+			goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
+				DispatchingItem: taskItem,
+				AggregatorPod: nil,
+				AggregatorSubtask: nil,
+			}
 		}
 	}
 	// second, downstream propagate the task
@@ -147,11 +167,12 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	return err
 }
 
-func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatchingItem) {
-	tasksGoingToDispatch := make(map[string][]*scheduler.TaskDispatchingItem) // nodekey: []*TaskDispatchingItem
+func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggregator) {
+	tasksGoingToDispatch := make(map[string][]*DispatchItemWithAggregator) // nodekey: []*TaskDispatchingItem
 	readyTaskCache := make(map[string]*kernel.Pod)                            // taskkey: *Pod
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
-	for _, taskItem := range tasklist {
+	for _, disptachItem := range tasklist {
+		taskItem := disptachItem.DispatchingItem
 		task := taskItem.Task
 		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
 		j.log.Printf("evaluating task[%v], report to [%v]", task.GetKey(), reportTo)
@@ -259,9 +280,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
 				j.log.Printf("Found an aggregator pod or unknown type on node[%v]", nodekey)
 				if _, e := tasksGoingToDispatch[nodekey]; !e {
-					tasksGoingToDispatch[nodekey] = []*scheduler.TaskDispatchingItem{taskItem}
+					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{disptachItem}
 				} else {
-					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], taskItem)
+					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], disptachItem)
 				}
 
 				if _, e := readyTaskCache[task.GetKey()]; e {
@@ -285,10 +306,19 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 	}
 
 	// dispatch sub-tasks
+	nodesToDispatch := make(map[string][]*scheduler.TaskDispatchingItem)
 	for nodekey, subTasklist := range tasksGoingToDispatch {
-		j.log.Printf("Further dispatching subtasks to {%v} sub-nodes", len(tasksGoingToDispatch))
-		j.dispatchTasks(nodekey, subTasklist)
+		dispatchingList := []*scheduler.TaskDispatchingItem{}
+		for _, dispatchItem := range subTasklist {
+			originalTaskItem := dispatchItem.DispatchingItem
+			dispatchingList = append(dispatchingList, originalTaskItem)
+		}
+		nodesToDispatch[nodekey] = dispatchingList
 	}
+	for nodekey, dispatchingList := range nodesToDispatch {
+		j.log.Printf("Further dispatching subtasks to {%v} sub-nodes", len(dispatchingList))
+		j.dispatchTasks(nodekey, dispatchingList)
+	}	
 	// reject bad tasks
 	if len(rejectTaskCache) > 0 {
 		for _, taskItem := range rejectTaskCache {
@@ -298,7 +328,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 				taskItem.Task.GetKey(),
 				string(kernel.AppModuleWorker),
 				nil,
-				"",
+				taskItem.Task.SubtaskKey,
 			))
 		}
 	}
@@ -309,7 +339,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*scheduler.TaskDispatch
 			taskKey,
 			string(kernel.AppModuleWorker),
 			pod,
-			"",
+			j.TaskCache.GetTask(taskKey, true).Task.SubtaskKey,
 		))
 	}
 	if j.IsCoordinator() {
