@@ -31,8 +31,10 @@ func NewSubtask(taskKey string, appName string, moduleName string, nodeKey strin
 		PodKey:     podKey,
 		Fanout:     1,
 	}
-	if subtaskKey != "" {
+	if subtaskKey == "" {
 		newSubtask.Key = newSubtask.GetKey()
+	} else {
+		newSubtask.Key = subtaskKey
 	}
 	return newSubtask
 }
