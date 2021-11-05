@@ -43,6 +43,11 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod)
 
+				// forward aggregator subtask to upper tier if possible
+				if subtask.ModuleName == string(kernel.AppModuleAggregator) && j.HasUpperNode() {
+					j.sdk.SendReportMessageToJadelet(j.Config.UpperNode.GetSDKNode(), msg)
+				}
+
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
 				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Printf)
