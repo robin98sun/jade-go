@@ -278,7 +278,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
 				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
-				j.log.Printf("Found an aggregator pod or unknown type on node[%v]", nodekey)
+				j.log.Printf("Found an aggregator pod or unknown type pod on node[%v]", nodekey)
 				if _, e := tasksGoingToDispatch[nodekey]; !e {
 					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{disptachItem}
 				} else {
@@ -288,8 +288,13 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
 				}
-				j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-				j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
+				if workerPod == nil {
+					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
+				} else {
+					j.log.Printf("Caching {} pod on node[%v] for task[%v]", workerPod.ModuleName, nodekey, task.GetKey())
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), workerPod.ModuleName, taskItem, workerPod, "", "")
+				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
 			// 				I. If any sub-node responded, the task-cache could be updated,
