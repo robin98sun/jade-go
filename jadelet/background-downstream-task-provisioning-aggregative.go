@@ -287,15 +287,16 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], disptachItem)
 				}
 
-				if _, e := readyTaskCache[task.GetKey()]; e {
-					delete(readyTaskCache, task.GetKey())
-				}
 				if aggregatorPod == nil {
 					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
+					if _, e := readyTaskCache[task.GetKey()]; e {
+						delete(readyTaskCache, task.GetKey())
+					}
 				} else {
-					j.log.Printf("Caching {} pod on node[%v] for task[%v]", string(kernel.AppModuleAggregator), nodekey, task.GetKey())
+					j.log.Printf("Caching %v pod on node[%v] for task[%v]", string(kernel.AppModuleAggregator), nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
+					readyTaskCache[task.GetKey()] = aggregatorPod
 				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
@@ -344,7 +345,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		j.feedbackProvisioning(NewTaskProvisioningResult(
 			j.Config.SelfNode.Key(),
 			taskKey,
-			string(kernel.AppModuleWorker),
+			pod.ModuleName,
 			pod,
 			"",
 		))
