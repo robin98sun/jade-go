@@ -198,7 +198,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			j.log.Printf("processing node[%v]", nodekey)
 			//		search pod on that node for this task
 			workerAllocation := task.Requirements.Allocations[string(kernel.AppModuleWorker)]
+			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 			workerPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(kernel.AppModuleWorker), workerAllocation)
+			aggregatorPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
 				j.log.Printf("[%v] is a self-node", nodekey)
@@ -288,12 +290,12 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
 				}
-				if workerPod == nil {
+				if aggregatorPod == nil {
 					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
 				} else {
-					j.log.Printf("Caching {} pod on node[%v] for task[%v]", workerPod.ModuleName, nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), workerPod.ModuleName, taskItem, workerPod, "", "")
+					j.log.Printf("Caching {} pod on node[%v] for task[%v]", string(kernel.AppModuleAggregator), nodekey, task.GetKey())
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
 				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
