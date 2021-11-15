@@ -294,13 +294,18 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
 				}
+				newDispatchItem := &DispatchItemWithAggregator {
+					DispatchingItem: disptachItem.DispatchingItem.CopyForSubtask(true),
+					AggregatorPod: disptachItem.AggregatorPod,
+					AggregatorSubtask: disptachItem.AggregatorSubtask,
+				}
 				if subtask != nil {
-					disptachItem.DispatchingItem.Task.SubtaskKey = subtask.GetKey()
+					newDispatchItem.DispatchingItem.Task.SubtaskKey = subtask.GetKey()
 				}
 				if _, e := tasksGoingToDispatch[nodekey]; !e {
-					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{disptachItem}
+					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{newDispatchItem}
 				} else {
-					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], disptachItem)
+					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], newDispatchItem)
 				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
