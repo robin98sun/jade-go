@@ -131,6 +131,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	// acknowledge good tasks
 	if j.HasUpperNode() && len(ackAggregatorPods) > 0 {
 		for taskKey, pod := range ackAggregatorPods {
+			j.log.Printf("Acknowledging good task[%v] before propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 			aggregatorSubtaskKey := ackAggregatorSubtasks[taskKey]
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
@@ -286,17 +287,15 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				} else {
 					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], disptachItem)
 				}
-
 				if aggregatorPod == nil {
 					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
-					if _, e := readyTaskCache[task.GetKey()]; e {
-						delete(readyTaskCache, task.GetKey())
-					}
 				} else {
-					j.log.Printf("Caching %v pod on node[%v] for task[%v], which runtime-module-prop is: %v", string(kernel.AppModuleAggregator), nodekey, task.GetKey(), aggregatorPod.ModuleName)
+					j.log.Printf("Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
-					readyTaskCache[task.GetKey()] = aggregatorPod
+				}
+				if _, e := readyTaskCache[task.GetKey()]; e {
+					delete(readyTaskCache, task.GetKey())
 				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
@@ -342,7 +341,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	}
 	// acknowledge good tasks
 	for taskKey, pod := range readyTaskCache {
-		j.log.Printf("Acknowledging good task[%v] for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
+		j.log.Printf("Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 		j.feedbackProvisioning(NewTaskProvisioningResult(
 			j.Config.SelfNode.Key(),
 			taskKey,
