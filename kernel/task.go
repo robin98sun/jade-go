@@ -26,6 +26,9 @@ func (t *Task) CopyForSubtask() *Task {
 		Application:  t.Application,
 		Requirements: t.Requirements,
 		Key:          t.Key,
+		ForceUpdateNetworkStructure: t.ForceUpdateNetworkStructure,
+		QueuingMechanism: t.QueuingMechanism,
+		JobKey: t.JobKey,
 	}
 	return newTask
 }

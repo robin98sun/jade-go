@@ -84,7 +84,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// reject the task
 				rejectTaskCache[task.GetKey()] = taskItem
 			} else {
-				newTaskItem := taskItem.Copy(false)
+				newTaskItem := taskItem.CopyForSubtask(false)
 				// the reportTo is very tricky here
 				// it's different for aggregator and worker module
 				// please think carefully why they are different
@@ -282,20 +282,25 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
 				j.log.Printf("Found an aggregator pod or unknown type pod on node[%v]", nodekey)
+				
+				var subtask *kernel.SubTask
+				if aggregatorPod == nil {
+					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
+				} else {
+					j.log.Printf("Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
+				}
+				if _, e := readyTaskCache[task.GetKey()]; e {
+					delete(readyTaskCache, task.GetKey())
+				}
+				if subtask != nil {
+					disptachItem.DispatchingItem.Task.SubtaskKey = subtask.GetKey()
+				}
 				if _, e := tasksGoingToDispatch[nodekey]; !e {
 					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{disptachItem}
 				} else {
 					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], disptachItem)
-				}
-				if aggregatorPod == nil {
-					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
-				} else {
-					j.log.Printf("Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
-				}
-				if _, e := readyTaskCache[task.GetKey()]; e {
-					delete(readyTaskCache, task.GetKey())
 				}
 			}
 			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes

@@ -44,6 +44,14 @@ func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
 	return inst
 }
 
+func (t *TaskDispatchingItem) CopyForSubtask(withReport bool) *TaskDispatchingItem {
+	inst := t.Copy(withReport)
+	if inst.Task != nil {
+		inst.Task = inst.Task.CopyForSubtask()
+	}
+	return inst
+}
+
 func (t *TaskDispatchingItem) Arrived() {
 	if t != nil {
 		t.arriveTimestamp = time.Now()
