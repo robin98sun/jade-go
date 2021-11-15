@@ -342,7 +342,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	}
 	// acknowledge good tasks
 	for taskKey, pod := range readyTaskCache {
-		j.log.Printf("Acknowledging good task[%v] for module[%v] of application[%v]", taskKey, pod.ModuleName, pod.AppKey)
+		j.log.Printf("Acknowledging good task[%v] for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 		j.feedbackProvisioning(NewTaskProvisioningResult(
 			j.Config.SelfNode.Key(),
 			taskKey,
