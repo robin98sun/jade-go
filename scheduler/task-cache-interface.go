@@ -5,7 +5,6 @@ import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
-	"log"
 )
 
 func (c *TaskCache) GetJobIdList() []string {
@@ -22,7 +21,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -46,7 +45,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 	if pod != nil {
 		podKey = pod.GetKey()
 	}
-	log.Printf("[task cache] caching subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey)
+	printf("[task cache] caching subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey)
 	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()]; !e {
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()] = &TaskCacheNodeItem{
 			node:    subnode,
@@ -65,7 +64,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			subtasks: nil,
 			status:   TaskStatusPending,
 		}
-		log.Printf("[task cache] created module [%v] for task [%v] on node [%v]", moduleName, taskKey, subnodeKey)
+		printf("[task cache] created module [%v] for task [%v] on node [%v]", moduleName, taskKey, subnodeKey)
 	}
 	
 	var subtask *kernel.SubTask
@@ -74,10 +73,10 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName]; e {
 				if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks) == 0 {
 					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules, originalModuleName)
-					log.Printf("[task cache] deleted original module [%v] for task [%v] on node [%v]", originalModuleName, taskKey, subnodeKey)
+					printf("[task cache] deleted original module [%v] for task [%v] on node [%v]", originalModuleName, taskKey, subnodeKey)
 				} else if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks[subtaskKey]; e {
 					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks, subtaskKey)
-					log.Printf("[task cache] deleted subtask [%v] from original module [%v] for task [%v] on node [%v]",subtaskKey, originalModuleName, taskKey, subnodeKey)
+					printf("[task cache] deleted subtask [%v] from original module [%v] for task [%v] on node [%v]",subtaskKey, originalModuleName, taskKey, subnodeKey)
 				}
 			}
 		}
@@ -89,7 +88,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 					if subtask.Pod == nil {
 						subtask.Pod = pod
 						tmpst.status = TaskStatusAccepted
-						log.Printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
+						printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 					}
 					break
 				}
@@ -115,13 +114,13 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			}
 
 			subtaskKey = subtask.GetKey()
-			log.Printf("[task cache] created subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
+			printf("[task cache] created subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 		}
 	}
 	if subtask != nil {
 		subtaskKey = subtask.GetKey()
 		dispatchItem := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()]
-		log.Printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey, string(dispatchItem.status))
+		printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey, string(dispatchItem.status))
 	}
 	return subtask
 }
@@ -306,7 +305,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 			return true
 		}
 		if printf != nil {
-			printf("[task cache] task[%v] is NOT {%v}", taskKey, desiredStatus)
+			printf("[task cache] task[%v] is NOT {%v}, BUT {}", taskKey, desiredStatus, checkResult)
 		}
 	}
 	return false

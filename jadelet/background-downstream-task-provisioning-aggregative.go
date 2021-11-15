@@ -93,7 +93,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
-				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey)
+				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
 				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
 				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 					DispatchingItem: newTaskItem,
@@ -267,7 +267,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, kernel.AppModuleWorker)
 				if j.IsCoordinator() {
 					j.log.Printf("Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod, "", "")
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod, "", "", j.log.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; !e {
 					readyTaskCache[task.GetKey()] = workerPod
@@ -286,10 +286,10 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				var subtask *kernel.SubTask
 				if aggregatorPod == nil {
 					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "")
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "", j.log.Printf)
 				} else {
 					j.log.Printf("Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "", j.log.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
@@ -332,8 +332,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		}
 		nodesToDispatch[nodekey] = dispatchingList
 	}
+
+	j.log.Printf("Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
 	for nodekey, dispatchingList := range nodesToDispatch {
-		j.log.Printf("Further dispatching subtasks to {%v} sub-nodes", len(dispatchingList))
 		j.dispatchTasks(nodekey, dispatchingList)
 	}	
 	// reject bad tasks
@@ -365,6 +366,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	if j.IsCoordinator() {
 		// check task status and enqueue them the task is ready
 		for taskKey := range readyTaskCache {
+			j.log.Printf("check status for good task[%v] after propagating", taskKey)
 			j.checkTaskStatus(taskKey)
 		}
 	}
