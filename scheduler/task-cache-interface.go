@@ -86,11 +86,11 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
 				if tmpst.subtask.PodKey == pod.GetKey() {
 					subtask = tmpst.subtask
-					tmpst.status = TaskStatusAccepted
 					if subtask.Pod == nil {
 						subtask.Pod = pod
+						tmpst.status = TaskStatusAccepted
+						log.Printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 					}
-					log.Printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 					break
 				}
 			}
