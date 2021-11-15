@@ -5,7 +5,7 @@ import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
-	// "log"
+	"log"
 )
 
 func (c *TaskCache) GetJobIdList() []string {
@@ -38,6 +38,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			return nil
 		}
 	}
+	log.Printf("[task cache] caching subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v]", subtaskKey, taskKey, subnode.GetKey(), realModuleName, originalModuleName, pod.GetKey())
 	if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()]; !e {
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()] = &TaskCacheNodeItem{
 			node:    subnode,
@@ -96,6 +97,10 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 				ArriveTimestamp: time.Now(),
 			}
 		}
+	}
+	if subtask != nil {
+		dispatchItem := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()]
+		log.Printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", subtaskKey, taskKey, subnode.GetKey(), realModuleName, originalModuleName, pod.GetKey(), string(dispatchItem.status))
 	}
 	return subtask
 }

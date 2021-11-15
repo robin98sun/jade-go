@@ -49,6 +49,10 @@ func (n *Node) Key() string {
 	return ""
 }
 
+func (n *Node) GetKey() string {
+	return n.Key()
+}
+
 // IsAddrEmpty tells whether a node address is meaningless
 func (n *Node) IsAddrEmpty() bool {
 	return n.Address == "" || n.Port == 0 || n.Protocol == ""

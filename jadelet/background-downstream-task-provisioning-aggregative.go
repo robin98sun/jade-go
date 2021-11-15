@@ -339,16 +339,18 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			))
 		}
 	}
-	// acknowledge good tasks
+	// acknowledge good tasks as a worker node
 	for taskKey, pod := range readyTaskCache {
-		j.log.Printf("Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
-		j.feedbackProvisioning(NewTaskProvisioningResult(
-			j.Config.SelfNode.Key(),
-			taskKey,
-			pod.ModuleName,
-			pod,
-			"",
-		))
+		if j.IsSelfNode(pod.NodeKey) {
+			j.log.Printf("Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
+			j.feedbackProvisioning(NewTaskProvisioningResult(
+				j.Config.SelfNode.Key(),
+				taskKey,
+				pod.ModuleName,
+				pod,
+				"",
+			))
+		}
 	}
 	if j.IsCoordinator() {
 		// check task status and enqueue them the task is ready
