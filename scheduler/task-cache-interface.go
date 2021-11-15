@@ -305,7 +305,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 			return true
 		}
 		if printf != nil {
-			printf("[task cache] task[%v] is NOT {%v}, BUT {}", taskKey, desiredStatus, checkResult)
+			printf("[task cache] task[%v] is NOT {%v}", taskKey, desiredStatus)
 		}
 	}
 	return false
