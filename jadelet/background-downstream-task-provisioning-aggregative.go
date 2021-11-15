@@ -294,7 +294,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 						delete(readyTaskCache, task.GetKey())
 					}
 				} else {
-					j.log.Printf("Caching %v pod on node[%v] for task[%v]", string(kernel.AppModuleAggregator), nodekey, task.GetKey())
+					j.log.Printf("Caching %v pod on node[%v] for task[%v], which runtime-module-prop is: %v", string(kernel.AppModuleAggregator), nodekey, task.GetKey(), aggregatorPod.ModuleName)
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "")
 					readyTaskCache[task.GetKey()] = aggregatorPod
 				}
