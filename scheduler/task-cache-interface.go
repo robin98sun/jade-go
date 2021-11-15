@@ -76,7 +76,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules, originalModuleName)
 					log.Printf("[task cache] deleted original module [%v] for task [%v] on node [%v]", originalModuleName, taskKey, subnodeKey)
 				} else if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks[subtaskKey]; e {
-					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks[subtaskKey])
+					delete(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName].subtasks, subtaskKey)
 					log.Printf("[task cache] deleted subtask [%v] from original module [%v] for task [%v] on node [%v]",subtaskKey, originalModuleName, taskKey, subnodeKey)
 				}
 			}
