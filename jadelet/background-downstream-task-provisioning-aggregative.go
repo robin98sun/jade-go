@@ -269,10 +269,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					j.log.Printf("Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
 					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod, "", "")
 				}
-				if j.IsSelfNode(nodekey) {
-					if _, e := readyTaskCache[task.GetKey()]; !e {
-						readyTaskCache[task.GetKey()] = workerPod
-					}
+				if _, e := readyTaskCache[task.GetKey()]; !e {
+					readyTaskCache[task.GetKey()] = workerPod
 				}
 			} else if !j.IsSelfNode(nodekey) {
 				//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
