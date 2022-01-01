@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
+	"strings"
 	"uta.edu/aces/jade-go/kernel"
 )
 
@@ -33,7 +34,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-env":         envName,
 		"jade-role":        "application",
 		"jade-owner":       owner,
-		"jade-app":         appname,
+		"jade-app":         strings.ReplaceAll(appname, "/", "-"),
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
 		"jade-app-module":  moduleName,
