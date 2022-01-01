@@ -64,7 +64,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 						},
 						"containers": []map[string]interface{}{
 							{
-								"name":  appname,
+								"name":  strings.ReplaceAll(appname, "/", "-"),
 								"image": image,
 								"ports": []map[string]interface{}{
 									{
