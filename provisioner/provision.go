@@ -46,7 +46,7 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 
 func purifyString(s string) string {
 	str := s
-	for _, ch := range []string{"_", "."} {
+	for _, ch := range []string{"_", ".", "/", ":"} {
 		str = strings.ReplaceAll(str, ch, "-")
 	}
 	return str
