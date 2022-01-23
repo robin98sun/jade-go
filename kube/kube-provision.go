@@ -38,6 +38,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
 		"jade-app-module":  moduleName,
+		hostnameKey: hostname,
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	deployment := &unstructured.Unstructured{
