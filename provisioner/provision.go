@@ -22,8 +22,8 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	allocationLimits *kernel.AllocationUnit,
 	replicas int) (string, int, error) {
 	// deploymentName
-	deploymentName := purifyString(node.Hostname) + "-" + purifyString(app.Owner)
-	deploymentName += "-" + purifyString(app.Name)
+	deploymentName := purifyString(node.Hostname) + "-" + purifyString(app.Name)
+	deploymentName += "-" + purifyString(app.Owner)
 	// registry
 	// Environment variables
 	p.log.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
