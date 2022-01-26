@@ -139,6 +139,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				)
 				// backdoor for fake service time
 				estimatedServiceTime := float64(-1)
+				j.log.Printf("[task dispatcher][debugging] options: [%v], EstimatedServiceTimeModel: [%v]", taskItem.Options, taskItem.Options.EstimatedServiceTimeModel)
+
 				if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
 					options := taskItem.Options
 					if options.EstimatedServiceTimeModel == "poission" {
@@ -151,8 +153,9 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						}
 					} else if options.EstimatedServiceTimeModel == "constant" && options.EstimatedMeanServiceTime > 0 {
 						estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
-					} else if options.EstimatedServiceTimeModel == "custom" && len(workerSubtasks) == len(options.ServiceTimeList) {
+					} else if options.EstimatedServiceTimeModel == "custom" && i < len(options.ServiceTimeList) {
 						estimatedServiceTime = float64(options.ServiceTimeList[i])
+						j.log.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.Pod.GetKey(), worker.Node.Key())
 					}
 				}
 				// generate request payload for the subtask
