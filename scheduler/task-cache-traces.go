@@ -21,7 +21,9 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 	headline = append(headline, "Subtask_Arrival_Timestamp")
 
 	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
-	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Queueing_Time(ms)")
+	headline = append(headline, "Task_Parallel_Time(ms)", "Task_Sequential_Time(ms)")
+	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Unloaded_Response_Time(ms)")
+	headline = append(headline, "Subtask_Queueing_Time(ms)")
 	headline = append(headline, "Queue_Length")
 	headline = append(headline, "Subtask_Service_Time(ms)")
 	headline = append(headline, "Subtask_Communication_Time(ms)", "Subtask_Upward_Trip_Time(ms)")
@@ -99,8 +101,25 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					}
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
+					// Task_Parallel_Time
+					dur = float64(0)
+					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
+						dur = float64(float64(taskItem.WorkerFinishTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
+					}
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+
+					// Task_Sequential_Time
+					dur = float64(0)
+					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
+						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.WorkerFinishTimestamp) + taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
+					}
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+
 					// Subtask_Request_Time(ms)
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
+					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+					// Subtask_Unloaded_Response_Time(ms)
+					dur = float64(float64(subtaskItem.RequestTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime ) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Queueing_Time(ms)
 					dur = float64(float64(subtaskItem.QueueingTime) / float64(time.Millisecond))

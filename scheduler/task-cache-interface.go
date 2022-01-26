@@ -169,7 +169,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	
 	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp) + subtaskItem.PreDispatchingTime
 
-	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime 
+	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime
 	subtaskItem.CommunicationTime -= subtaskItem.ReportProcessingTime
 	subtaskItem.CommunicationTime -= subtaskItem.PostServiceTime
 	if subtask.ModuleName == kernel.AppModuleWorker {
@@ -251,7 +251,9 @@ func (c *TaskCache) GetResultOfTask(taskKey string, moduleName string) []*TaskRe
 	return result
 }
 
-func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) bool {
+func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) (bool, bool) {
+	allSubtasksDone := false
+	allWorkersDone := false
 	if taskItem, e := c.Cache[taskKey]; e {
 		if printf != nil {
 			printf("[task cache] checking if all subtasks are {%v} of task[%v]", desiredStatus, taskKey)
@@ -279,6 +281,9 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 					}
 					if checkModule == desiredStatus {
 						moduleItem.status = desiredStatus
+						if moduleName == kernel.AppModuleWorker {
+							allWorkersDone = true
+						}
 						if printf != nil {
 							printf("[task cache] task[%v] module[%v] on node[%v] is {%v}", taskKey, moduleName, nodeItem.node.Key(), desiredStatus)
 						}
@@ -302,13 +307,12 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 			if printf != nil {
 				printf("[task cache] task[%v] is {%v}", taskKey, desiredStatus)
 			}
-			return true
-		}
-		if printf != nil {
+			allSubtasksDone = true
+		} else if printf != nil {
 			printf("[task cache] task[%v] is NOT {%v}", taskKey, desiredStatus)
 		}
 	}
-	return false
+	return allSubtasksDone, allWorkersDone
 }
 
 func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
@@ -327,7 +331,11 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestam
 			printf("[task cache] task[%v] is already {%v}, stop checking subtasks", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
-		if result := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf); result {
+		allSubtasksDone, allWorkersDone := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf);
+		if allWorkersDone && desiredStatus == TaskStatusDone {
+			taskItem.WorkerFinishTimestamp = time.Now()
+		}
+		if allSubtasksDone {
 			if desiredStatus == TaskStatusDone {
 				if taskItem.FinishTimestamp.IsZero() {
 					taskItem.FinishTimestamp = time.Now()
@@ -340,7 +348,7 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestam
 					taskItem.AcceptTimestamp = timestamp
 				}
 			}
-			return result
+			return allSubtasksDone
 		}
 	} else {
 		printf("[task cache] ERROR: task[%v] is not in cache", taskKey)

@@ -109,6 +109,7 @@ type TaskCacheTaskItem struct {
 	AggregatorReadyTimestamp time.Time `json:"aggregatorReadyTimestamp,omitempty"`
 	WorkerReadyTimestamp time.Time `json:"workerReadyTimestamp,omitempty"`
 	LastSubtaskFinishTimestamp time.Time `json:"lastSubtaskFinishTimestamp,omitempty"`
+	WorkerFinishTimestamp time.Time `json:"workerFinishiTimestamp,omitempty"`
 	FinishTimestamp     time.Time `json:"finishTimestamp,omitempty"`
 	Fanout              int64     `json:"fanout,omitempty"`
 	AcceptTimestamp    time.Time     `json:"acceptTimestamp,omitempty"`
