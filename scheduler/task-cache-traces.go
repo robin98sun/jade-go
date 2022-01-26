@@ -81,6 +81,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 
 					// task durations milliseconds
 					// Task_Total_Time(ms)
+					// [6]
 					dur := float64(0)
 					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
 						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
@@ -88,6 +89,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// Task_Provision_Time(ms)
+					// [7]
 					dur = float64(0)
 					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.DispatchTimestamp.IsZero() {
 						dur = float64(float64(taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
@@ -95,6 +97,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// Task_Execution_Time(ms)
+					// [8]
 					dur = float64(0)
 					if !taskItem.WorkerReadyTimestamp.IsZero() && !taskItem.LastSubtaskFinishTimestamp.IsZero() {
 						dur = float64(float64(taskItem.LastSubtaskFinishTimestamp.Sub(taskItem.WorkerReadyTimestamp)) / float64(time.Millisecond))
@@ -102,6 +105,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// Task_Parallel_Time
+					// [9]
 					dur = float64(0)
 					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
 						dur = float64(float64(taskItem.WorkerFinishTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
@@ -109,6 +113,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// Task_Sequential_Time
+					// [10]
 					dur = float64(0)
 					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
 						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.WorkerFinishTimestamp) + taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
@@ -116,41 +121,55 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					// Subtask_Request_Time(ms)
+					// [11]
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Unloaded_Response_Time(ms)
+					// [12]
 					dur = float64(float64(subtaskItem.RequestTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime ) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Queueing_Time(ms)
+					// [13]
 					dur = float64(float64(subtaskItem.QueueingTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Queue_Length
+					// [14]
 					line = append(line, strconv.FormatInt(subtaskItem.QueueLength, 10))
 					// Subtask_Service_Time(ms)
+					// [15]
 					dur = float64(float64(subtaskItem.ServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Round_Trip_Time(ms)
+					// [16]
 					dur = float64(float64(subtaskItem.CommunicationTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Upward_Trip_Time(ms)
+					// [17]
 					dur = float64(float64(subtaskItem.ForwardingTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Downward_Package_Size
+					// [18]
 					line = append(line, strconv.Itoa(subtaskItem.SendPackageSize))
 					// Subtask_Upward_Package_Size
+					// [19]
 					line = append(line, strconv.Itoa(subtaskItem.ReceivePackageSize))
-					// Subtask_Enqueuing_Overhead 
+					// Subtask_Enqueuing_Overhead
+					// [20]
 					dur = float64(float64(subtaskItem.EnqueuingOverhead) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_Amount_Preempted
+					// [21]
 					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
 					// Subtask_Execution_Time 
+					// [22]
 					dur = float64(float64(subtaskItem.ExecutionTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_PreService_Time 
+					// [23]
 					dur = float64(float64(subtaskItem.PreServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 					// Subtask_PostService_Time 
+					// [24]
 					dur = float64(float64(subtaskItem.PostServiceTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
