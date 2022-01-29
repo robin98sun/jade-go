@@ -22,7 +22,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 
 	headline = append(headline, "Task_Total_Time(ms)", "Task_Provision_Time(ms)", "Task_Execution_Time(ms)")
 	headline = append(headline, "Task_Parallel_Time(ms)", "Task_Sequential_Time(ms)")
-	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Unloaded_Response_Time(ms)")
+	headline = append(headline, "Subtask_Request_Time(ms)", "Subtask_Parallel_Part_Response_Time(ms)")
 	headline = append(headline, "Subtask_Queueing_Time(ms)")
 	headline = append(headline, "Queue_Length")
 	headline = append(headline, "Subtask_Service_Time(ms)")
@@ -124,7 +124,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 					// [11]
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Unloaded_Response_Time(ms)
+					// Subtask_Parallel_Part_Response_Time(ms)
 					// [12]
 					dur = float64(float64(subtaskItem.RequestTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime ) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
@@ -179,7 +179,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string) [][]string {
 
 					if traceType == "full" {
 						// Task_Budget
-						line = append(line, strconv.FormatInt(subtaskItem.Budget, 10))
+						line = append(line, strconv.FormatFloat(subtaskItem.Budget, 'f', -1, 64))
 						// Task_Priority
 						line = append(line, strconv.Itoa(subtaskItem.Priority))
 						// Retry_Count_Sending

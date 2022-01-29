@@ -53,7 +53,7 @@ type PodQueueItem struct {
 	EstimatedServiceTime float64
 	EnqueuingOverhead    time.Duration
 	AmountPreempted      int
-	Budget               int64
+	Budget               float64
 	Priority             int
 }
 
@@ -108,7 +108,7 @@ func (q *PodQueue) search_insertion_place(low int, high int, ddl time.Time, pri 
 
 func (q *PodQueue) Enqueue(
 	key string, taskKey string, subtaskKey string, payload interface{},
-	queueType kernel.TaskQueuingMechanism, maxQueuingTime int64, priority int,
+	queueType kernel.TaskQueuingMechanism, maxQueuingTime float64, priority int,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
 ) (bool, *PodQueueItem, int) {

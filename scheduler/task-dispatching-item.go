@@ -95,7 +95,7 @@ func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDis
 }
 
 type TaskDispatchingItemBudget struct {
-	FanoutTable []int64
+	FanoutTable []float64 `json:"fanoutTable,omitempty"`
 }
 
 func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {
@@ -118,7 +118,7 @@ func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispa
 	return nil
 }
 
-func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) int64 {
+func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) float64 {
 	if t.Budgets == nil || len(t.Budgets) == 0 {
 		return 0
 	}
