@@ -128,6 +128,13 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
 			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
 
+			// 2022-02-19
+			// get online-statistics for the selected worker pods
+			if taskItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
+				
+			}
+			// end of online-statistics
+
 			// enqueue each worker subtask
 			for i, worker := range workerSubtasks {
 				if worker.Subtask.ModuleName != string(kernel.AppModuleWorker) {

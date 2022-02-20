@@ -157,13 +157,15 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	}
 
 	subtaskItem.FinishTimestamp = time.Now()
-	subtaskItem.ServiceTime = stat.Service
-	subtaskItem.ForwardingTime = stat.Forwarding
-	subtaskItem.PreServiceTime = stat.PreService
-	subtaskItem.PostServiceTime = stat.PostService
-	subtaskItem.ExecutionTime = stat.Execution
-	subtaskItem.ReceivePackageSize = int(stat.PackageSize)
-	subtaskItem.RetryCountOfSending = stat.RetryCountOfArrivalComm
+	if stat != nil {
+		subtaskItem.ServiceTime = stat.Service
+		subtaskItem.ForwardingTime = stat.Forwarding
+		subtaskItem.PreServiceTime = stat.PreService
+		subtaskItem.PostServiceTime = stat.PostService
+		subtaskItem.ExecutionTime = stat.Execution
+		subtaskItem.ReceivePackageSize = int(stat.PackageSize)
+		subtaskItem.RetryCountOfSending = stat.RetryCountOfArrivalComm
+	}
 	subtaskItem.RetryCountOfReceiving = retryCount
 	subtaskItem.ReportProcessingTime = subtaskItem.FinishTimestamp.Sub(timestampReceiving)
 	

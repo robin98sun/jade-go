@@ -12,6 +12,7 @@ type PodQueue struct {
 	Queue        []*PodQueueItem
 	ItemsInQueue map[string]*PodQueueItem
 	mutex        *sync.Mutex
+	Stat 		 *PodStat
 	dequeueClock int64
 }
 
@@ -20,6 +21,7 @@ func NewPodQueue() *PodQueue {
 		Queue:        []*PodQueueItem{},
 		mutex:        &sync.Mutex{},
 		ItemsInQueue: make(map[string]*PodQueueItem),
+		Stat:		  NewPodStat(),
 		dequeueClock: 0,
 	}
 }
