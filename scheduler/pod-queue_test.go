@@ -139,7 +139,7 @@ func TestScheduler_Queueing_DDL_AND_PRQ(t *testing.T) {
 			}
 			_, queue_item, idx := q.Enqueue(
 				p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
-				p.MaximumQueueingTime, p.Priority, 0, 
+				float64(p.MaximumQueueingTime), p.Priority, 0, 
 				// log.Printf,
 				nil,
 			)
@@ -176,7 +176,7 @@ func TestScheduler_Queueing_DDL_AND_PRQ(t *testing.T) {
 			if queueType == "ddl" {
 				assert.Equal(
 					t, 
-					budget, 
+					float64(budget), 
 					queue_item.Budget, 
 					"the budget should be that value",
 				)
