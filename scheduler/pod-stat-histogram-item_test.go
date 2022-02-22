@@ -3,7 +3,7 @@
 package scheduler
 
 import (
-	"log"
+	// "log"
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
@@ -31,7 +31,7 @@ var SAMPLE_LIST []float64 = []float64{
 func TestScheduler_InsertHistogramItem(t *testing.T) {
 	// random_list := gen_random_list(3000)
 	random_list := SAMPLE_LIST
-	log.Printf("sample list length: %v", len(random_list))
+	// log.Printf("sample list length: %v", len(random_list))
 
 	var root *HistogramItem
 	for _, v := range random_list {
@@ -39,7 +39,10 @@ func TestScheduler_InsertHistogramItem(t *testing.T) {
 		if root == nil {
 			root = NewHistogramItem(v)
 		} else {
-			root = root.Insert(v).GetRoot()
+			_, newRoot := root.Insert(v)
+			if newRoot != nil {
+				root = newRoot
+			}
 		}
 	}
 
@@ -75,44 +78,111 @@ func TestScheduler_InsertHistogramItem(t *testing.T) {
 	}
 }
 
-func TestScheduler_DeleteHistogramItem(t *testing.T) {
+func delete_in_order(t *testing.T, list string, order string, size int) {
 	random_list := SAMPLE_LIST
+
+	sorted_sample_list := make([]float64, len(SAMPLE_LIST))
+	copy(sorted_sample_list, SAMPLE_LIST)
+	sort.Float64Slice(sorted_sample_list).Sort()
+
+	if list == "sorted" {
+		random_list = sorted_sample_list
+	} else if list == "random" {
+		random_list = gen_random_list(size)
+	}
 
 	var root *HistogramItem
 	for _, v := range random_list {
-		// log.Printf("inerting: %v \n", v)
+		// log.Printf("inerting: [%v] %v \n", i, v)
 		if root == nil {
 			root = NewHistogramItem(v)
 		} else {
-			root = root.Insert(v).GetRoot()
+			_, newRoot := root.Insert(v)
+			if newRoot != nil {
+				root = newRoot
+			}
 		}
+		// log.Printf("after inserting: %v\n\n", root.Describe())
 	}
 
+	// log.Printf("\n\nStart deleting [%v, %v, %v]\n\n", list, order, size)
 	for k := range random_list {
 		
 		i := len(random_list) - k - 1
+		remaining_count := i
+		if order == "asc" {
+			i = k
+		}
 		v := random_list[i]
-		log.Printf("deleting: %v, %v \n", i, v)
+		// log.Printf("\n\ndeleting: %v, %v \n", i, v)
+		// log.Printf("before deleting, root: %v", root.Describe())
 		n := root.Find(v)
 		assert.NotNil(t, n, "node should not be nil")
-
-		replaced := n.Delete()
-		if n == root && replaced != nil {
-			root = replaced.GetRoot()
-		} else if n == root && replaced == nil {
-			assert.Equal(t, len(random_list)-1, k, "when root is nil it should be the last element")
+		count := n.Duplications
+		if n == nil {
+			break
 		}
-
-		log.Printf("root: %v", root.Describe())
 
 		if k == len(random_list) - 1 {
-			assert.Equal(t, n.Value, root.Value, "when deleting the last element, it should be root")
-			assert.Nil(t, replaced, "when deleted the last element, there should have no other nodes left")
-		} else {
-			assert.Equal(t, int64(i), root.Count, "the remaining nodes after deleting should decreased by 1")
+			assert.Equal(t, root.Value, n.Value, "when deleted the last element, there should have no other nodes left")
+			assert.Equal(t, root.Count, int64(1), "when deleted the last element, there should have no other nodes left")
+			if root.Value != n.Value{
+				break
+			}
 		}
 
+		replaced, newRoot := n.Delete()
+		if newRoot != nil || (replaced == nil && newRoot == nil) {
+			root = newRoot
+		}
 
-	}
+		if n == root && replaced == nil {
+			root = nil
+			assert.Equal(t, len(random_list)-1, k, "when root is nil it should be the last element")
+			if k != len(random_list) - 1 {
+				break
+			}
+		}
+
+		if root != nil {
+			n = root.Find(v)
+			if count == 1 {
+				assert.Nil(t, n, "the node should not be searchable anymore after being deleted")
+			} else {
+				assert.NotNil(t, n, "the node should not be delete if it has multiple duplications")
+			}
+			if (count == 1 && n != nil) || (count != 1 && n == nil) {
+				break
+			}
+			// log.Printf("after deleting, root: %v", root.Describe())
+		}
+
+		if k == len(random_list) - 1 {
+			assert.Nil(t, replaced, "when deleted the last element, there should have no other nodes left")
+			if replaced != nil{
+				break
+			}
+		} else {
+			assert.NotNil(t, root, "root should not be nil")
+			assert.Equal(t, int64(remaining_count), root.Count, "the remaining nodes after deleting should decreased by 1")
+			if root == nil || root.Count != int64(remaining_count) {
+				break
+			}
+		}
+	}	
+}
+
+func TestScheduler_DeleteHistogramItem(t *testing.T) {
+	
+	delete_in_order(t, "sorted", "asc", 0)
+	delete_in_order(t, "sorted", "desc", 0)
+	delete_in_order(t, "original", "asc", 0)
+	delete_in_order(t, "original", "desc", 0)
+	delete_in_order(t, "random", "asc", 10)
+	delete_in_order(t, "random", "desc", 10)
+	delete_in_order(t, "random", "asc", 3000)
+	delete_in_order(t, "random", "desc", 3000)
+	delete_in_order(t, "random", "asc", 1000000)
+	
 }
 

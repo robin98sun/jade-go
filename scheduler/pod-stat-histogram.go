@@ -22,8 +22,12 @@ func (h *Histogram) Enqueue(v float64) *HistogramItem{
 	var result *HistogramItem = nil
 
 	var item *HistogramItem = nil
+	var newRoot *HistogramItem = nil
 	if h.RootItem != nil {
-		item = h.RootItem.Insert(v)
+		item, newRoot = h.RootItem.Insert(v)
+		if newRoot != nil {
+			h.RootItem = newRoot
+		}
 	} else {
 		item = NewHistogramItem(v)
 		h.RootItem = item
@@ -44,9 +48,9 @@ func (h *Histogram) Dequeue() *HistogramItem {
 		result = h.Queue[0]
 		h.Queue = h.Queue[1:]
 		h.Count -= 1
-		replacedItem := result.Delete()
-		if h.RootItem == result {
-			h.RootItem = replacedItem
+		replacedItem, newRoot := result.Delete()
+		if newRoot != nil || (newRoot == nil && replacedItem == nil) {
+			h.RootItem = newRoot
 		}
 	}
 	return result

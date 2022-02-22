@@ -9,7 +9,7 @@ import (
     "fmt"
 )
 
-var DEBUG bool = true
+var DEBUG bool = false
 
 type HistogramItem struct {
     Value float64
@@ -20,6 +20,7 @@ type HistogramItem struct {
     Larger *HistogramItem
     Height int64
     Count int64
+    Duplications int64
 }
 
 func NewHistogramItem(v float64) *HistogramItem {
@@ -32,12 +33,20 @@ func NewHistogramItem(v float64) *HistogramItem {
             Larger: nil,
             Height: 1,
             Count: 1,
+            Duplications: 1,
     }
 }
 
 func (t *HistogramItem) GetRoot() *HistogramItem {
     root := t
-    for ; root.Parent != nil; root = root.Parent {}
+    path := fmt.Sprintf("%v", t.Value)
+    for c := t.Parent; c != nil; c = c.Parent {
+        path = fmt.Sprintf("%v, %v", path, c.Value)
+        root = c
+    }
+    if DEBUG {
+        log.Printf("path to root: %v", path)
+    }
     return root
 }
 
@@ -52,13 +61,21 @@ func (t *HistogramItem) Find(v float64) *HistogramItem {
     return nil
 }
 
-func (t *HistogramItem) Insert(v float64) *HistogramItem {
+// return the inserted node,
+// and if the root could be changed, then return the new root
+//     but if the root is not changed, then return nil
+func (t *HistogramItem) Insert(v float64) (*HistogramItem, *HistogramItem) {
     if v == t.Value {
+        t.Duplications += 1
         t.Count += 1
-        return t
+        for c := t.Parent; c!= nil; c = c.Parent {
+            c.Count += 1
+        }
+        return t, nil
     } else if (t.Left == nil && v < t.Value) || ( t.Right == nil && v > t.Value ) {
         newItem := NewHistogramItem(v)
         newItem.Parent = t
+        var root *HistogramItem = nil
         if v > t.Value {
             t.Right = newItem
             newItem.Larger = t.Larger
@@ -83,9 +100,9 @@ func (t *HistogramItem) Insert(v float64) *HistogramItem {
         // update height
         if (t.Left == nil && v > t.Value) || (t.Right == nil && v < t.Value) {
             t.Height += 1
-            t.UpdateHeight()
+            root = t.UpdateHeight(true)
         }
-        return newItem
+        return newItem, root
     } else if v < t.Value {
         return t.Left.Insert(v)
     } else {
@@ -93,18 +110,27 @@ func (t *HistogramItem) Insert(v float64) *HistogramItem {
     }
 }
 
-func (t *HistogramItem) Delete() *HistogramItem {
-    if t.Count > 1 {
+// return the replacing node,
+// and if the root could be changed, then return the new root
+//     but if the root is not changed, then return nil
+func (t *HistogramItem) Delete() (*HistogramItem, *HistogramItem) {
+    if t.Duplications > 1 {
         t.Count -= 1
+        t.Duplications -= 1
 
         for c := t.Parent; c!= nil; c = c.Parent {
             c.Count -= 1
         }
-        return t
+        return t, nil
     }
 
-    affectedNode := t.Parent
-    var tmp *HistogramItem = nil
+    if t.Parent == nil && t.Left == nil && t.Right == nil {
+        return nil, nil
+    }
+
+    affectedNode_height := t.Parent
+    affectedNode_count := t.Parent
+    var replaced_by *HistogramItem = nil
 
     if t.Left == nil && t.Right == nil {
         if DEBUG {
@@ -126,83 +152,117 @@ func (t *HistogramItem) Delete() *HistogramItem {
         }
 
     } else {
-        if t.Left != nil {
-            tmp = t.FindLargestInLeft()
-            if tmp.Left != nil {
-                tmp.Left.Parent = tmp.Parent
-                tmp.Parent.Right = tmp.Left
-            } else {
-                tmp.Parent.Right = nil
-            }
-
-        } else if t.Right != nil {
-            tmp = t.FindSmallestInRight()
-            if tmp.Right != nil {
-                tmp.Right.Parent = tmp.Parent
-                tmp.Parent.Left = tmp.Right
-            } else {
-                tmp.Parent.Left = nil
-            }
-        }
         if DEBUG {
             log.Printf("deleting a non-leaf node: %v", t.Value)
         }
-        if tmp != nil {
-            affectedNode = tmp.Parent
+        if DEBUG {
+                log.Printf("   before searching for replacing node, the node is: %v", t.Describe())
+            }
+        if t.Left != nil {
+            replaced_by = t.FindLargestInLeft()
+            if replaced_by.Parent != t {
+                if replaced_by.Left != nil {
+                    replaced_by.Left.Parent = replaced_by.Parent
+                    replaced_by.Parent.Right = replaced_by.Left
+                } else {
+                    replaced_by.Parent.Right = nil
+                }
+            }
+        } else if t.Right != nil {
+            replaced_by = t.FindSmallestInRight()
+            if replaced_by.Parent != t {
+                if replaced_by.Right != nil {
+                    replaced_by.Right.Parent = replaced_by.Parent
+                    replaced_by.Parent.Left = replaced_by.Right
+                } else {
+                    replaced_by.Parent.Left = nil
+                }
+            }
+        }
+        if replaced_by != nil && replaced_by.Parent != t {
+            for c:= replaced_by.Parent; c != nil && c != t; c = c.Parent {
+                c.Count -= replaced_by.Duplications
+            }
+        }
+        if replaced_by != nil {
+            affectedNode_height = replaced_by.Parent
+            if replaced_by.Parent == t {
+                affectedNode_height = replaced_by
+            }
             
             if DEBUG {
-                log.Printf("   the non-leaf node is going to be replaced by %v", tmp.Value)
+                log.Printf("   the non-leaf node is going to be replaced by %v", replaced_by.Value)
+                log.Printf("   before replacing, the node is: %v", t.Describe())
             }
             // update stats
-            tmp.Count = t.Count
-            tmp.Height = t.Height
+            replaced_by.Count = t.Count - t.Duplications
+            replaced_by.Height = t.Height
 
             // update pointers
-            tmp.Parent = t.Parent
-            if tmp != t.Left {
-                tmp.Left = t.Left
-            }
-            if tmp != t.Right {
-                tmp.Right = t.Right
-            }
-            if tmp != t.Smaller {
-                tmp.Smaller = t.Smaller
-            }
-            if tmp != t.Larger {
-                tmp.Larger = t.Larger
+            // parent
+            replaced_by.Parent = t.Parent
+            if t.Parent != nil && t.Parent.Left == t {
+                t.Parent.Left = replaced_by
+            } else if t.Parent != nil && t.Parent.Right == t {
+                t.Parent.Right = replaced_by
             }
 
-            if t.Left != nil && t.Left != tmp {
-                t.Left.Parent = tmp
-            }
-            if t.Right != nil && t.Right != tmp {
-                t.Right.Parent = tmp
-            }
-            if t.Smaller != nil && t.Smaller != tmp {
-                t.Smaller.Larger = tmp
-            }
-            if t.Larger != nil && t.Larger != tmp {
-                t.Larger.Smaller = tmp
+            // left
+            if replaced_by != t.Left {
+                replaced_by.Left = t.Left
+                if t.Left != nil {
+                    t.Left.Parent = replaced_by
+                }
             }
 
-            // nil t's pointers
-            t.Right = nil
-            t.Left = nil
-            t.Smaller = nil
-            t.Larger = nil
+            // right
+            if replaced_by != t.Right {
+                replaced_by.Right = t.Right
+                if t.Right != nil {
+                    t.Right.Parent = replaced_by
+                }
+            }
 
-            
+            // smaller
+            if replaced_by != t.Smaller {
+                replaced_by.Smaller = t.Smaller
+            }
+            if t.Smaller != nil && t.Smaller != replaced_by {
+                t.Smaller.Larger = replaced_by
+            }
+
+            // larger
+            if replaced_by != t.Larger {
+                replaced_by.Larger = t.Larger
+            }
+            if t.Larger != nil && t.Larger != replaced_by {
+                t.Larger.Smaller = replaced_by
+            }
+
+            if DEBUG {
+                log.Printf("   after replacing, the replacing node is: %v", replaced_by.Describe())
+            }
         } 
     }
 
+    // nil t's pointers
+    t.Right = nil
+    t.Left = nil
+    t.Smaller = nil
+    t.Larger = nil
+    t.Parent = nil
+
     // Update Count
-    for p := affectedNode; p != nil; p = p.Parent {
-        p.Count -= 1
+    for p := affectedNode_count; p != nil; p = p.Parent {
+        if DEBUG {
+            log.Printf("   updating count for node[%v]", p.Value)
+        }
+        p.Count -= t.Duplications
     }
 
-    affectedNode.UpdateHeight()
+    root := affectedNode_height.UpdateHeight(false)
 
-    return tmp
+    return replaced_by, root
 }
 
 func (t *HistogramItem) FindSmallestInRight() *HistogramItem {
@@ -244,10 +304,11 @@ func (t *HistogramItem) CalcHeight() (int64, int64, int64) {
     return t.Height, leftHeight, rightHeight
 }
 
-func (t *HistogramItem) UpdateHeight() {
+func (t *HistogramItem) UpdateHeight(isInserting bool) *HistogramItem {
     if DEBUG {
         log.Printf("updating height for node: %v", t.Describe())
     }
+    root := t
     for c := t; c != nil; c = c.Parent {
         _, leftHeight, rightHeight := c.CalcHeight()
 
@@ -257,11 +318,17 @@ func (t *HistogramItem) UpdateHeight() {
                 )
         }
         if leftHeight - rightHeight > 1 {
-            if c.Left.Right != nil {
-                c.Left.LeftRotate()
-                if DEBUG {
-                    log.Printf("      after left rotation, node[%v]: %v", c.Value, c.Describe())
-                }
+            if DEBUG {
+                log.Printf("      before right rotation, node[%v]: %v", c.Value, c.Describe())
+            }
+
+            if isInserting {
+               if c.Left.Right != nil {
+                    c.Left.LeftRotate()
+                    if DEBUG {
+                        log.Printf("      after left rotation, node[%v]: %v", c.Value, c.Describe())
+                    }
+                } 
             }
             
             c = c.RightRotate()
@@ -269,24 +336,34 @@ func (t *HistogramItem) UpdateHeight() {
                 log.Printf("      after right rotation, node[%v]: %v", c.Value, c.Describe())
             }
         } else if rightHeight - leftHeight > 1 {
-            if c.Right.Left != nil {
-                c.Right.RightRotate()
-                if DEBUG {
-                    log.Printf("      after right rotation, node[%v]: %v", c.Value, c.Describe())
+            if DEBUG {
+                log.Printf("      before left rotation, node[%v]: %v", c.Value, c.Describe())
+            }
+
+            if isInserting {
+                if c.Right.Left != nil {
+                    c.Right.RightRotate()
+                    if DEBUG {
+                        log.Printf("      after right rotation, node[%v]: %v", c.Value, c.Describe())
+                    }
                 }
             }
+
             c = c.LeftRotate()
             if DEBUG {
                 log.Printf("      after left rotation, node[%v]: %v", c.Value, c.Describe())
             }
         }
+
+        root = c
     }
+    return root
 }
 
 func (t *HistogramItem) LeftRotate() *HistogramItem{
 
     if DEBUG {
-        log.Printf("   Left rotate for node: %v", t.Value)
+        log.Printf("   Left rotate node: %v", t.Value)
     }
 
     if t.Right == nil {
@@ -295,8 +372,14 @@ func (t *HistogramItem) LeftRotate() *HistogramItem{
 
     p := t.Right
 
+    // prepare to rotate
+    t.Count -= p.Count
+    p.Count += t.Count
+
+    // take p's left
     t.Right = p.Left
     if p.Left != nil {
+        t.Count += p.Left.Count
         p.Left.Parent = t
     }
 
@@ -311,9 +394,6 @@ func (t *HistogramItem) LeftRotate() *HistogramItem{
     t.Parent = p
     p.Left = t
 
-    t.Count -= p.Count
-    p.Count += t.Count
-
     t.CalcHeight()
     p.CalcHeight()
 
@@ -322,7 +402,7 @@ func (t *HistogramItem) LeftRotate() *HistogramItem{
 
 func (t *HistogramItem) RightRotate() *HistogramItem{
     if DEBUG {
-        log.Printf("   Right rotate for node: %v", t.Value)
+        log.Printf("   Right rotate node: %v", t.Value)
     }
 
     if t.Left == nil {
@@ -331,8 +411,14 @@ func (t *HistogramItem) RightRotate() *HistogramItem{
 
     p := t.Left
 
+    // prepare to rotate
+    t.Count -= p.Count
+    p.Count += t.Count
+
+    // take p's right
     t.Left = p.Right
     if p.Right != nil {
+        t.Count += p.Right.Count
         p.Right.Parent = t
     }
 
@@ -347,8 +433,6 @@ func (t *HistogramItem) RightRotate() *HistogramItem{
     t.Parent = p
     p.Right = t
 
-    t.Count -= p.Count
-    p.Count += t.Count
 
     t.CalcHeight()
     p.CalcHeight()
