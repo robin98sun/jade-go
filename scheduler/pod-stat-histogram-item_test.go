@@ -3,7 +3,7 @@
 package scheduler
 
 import (
-	"log"
+	// "log"
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
@@ -349,50 +349,32 @@ func TestScheduler_FindNoLargerThan(t *testing.T) {
 func TestScheduler_CumulativeCount(t *testing.T) {
 
 	is_something_wrong := false
-	for round := 0; round < 3; round++ {
+	for round := 0; round < 1; round++ {
 		if is_something_wrong {break}
-		for size := 10; size <= 10000; size *= 10 {
+		for size := 10; size <= 1000000; size *= 10 {
 			if is_something_wrong {break}
 			random_sample_list := gen_random_list(size)
 			sorted_sample_list := sorted_list(random_sample_list)
 			root := create_tree(random_sample_list)
 			pre := float64(-1)
+			cc := int64(0)
 			for i := 0; i < len(random_sample_list); i++ {
 				v := sorted_sample_list[i] 
 				if i > 0 && v == pre {continue}
 				pre = v
 
 				node := root.Find(v)
-				cumulativeCount := node.CumulativeCount(root)
+				// cumulativeCount := node.CumulativeCountTopDown(root)
+				cumulativeCount := node.CumulativeCount()
 
-				smallest := root
-				for ; smallest.Left != nil; smallest = smallest.Left {}
-				if smallest.Smaller != nil {
-					log.Printf("smallest is not smallest")
+				cc += node.Duplications
+
+				assert.Equal(t, cc, cumulativeCount, "cumulative count should equal with the sum")	
+
+				if cc != cumulativeCount {
 					is_something_wrong = true
 					break
 				}
-				largest := root 
-				for ; largest.Right != nil; largest = largest.Right {}
-				if largest.Larger != nil {
-					log.Printf("largest is not largest")
-					is_something_wrong = true
-					break
-				}
-
-				cc := node.Duplications
-				for p := smallest; p!= node; p=p.Larger {
-					cc += p.Duplications
-				}
-
-				if cumulativeCount - cc > 0 {
-					log.Printf("target: %v, root: %v, cumulative count: %v, cc: %v, diff: %v", node.Value, root.Value, cumulativeCount, cc, cumulativeCount-cc)
-					secondTimeCC := node.CumulativeCount(root)
-					log.Printf("second time cumulative count: %v, cc: %v, diff: %v", secondTimeCC, cc, secondTimeCC-cc)
-					log.Println("")
-					log.Println("")
-				}
-
 				
 			}
 		}

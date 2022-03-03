@@ -124,7 +124,7 @@ func (t *HistogramItem) FindNoLargerThan(v float64) *HistogramItem {
         }
     }}
 
-func (t *HistogramItem) CumulativeCount(root *HistogramItem) int64 {
+func (t *HistogramItem) CumulativeCountTopDown(root *HistogramItem) int64 {
     if t == nil {
         if DEBUG {
             log.Printf("    target is nil")
@@ -226,11 +226,37 @@ func (t *HistogramItem) CumulativeCount(root *HistogramItem) int64 {
     }
     
     if is_on_left_ridge {
-        return cumulative_count + t.CumulativeCount(largestOnRidge.Right)
+        return cumulative_count + t.CumulativeCountTopDown(largestOnRidge.Right)
     } else {
-        return cumulative_count + t.CumulativeCount(largestOnRidge.Right)
+        return cumulative_count + t.CumulativeCountTopDown(largestOnRidge.Right)
     }
 
+}
+
+func (t *HistogramItem) CumulativeCount() int64 {
+    if t == nil {return int64(0)}
+
+    cumulative_count := int64(0)
+    cumulative_count += t.Duplications
+    if t.Left != nil {
+        cumulative_count += t.Left.Count
+    }
+
+    if t.Parent == nil {
+        return cumulative_count
+    }
+
+    for pre, cur := t, t.Parent; cur!=nil; cur=cur.Parent {
+        if cur.Left != nil && cur.Left != pre {
+            cumulative_count += cur.Left.Count
+        } 
+        if cur.Left != pre {
+            cumulative_count += cur.Duplications
+        }
+
+        pre = cur
+    }
+    return cumulative_count
 }
 
 // return the inserted node,
