@@ -11,12 +11,12 @@ import (
 )
 
 func TestScheduler_CreateHistogram(t *testing.T) {
-	sample_size := 100000
-	window_size := 10000
+	sample_size := 1000000
+	window_size := 100000
 	list := gen_random_list_float(sample_size, float64(10))
 	assert.Equal(t, len(list), sample_size, "random util should work")
 
-	histogram := NewHistogram(int64(window_size), float64(10), 1)
+	histogram := NewHistogram(int64(window_size), float64(10), 2)
 	assert.NotNil(t, histogram, "histogram should not be nil")
 
 	for i:=0; i<len(list); i++ {

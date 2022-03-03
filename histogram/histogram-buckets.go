@@ -28,7 +28,7 @@ func (sb *SubBucketHistogram) CalcPosition(v float64) int64 {
         return int64(-1)
     }
     idx_value := (v-sb.LowwerBoundry)/sb.BucketSize
-    if sb.BucketSize < 1 {
+    if math.Abs(sb.BucketSize) < 1 {
         idx_value = math.Round(idx_value)
     }
     idx := int64(idx_value)
@@ -87,7 +87,7 @@ func (b *BucketHistogram) CalcPosition(v float64) (int64, float64, float64) {
         return int64(-1), float64(-1), float64(-1)
     }
     idx_value := v/b.SubBucketHistogramSize
-    if b.SubBucketHistogramSize < 1 {
+    if math.Abs(b.SubBucketHistogramSize) < 1 {
         idx_value = math.Round(idx_value)
     }
     idx := int64(idx_value)
