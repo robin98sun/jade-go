@@ -364,7 +364,6 @@ func TestScheduler_CumulativeCount(t *testing.T) {
 				pre = v
 
 				node := root.Find(v)
-				// cumulativeCount := node.CumulativeCountTopDown(root)
 				cumulativeCount := node.CumulativeCount()
 
 				cc += node.Duplications
