@@ -1,10 +1,6 @@
 package scheduler
 
 import (
-    // "math"
-    // "sync"
-    // "time"
-    // "uta.edu/aces/jade-go/kernel"
     "log"
     "fmt"
 )
@@ -41,7 +37,9 @@ func (t *HistogramItem) GetRoot() *HistogramItem {
     root := t
     path := fmt.Sprintf("%v", t.Value)
     for c := t.Parent; c != nil; c = c.Parent {
-        path = fmt.Sprintf("%v, %v", path, c.Value)
+        if DEBUG {
+            path = fmt.Sprintf("%v, %v", path, c.Value)
+        }
         root = c
     }
     if DEBUG {
@@ -59,6 +57,180 @@ func (t *HistogramItem) Find(v float64) *HistogramItem {
         return t.Right.Find(v)
     }
     return nil
+}
+
+
+func (t *HistogramItem) FindSmallestInRight() *HistogramItem {
+    if t.Right == nil {
+        return nil
+    } else {
+        c := t.Right
+        for ; c.Left != nil;  c = c.Left {
+        }
+        return c
+    }
+}
+
+func (t *HistogramItem) FindLargestInLeft() *HistogramItem {
+    if t.Left == nil {
+        return nil
+    } else {
+        c := t.Left
+        for ; c.Right != nil;  c = c.Right {
+        }
+        return c
+    }
+}
+
+func (t *HistogramItem) FindNoLargerThan(v float64) *HistogramItem {
+
+    if t == nil {
+        return nil
+    }
+
+    p := t
+    if p.Value <= v {
+        for ; p.Right != nil && p.Value <= v; p = p.Right {}
+        if p.Value <= v {
+            // reached the largest node but still not large enough
+            return p
+        } else {
+            // p.Value > v, it must has passed v just one step
+            candidate := p.Parent
+            if p.Left != nil {
+                candidate = p.Left.FindNoLargerThan(v)
+                if candidate == nil {
+                    candidate = p.Parent
+                }
+            }
+            return candidate
+        }
+    } else {
+        // p.Value > v
+        for ; p.Left != nil && p.Value > v; p = p.Left {}
+        if p.Value > v {
+            // reached the smallest node but still larger than v
+            return nil
+        } else {
+            // p.Value <= v
+            candidate := p
+            if p.Right != nil {
+                candidate = p.Right.FindNoLargerThan(v)
+                if candidate == nil {
+                    candidate = p
+                }
+            }
+            return candidate
+        }
+    }}
+
+func (t *HistogramItem) CumulativeCount(root *HistogramItem) int64 {
+    if t == nil {
+        if DEBUG {
+            log.Printf("    target is nil")
+        }
+        return 0
+    }
+
+    cumulative_count := int64(0)
+
+    if root == nil {
+        if DEBUG {
+            log.Printf("    root is nil, target is %v", t.Value)
+        }
+        cumulative_count += t.Duplications
+        if t.Left != nil {
+            cumulative_count += t.Left.Count
+        }
+        return cumulative_count
+    }
+
+    if t.Parent == nil {
+        if DEBUG {
+            log.Printf("    root is nil, target is %v", t.Value)
+        }
+        cumulative_count += t.Duplications
+        if t.Left != nil {
+            cumulative_count += t.Left.Count
+        }
+        return cumulative_count
+    }
+
+    if root == t || root.Value == t.Value {
+        if DEBUG {
+            log.Printf("    root %v is target %v", root.Value, t.Value)
+        }
+        cumulative_count += t.Duplications
+        if t.Left != nil {
+            cumulative_count += t.Left.Count
+        }
+        return cumulative_count
+    }
+
+    largestOnRidge := root
+    is_on_left_ridge := false
+    if root.Value > t.Value {
+        is_on_left_ridge = true
+        for ; largestOnRidge.Value > t.Value && largestOnRidge.Left != nil; largestOnRidge = largestOnRidge.Left {}
+        // if largestOnRidge.Value > t.Value {} // this should not happen
+        if largestOnRidge.Parent == t {
+            largestOnRidge = t
+        } else if largestOnRidge.Parent.Value == t.Value {
+            largestOnRidge = t
+            if DEBUG {
+                log.Printf("    largest parent value equal with target, but not the same node")
+            }
+        }
+    } else {
+        for ; largestOnRidge.Value <= t.Value && largestOnRidge.Right != nil; largestOnRidge = largestOnRidge.Right {}
+        // if largestOnRidge.Value < t.Value {} // this should not happen
+        if largestOnRidge != t && largestOnRidge.Value > t.Value {
+            largestOnRidge = largestOnRidge.Parent
+        }
+        for p := root; p!=largestOnRidge; p = p.Right {
+            cumulative_count += p.Duplications
+            if p.Left != nil {
+                cumulative_count += p.Left.Count
+            }
+        }
+    }
+
+
+    cumulative_count += largestOnRidge.Duplications
+    if largestOnRidge.Left != nil {
+        cumulative_count += largestOnRidge.Left.Count
+    }
+
+    if DEBUG {
+
+        log.Printf("     target node: %v", t.Value)
+        log.Printf("     root node: %v", root.Value)
+        log.Printf("     largest on left? %v", is_on_left_ridge)
+        log.Printf("     largest on ridge: %v", largestOnRidge.Value)
+        if largestOnRidge.Right != nil {
+            log.Printf("     largest_on_ridge.Right: %v", largestOnRidge.Right.Value)
+        } else {
+            log.Printf("     largest_on_ridge.Right: nil")
+        }
+        if largestOnRidge.Parent != nil {
+            log.Printf("     largest_on_ridge.Parent: %v", largestOnRidge.Parent.Value)
+        } else {
+            log.Printf("     largest_on_ridge.Parent: nil")
+        }
+        log.Println("")
+
+    }
+
+    if largestOnRidge == t {
+        return cumulative_count
+    }
+    
+    if is_on_left_ridge {
+        return cumulative_count + t.CumulativeCount(largestOnRidge.Right)
+    } else {
+        return cumulative_count + t.CumulativeCount(largestOnRidge.Right)
+    }
+
 }
 
 // return the inserted node,
@@ -265,27 +437,6 @@ func (t *HistogramItem) Delete() (*HistogramItem, *HistogramItem) {
     return replaced_by, root
 }
 
-func (t *HistogramItem) FindSmallestInRight() *HistogramItem {
-    if t.Right == nil {
-        return nil
-    } else {
-        c := t.Right
-        for ; c.Left != nil;  c = c.Left {
-        }
-        return c
-    }
-}
-
-func (t *HistogramItem) FindLargestInLeft() *HistogramItem {
-    if t.Left == nil {
-        return nil
-    } else {
-        c := t.Left
-        for ; c.Right != nil;  c = c.Right {
-        }
-        return c
-    }
-}
 
 func (t *HistogramItem) CalcHeight() (int64, int64, int64) {
     leftHeight := int64(0)
