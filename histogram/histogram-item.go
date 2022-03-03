@@ -1,4 +1,4 @@
-package scheduler
+package histogram
 
 import (
     "log"
@@ -7,6 +7,8 @@ import (
 
 var DEBUG bool = false
 
+
+// Histogram tree 
 type HistogramItem struct {
     Value float64
     Left *HistogramItem
@@ -18,6 +20,7 @@ type HistogramItem struct {
     Count int64
     Duplications int64
 }
+
 
 func NewHistogramItem(v float64) *HistogramItem {
     return &HistogramItem{

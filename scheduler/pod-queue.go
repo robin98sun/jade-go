@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/histogram"
 )
 
 type PodQueue struct {
@@ -12,7 +13,7 @@ type PodQueue struct {
 	Queue        []*PodQueueItem
 	ItemsInQueue map[string]*PodQueueItem
 	mutex        *sync.Mutex
-	Stat 		 *PodStat
+	Histogram 		 *histogram.Histogram
 	dequeueClock int64
 }
 
@@ -21,7 +22,7 @@ func NewPodQueue() *PodQueue {
 		Queue:        []*PodQueueItem{},
 		mutex:        &sync.Mutex{},
 		ItemsInQueue: make(map[string]*PodQueueItem),
-		Stat:		  NewPodStat(),
+		Histogram:	  histogram.NewHistogram(100000, 10, 0.1),
 		dequeueClock: 0,
 	}
 }
