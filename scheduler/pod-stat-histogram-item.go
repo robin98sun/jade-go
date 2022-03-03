@@ -246,15 +246,13 @@ func (t *HistogramItem) CumulativeCount() int64 {
         return cumulative_count
     }
 
-    for pre, cur := t, t.Parent; cur!=nil; cur=cur.Parent {
-        if cur.Left != nil && cur.Left != pre {
-            cumulative_count += cur.Left.Count
-        } 
+    for pre, cur := t, t.Parent; cur!=nil; pre,cur=cur,cur.Parent {
         if cur.Left != pre {
             cumulative_count += cur.Duplications
+            if cur.Left != nil{
+                cumulative_count += cur.Left.Count
+            }
         }
-
-        pre = cur
     }
     return cumulative_count
 }
