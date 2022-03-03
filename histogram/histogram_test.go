@@ -16,7 +16,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 	list := gen_random_list_float(sample_size, float64(10))
 	assert.Equal(t, len(list), sample_size, "random util should work")
 
-	histogram := NewHistogram(int64(window_size), float64(10), float64(0.1))
+	histogram := NewHistogram(int64(window_size), float64(10), 1)
 	assert.NotNil(t, histogram, "histogram should not be nil")
 
 	for i:=0; i<len(list); i++ {

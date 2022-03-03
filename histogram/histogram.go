@@ -5,6 +5,8 @@ import (
 	// "sync"
 	// "time"
 	// "uta.edu/aces/jade-go/kernel"
+	// "strconv"
+	// "fmt"
 )
 
 type Histogram struct {
@@ -13,13 +15,15 @@ type Histogram struct {
 	QueueSize  	int64
 	Count  		int64
 	BucketHistogram *BucketHistogram
+	Accuracy    float64
 }
 
-func NewHistogram(size int64, subBucketHistogramSize float64, bucketSize float64) *Histogram {
-	bs := bucketSize
-	if bucketSize == 0 {
-		bs = float64(1.0)
-	}
+func NewHistogram(size int64, subBucketHistogramSize float64, accuracy int) *Histogram {
+	bs := float64(1)
+	accuracy_factor := math.Pow(10, float64(accuracy))
+	if accuracy != 0 {
+		bs = float64(1) / accuracy_factor
+	} 
 
 	sbs := subBucketHistogramSize
 	if subBucketHistogramSize == 0 {
@@ -30,12 +34,16 @@ func NewHistogram(size int64, subBucketHistogramSize float64, bucketSize float64
 		Queue: []*HistogramItem{},
 		QueueSize: size,
 		BucketHistogram: NewBucketHistogram(sbs, bs),
+		Accuracy: accuracy_factor,
 	}
 	return h
 }
 
-func (h *Histogram) UnifyValue(value float64) float64 {
-	return   math.Round(value / h.BucketHistogram.BucketSize)*h.BucketHistogram.BucketSize
+func (h *Histogram) UnifiedValue(value float64) float64 {
+	v := value
+
+	v = math.Round(v* h.Accuracy)/h.Accuracy
+	return v
 }
 
 // No matter how the histogram structure is implemented
@@ -44,7 +52,7 @@ func (h *Histogram) UnifyValue(value float64) float64 {
 // the complexity of Enqueue shall be no larger than O(log n)
 func (h *Histogram) Enqueue(value float64) *HistogramItem{
 
-	v := h.UnifyValue(value)
+	v := h.UnifiedValue(value)
 
 	var result *HistogramItem = nil
 

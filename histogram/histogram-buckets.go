@@ -3,6 +3,7 @@ package histogram
 import (
     "log"
     // "fmt"
+    "math"
 )
 
 // Histogram bucket
@@ -26,7 +27,13 @@ func (sb *SubBucketHistogram) CalcPosition(v float64) int64 {
     if sb.BucketSize == 0 {
         return int64(-1)
     }
-    idx := int64((v-sb.LowwerBoundry)/sb.BucketSize)
+    idx_value := (v-sb.LowwerBoundry)/sb.BucketSize
+    if sb.BucketSize < 1 {
+        idx_value = math.Round(idx_value)
+    }
+    idx := int64(idx_value)
+
+    // log.Printf("     ....v: %v, bucket size: %v, lower boundry: %v, idx_value: %v, idx: %v", v, sb.BucketSize, sb.LowwerBoundry, idx_value, idx)
     return idx
 }
 
@@ -79,7 +86,11 @@ func (b *BucketHistogram) CalcPosition(v float64) (int64, float64, float64) {
     if b.SubBucketHistogramSize == 0 {
         return int64(-1), float64(-1), float64(-1)
     }
-    idx := int64(v/b.SubBucketHistogramSize)
+    idx_value := v/b.SubBucketHistogramSize
+    if b.SubBucketHistogramSize < 1 {
+        idx_value = math.Round(idx_value)
+    }
+    idx := int64(idx_value)
     lower := float64(idx)*b.SubBucketHistogramSize
     upper := float64(idx+1)*b.SubBucketHistogramSize
     return idx, lower, upper
