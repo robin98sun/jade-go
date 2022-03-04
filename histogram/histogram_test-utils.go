@@ -26,10 +26,10 @@ func gen_random_list(list_size int) []float64 {
 	return result
 }
 
-func gen_random_list_float(list_size int, fraction float64) []float64 {
+func gen_random_list_float(list_size int, sample_mean int, fraction float64) []float64 {
 	result := make([]float64, list_size)
 	for i := 0; i < list_size; i++ {
-		result[i] = math.Round(rand.ExpFloat64() * float64(list_size)) / fraction
+		result[i] = math.Round(rand.ExpFloat64() * float64(sample_mean)*fraction) / fraction
 	}
 	return result
 }

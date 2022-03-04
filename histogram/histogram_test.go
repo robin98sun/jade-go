@@ -3,49 +3,238 @@
 package histogram
 
 import (
-	// "log"
+	"log"
+	"fmt"
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"math"
 	// "math/rand"
 	// "sort"
 )
 
 func TestScheduler_CreateHistogram(t *testing.T) {
-	sample_size := 1000000
-	window_size := 100000
-	list := gen_random_list_float(sample_size, float64(10))
-	assert.Equal(t, len(list), sample_size, "random util should work")
 
-	histogram := NewHistogram(int64(window_size), float64(10), 2)
-	assert.NotNil(t, histogram, "histogram should not be nil")
+	sample_mean := 100
+	base_window_size := 10000
+	subhisto_size := 0.1
+	accuracy := 1
+	buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
+	for x := 1; x <= 5; x++ {
+		window_size := base_window_size* x
+		sample_size := window_size*10*x
+		percentile_list := []float64{
+			float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
+		}
+		list := gen_random_list_float(sample_size, sample_mean, float64(1000))
+		assert.Equal(t, len(list), sample_size, "random util should work")
 
-	for i:=0; i<len(list); i++ {
-		v := list[i]
-		// log.Printf("original %v value: %v", i, v)
-		histogram.Enqueue(v)
-	}
-	assert.Equal(t, int64(window_size), histogram.Count, "histogram size should equal window size")
+		histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
+		assert.NotNil(t, histogram, "histogram should not be nil")
 
-	assert.NotNil(t, histogram.RootItem, "root item should not be nil")
+		for _, p := range percentile_list {
+			histogram.AddPercentilePoint(p)
+		}
 
-	assert.Equal(t, int64(window_size), histogram.RootItem.Count, "histogram root count should equal window size")
+		for i:=0; i<len(list); i++ {
+			v := list[i]
+			// log.Printf("original %v value: %v", i, v)
+			histogram.Enqueue(v)
+		}
+		assert.Equal(t, int64(window_size), histogram.Count, "histogram size should equal window size")
 
-	assert.Equal(t, int64(window_size), int64(len(histogram.Queue)), "histogram queue length should equal window size")
+		assert.NotNil(t, histogram.RootItem, "root item should not be nil")
 
-	bucketCount := int64(0)
-	for i:=0; i<len(histogram.BucketHistogram.SubBucketHistograms); i++ {
-		sbh := histogram.BucketHistogram.SubBucketHistograms[i]
-		if sbh != nil {
-			for j:=0; j<len(sbh.BucketList);j++ {
-				bucketItem := sbh.BucketList[j]
-				if bucketItem != nil {
-					bucketCount+=bucketItem.Duplications
-					// log.Printf(" i: %v, j: %v, value: %v, duplication: %v, count: %v", i, j, bucketItem.Value, bucketItem.Duplications, bucketItem.Count)
+		assert.Equal(t, int64(window_size), histogram.RootItem.Count, "histogram root count should equal window size")
+
+		assert.Equal(t, int64(window_size), int64(len(histogram.Queue)), "histogram queue length should equal window size")
+
+		sumAllBuckets := int64(0)
+		bucket_count := 0
+		max_possible_bucket_count := len(histogram.BucketHistogram.SubBucketHistograms)*buckets_in_subhisto
+		for i:=0; i<len(histogram.BucketHistogram.SubBucketHistograms); i++ {
+			sbh := histogram.BucketHistogram.SubBucketHistograms[i]
+			if sbh != nil {
+				bucket_count += len(sbh.BucketList)
+				for j:=0; j<len(sbh.BucketList);j++ {
+					bucketItem := sbh.BucketList[j]
+					if bucketItem != nil {
+						sumAllBuckets+=bucketItem.Duplications
+						// log.Printf(" i: %v, j: %v, value: %v, duplication: %v, count: %v", i, j, bucketItem.Value, bucketItem.Duplications, bucketItem.Count)
+
+						idx:=sbh.CalcPosition(bucketItem.Value)
+						assert.Equal(t, int64(j), idx, "the index should be equal")
+
+						idx,_,_ = histogram.BucketHistogram.CalcPosition(bucketItem.Value)
+						assert.Equal(t, int64(i), idx, "the index should be equal")
+
+					}
 				}
 			}
 		}
+
+		min_node := histogram.RootItem
+		for ; min_node.Left != nil ; min_node = min_node.Left {}
+		max_node := histogram.RootItem
+		for ; max_node.Right != nil; max_node = max_node.Right {}
+
+		node_amount := 0
+		min_value := min_node.Value
+		max_value := max_node.Value
+		avg_value := min_value - min_value
+		sum_value := avg_value
+		variance  := sum_value
+		for p:=min_node; p!=nil; p=p.Larger{
+			node_amount++
+			sum_value += p.Value * float64(p.Duplications)
+		}
+		avg_value = sum_value / float64(histogram.RootItem.Count)
+
+		for p:=min_node; p!=nil; p=p.Larger{
+			variance += math.Pow((p.Value-avg_value), 2) * float64(p.Duplications)
+		}
+		variance /= float64(histogram.RootItem.Count)
+
+		assert.Equal(t, histogram.MinItem, min_node, "min node should be identical")
+		assert.Equal(t, histogram.MaxItem, max_node, "max node should be identical")
+
+		for _, v := range percentile_list {
+			p := histogram.GetPercentile(v)
+			cc := p.Item.CumulativeCount()
+			// log.Printf("%v percentile(%v), real percentage: %v(%v), count: %v, total: %v, min: %v(%v), max: %v(%v), p-node: %v, cumulativeCount: %v, real: %v", 
+			// 	v*float64(100), p.Percentile, 
+			// 	p.RealPercentage, float64(p.Count)/float64(histogram.RootItem.Count),
+			// 	p.Count, histogram.RootItem.Count, 
+			// 	histogram.MinItem.Value, min_node.Value, 
+			// 	histogram.MaxItem.Value, max_node.Value,
+			// 	p.Item.Value, cc, float64(cc)/float64(histogram.RootItem.Count),
+			// )
+			assert.GreaterOrEqual(t, (1-p.Percentile)/float64(100), p.Percentile - float64(cc)/float64(histogram.RootItem.Count), "percentile point should be correct")
+			assert.GreaterOrEqual(t, p.Percentile - float64(cc)/float64(histogram.RootItem.Count), float64(0), "percentile point should be correct")
+
+			assert.GreaterOrEqual(t, (1-p.RealPercentage)/float64(100), p.RealPercentage - float64(cc)/float64(histogram.RootItem.Count), "percentile point should be correct")
+			assert.GreaterOrEqual(t, p.RealPercentage - float64(cc)/float64(histogram.RootItem.Count), float64(0), "percentile point should be correct")
+
+
+		}
+
+		assert.Equal(t, int64(window_size), sumAllBuckets, "histogram queue length should equal window size")
+
+		log.Printf("window size: %v, sample amount: %v, percentile points: %v, height of avl tree: %v", 
+			window_size, sample_size, len(percentile_list),
+			histogram.RootItem.Height,
+		)
+		log.Printf("   nodes: %v (%v%%, %v%%, %v%%), amount of buckets: %v (%v%%, %v%%), maximum possible buckets: %v", 
+			node_amount, 
+			node_amount*100/window_size, 
+			node_amount*100/bucket_count, 
+			node_amount*100/max_possible_bucket_count,
+			bucket_count, 
+			bucket_count*100/window_size,
+			bucket_count*100/max_possible_bucket_count,
+			max_possible_bucket_count,
+		)
+		log.Printf("   [data distribution] mean: %v, variance %v, min: %v, max: %v", 
+			avg_value, variance, min_value, max_value,
+		)
+		pstr := ""
+		for _, p := range percentile_list {
+			pstr = fmt.Sprintf("%s%v%%: %v, ", pstr,
+				p*float64(100),
+				histogram.GetPercentile(p).Item.Value,
+			)
+		}
+		log.Printf("   percentiles: %s", pstr)
+
+		log.Println("")
+	}
+	
+}
+
+
+func multiply_histograms(p float64, start_value float64, histogram_list []*Histogram, mask []bool) (float64, int){
+	
+	prod := float64(1)
+	bursted_count := 0
+	for i:=0; i<len(histogram_list); i++ {
+		if len(mask) > i && !mask[i] {continue}
+
+		h := histogram_list[i]
+		node := h.RootItem.FindNoLargerThan(start_value)
+		if node == h.MaxItem {
+			if len(mask) > i {
+				mask[i] = false
+			}
+			bursted_count++
+		} else {
+			cc := node.CumulativeCount()
+			prod *= float64(cc)/float64(h.Count)
+		}
 	}
 
-	assert.Equal(t, int64(window_size), bucketCount, "histogram queue length should equal window size")
+	return prod, bursted_count
+}
 
+func TestScheduler_MultiplyHistograms(t *testing.T) {
+	sample_size := 2000
+	window_size := 1000
+	histogram_count := 1000
+
+	sample_mean := 100
+	subhisto_size := 0.1
+	accuracy := 1
+	// buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
+	percentile_list := []float64{
+		float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
+	}
+
+	var histogram_list []*Histogram = []*Histogram{}
+	for h:=0; h<histogram_count; h++ {
+		list := gen_random_list_float(sample_size, sample_mean, float64(10))
+		assert.Equal(t, len(list), sample_size, "random util should work")
+
+		histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
+		assert.NotNil(t, histogram, "histogram should not be nil")
+
+		for _, p := range percentile_list {
+			histogram.AddPercentilePoint(p)
+		}
+
+		for i:=0; i<len(list); i++ {
+			v := list[i]
+			// log.Printf("original %v value: %v", i, v)
+			histogram.Enqueue(v)
+		}
+		histogram_list = append(histogram_list, histogram)
+	}
+
+
+	for pi := 0; pi < len(percentile_list); pi++ {
+		p := percentile_list[pi]
+
+		var mask []bool = make([]bool, histogram_count)
+		for i:=0; i<len(mask); i++ {
+			mask[i] = true
+		}
+
+		max_value := float64(0)
+		for i:=0; i<histogram_count; i++ {
+			h := histogram_list[i]
+			v := h.GetPercentile(p).Item.Value
+			if v > max_value {
+				max_value = v
+			}
+		}
+
+		prod, bursted_count := multiply_histograms(p, max_value, histogram_list, mask)
+
+		log.Printf("initial production to search %v%%: %v, bursted %v histograms, maximum value: %v, lower boundry: %v",
+			p*float64(100), prod, bursted_count, max_value,
+			math.Pow(p, float64(histogram_count)),
+		)
+
+
+	}
+
+
+	
 }
