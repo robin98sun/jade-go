@@ -296,8 +296,8 @@ func SearchPercentileByMultiply(
 		p float64, start_value float64, 
 		histogram_list []*Histogram, 
 		opt_out_mask []bool, 
-		lower_subhistogram_index int, 
-		upper_subhistogram_index int, 
+		lower_search_index int, 
+		upper_search_index int, 
 		is_going_up bool, 
 		subhistogram_index int,
 		last_prod float64,
@@ -306,11 +306,11 @@ func SearchPercentileByMultiply(
 		DEBUG bool,
 	) (float64){
 	
-	if lower_subhistogram_index > upper_subhistogram_index {
+	if lower_search_index > upper_search_index {
 		return float64(-1)
 	}
 
-	mid := (lower_subhistogram_index+upper_subhistogram_index)/2
+	mid := (lower_search_index+upper_search_index)/2
 	lower_boundary, upper_boundary := float64(0), float64(0)
 	criteria_value := start_value
 	if start_value < 0 {
@@ -348,7 +348,7 @@ func SearchPercentileByMultiply(
 
 	prod := multiply_histograms(criteria_value)
 
-	lower, upper := lower_subhistogram_index, upper_subhistogram_index
+	lower, upper := lower_search_index, upper_search_index
 	go_up := true
 
 	got_the_result := false
@@ -445,7 +445,7 @@ func SearchPercentileByMultiply(
 		log.Printf("%v%v iteration: %v, burn out %v histograms, idx: %v, lower: %v, upper: %v, criteria: %v%v",
 			placeholder, iteration_count,
 			prod, len(burnt_out_indices),
-			mid, lower_subhistogram_index, upper_subhistogram_index,
+			mid, lower_search_index, upper_search_index,
 			math.Round(criteria_value*10)/10, directionStr,
 		)
 	}
