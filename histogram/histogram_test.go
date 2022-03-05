@@ -151,7 +151,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 }
 
 // to do the benchmark:
-// go test -run=MultiplyHistograms -bench=MultiplyHistograms
+// go test -run=MultiplyHistograms -bench=MultiplyHistograms -count=3
 func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 	sample_size := 10000
 	window_size := 10000
@@ -190,7 +190,7 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 
 
 	DEBUG := false
-	title := fmt.Sprintf("multiply %v histograms each window size %v to search:", histogram_count, window_size)
+	title := fmt.Sprintf("multiply %v histograms each window size %v to search:", len(histogram_list), window_size)
 	for _, p := range percentile_list {
 		title = fmt.Sprintf("%v %v",title, p*float64(100))
 	}
