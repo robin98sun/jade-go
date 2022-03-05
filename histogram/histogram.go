@@ -6,8 +6,8 @@ import (
 	// "time"
 	// "uta.edu/aces/jade-go/kernel"
 	"strconv"
-	// "fmt"
-	// "log"
+	"fmt"
+	"log"
 )
 
 type Histogram struct {
@@ -62,6 +62,27 @@ func NewHistogram(size int64, subBucketHistogramSize float64, accuracy int) *His
 	}
 	return h
 }
+
+func (h *Histogram) GetIndexOfSubHistogram(v float64) int {
+	idx, _, _ := h.BucketHistogram.CalcPosition(v)
+	return int(idx)
+}
+
+func (h *Histogram) GetLengthOfSubHistograms() int {
+	return len(h.BucketHistogram.SubBucketHistograms)
+}
+
+
+func (h *Histogram) GetMaximumSizeOfSubHistograms() int {
+	return int(math.Round(h.BucketHistogram.SubBucketHistogramSize*h.Accuracy))
+}
+
+func (h *Histogram) GetValueOfBucket(subhistogramIndex int, bucketIndex int) float64 {
+	lower_boundary, _ := h.BucketHistogram.GetLowerAndUpperBoundaries(int64(subhistogramIndex))
+	return lower_boundary + float64(bucketIndex) * h.Accuracy
+}
+
+
 
 func (h *Histogram) UnifiedValue(value float64) float64 {
 	v := value
@@ -271,16 +292,185 @@ func (h *Histogram) Dequeue() *HistogramItem {
 	return item
 }
 
-// the complexity of GetByPercentage shall be as close as O(1)
-func (h *Histogram) GetByPercentage(p float64) float64 {
-	result := -1.0
+func SearchPercentileByMultiply(
+		p float64, start_value float64, 
+		histogram_list []*Histogram, 
+		opt_out_mask []bool, 
+		lower_subhistogram_index int, 
+		upper_subhistogram_index int, 
+		is_going_up bool, 
+		subhistogram_index int,
+		last_prod float64,
+		last_criteria float64,
+		iteration_count int,
+		DEBUG bool,
+	) (float64){
+	
+	if lower_subhistogram_index > upper_subhistogram_index {
+		return float64(-1)
+	}
 
-	return result
-}
+	mid := (lower_subhistogram_index+upper_subhistogram_index)/2
+	lower_boundary, upper_boundary := float64(0), float64(0)
+	criteria_value := start_value
+	if start_value < 0 {
+		if subhistogram_index < 0 {
+			lower_boundary, upper_boundary = histogram_list[0].BucketHistogram.GetLowerAndUpperBoundaries(int64(mid))
+			criteria_value = lower_boundary
+			if is_going_up {
+				criteria_value = upper_boundary
+			}
+		} else {
+			criteria_value = histogram_list[0].GetValueOfBucket(subhistogram_index, mid)
+		}
+		
+	} 
 
-// the complexity of CountPercentageByValue shall be as close as O(1)
-func (h *Histogram) CountPercentageByValue(v float64, startPercentage float64) float64 {
-	result := -1.0
+	var burnt_out_indices []int
 
-	return result
+	multiply_histograms := func(criteria float64) (float64) {
+		burnt_out_indices = []int{}
+		product := float64(1)
+		for i:=0; i<len(histogram_list); i++ {
+			if len(opt_out_mask) > i && opt_out_mask[i] {continue}
+
+			h := histogram_list[i]
+			node := h.RootItem.FindNoLargerThan(criteria)
+			if node == h.MaxItem {
+				burnt_out_indices = append(burnt_out_indices, i)
+			} else {
+				cc := node.CumulativeCount()
+				product *= float64(cc)/float64(h.Count)
+			}
+		}
+		return product
+	}
+
+	prod := multiply_histograms(criteria_value)
+
+	lower, upper := lower_subhistogram_index, upper_subhistogram_index
+	go_up := true
+
+	got_the_result := false
+
+	if prod == p {
+		got_the_result = true
+	} else {
+		is_going_to_try_the_other_boundary := []string{"first time", "retry"}
+		if subhistogram_index >= 0 {
+			is_going_to_try_the_other_boundary = []string{"first time"}
+		}
+		sizeOfSubhistogram := histogram_list[0].GetMaximumSizeOfSubHistograms()
+		need_retry := false
+		for _, x := range  is_going_to_try_the_other_boundary{
+			if x == "retry" && !need_retry {
+				break
+			} else {
+			}
+			if prod < p {
+				for _, i := range burnt_out_indices {
+					if len(opt_out_mask) > i {
+						opt_out_mask[i] = true
+					}
+				}
+
+				if subhistogram_index < 0 && start_value < 0{
+					if x == "first time" {
+						if !is_going_up {
+							prod = multiply_histograms(upper_boundary)
+							need_retry = true
+							continue
+						}
+					} else if x == "retry" && is_going_up {
+						// fall into this subhistogram range
+						return SearchPercentileByMultiply(
+							p, -1, histogram_list, opt_out_mask,
+							0, sizeOfSubhistogram-1, true, 
+							mid, prod, criteria_value,
+							1, DEBUG,
+						)
+					}
+				}
+				
+				lower = mid+1
+				
+			} else if prod > p {
+				burnt_out_indices = nil
+
+				if subhistogram_index < 0 && start_value < 0 {
+					if x == "first time" {
+						if is_going_up {
+							prod = multiply_histograms(lower_boundary)
+							need_retry = true
+							continue
+						}
+					} else if x == "retry" && !is_going_up {
+						// fall into this subhistogram range
+						return SearchPercentileByMultiply(
+							p, -1, histogram_list, opt_out_mask,
+							0, sizeOfSubhistogram-1, true, 
+							mid, prod, criteria_value,
+							1, DEBUG,
+						)
+						break
+					}
+				}
+
+				upper = mid-1
+				go_up = false
+
+				
+			}
+		}
+	}
+
+	if DEBUG {
+		if subhistogram_index < 0 && iteration_count == 1 {
+			log.Printf("iterations to search %v percentile:", p*float64(100))
+		}
+		placeholder := "" 
+		if subhistogram_index < 0 {
+			placeholder = " "
+		} else {
+			placeholder = fmt.Sprintf("   in [%v] subhistogram, ", subhistogram_index)
+		}
+		directionStr := ""
+		if got_the_result || lower > upper {
+			directionStr = ", stop"
+		} else if go_up {
+			directionStr = ", next go up"
+		} else {
+			directionStr = ", next go down"
+		}
+		log.Printf("%v%v iteration: %v, burn out %v histograms, idx: %v, lower: %v, upper: %v, criteria: %v%v",
+			placeholder, iteration_count,
+			prod, len(burnt_out_indices),
+			mid, lower_subhistogram_index, upper_subhistogram_index,
+			math.Round(criteria_value*10)/10, directionStr,
+		)
+	}
+	
+
+	if got_the_result {
+		return criteria_value
+	} else if lower > upper {
+		if last_criteria >= 0 && last_prod >= 0 {
+			if math.Abs(p-last_prod) < math.Abs(p-prod) {
+				if DEBUG {
+					log.Print("   due to larger distance, the last iteration is discarded")
+				}
+				return last_criteria
+			}
+		}
+		return criteria_value
+	} else {
+		return SearchPercentileByMultiply(
+			p, -1, histogram_list, opt_out_mask,
+			lower, upper, go_up, 
+			subhistogram_index, 
+			prod, criteria_value,
+			iteration_count+1,
+			DEBUG,
+		)
+	}
 }

@@ -150,91 +150,89 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 	
 }
 
-
-func multiply_histograms(p float64, start_value float64, histogram_list []*Histogram, mask []bool) (float64, int){
-	
-	prod := float64(1)
-	bursted_count := 0
-	for i:=0; i<len(histogram_list); i++ {
-		if len(mask) > i && !mask[i] {continue}
-
-		h := histogram_list[i]
-		node := h.RootItem.FindNoLargerThan(start_value)
-		if node == h.MaxItem {
-			if len(mask) > i {
-				mask[i] = false
-			}
-			bursted_count++
-		} else {
-			cc := node.CumulativeCount()
-			prod *= float64(cc)/float64(h.Count)
-		}
-	}
-
-	return prod, bursted_count
-}
-
-func TestScheduler_MultiplyHistograms(t *testing.T) {
-	sample_size := 2000
-	window_size := 1000
+// to do the benchmark:
+// go test -run=MultiplyHistograms -bench=MultiplyHistograms
+func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
+	sample_size := 10000
+	window_size := 10000
 	histogram_count := 1000
 
 	sample_mean := 100
-	subhisto_size := 0.1
+	subhisto_size := 10
 	accuracy := 1
 	// buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
 	percentile_list := []float64{
-		float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
+		float64(0.95), float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
 	}
 
 	var histogram_list []*Histogram = []*Histogram{}
-	for h:=0; h<histogram_count; h++ {
-		list := gen_random_list_float(sample_size, sample_mean, float64(10))
-		assert.Equal(t, len(list), sample_size, "random util should work")
 
-		histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
-		assert.NotNil(t, histogram, "histogram should not be nil")
+	t.Run(fmt.Sprintf("create %v histograms each window size: %v", histogram_count, window_size), func(b *testing.B) {
+		for h:=0; h<histogram_count; h++ {
+			list := gen_random_list_float(sample_size, sample_mean, float64(10))
+			assert.Equal(t, len(list), sample_size, "random util should work")
 
-		for _, p := range percentile_list {
-			histogram.AddPercentilePoint(p)
-		}
+			histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
+			assert.NotNil(t, histogram, "histogram should not be nil")
 
-		for i:=0; i<len(list); i++ {
-			v := list[i]
-			// log.Printf("original %v value: %v", i, v)
-			histogram.Enqueue(v)
-		}
-		histogram_list = append(histogram_list, histogram)
-	}
-
-
-	for pi := 0; pi < len(percentile_list); pi++ {
-		p := percentile_list[pi]
-
-		var mask []bool = make([]bool, histogram_count)
-		for i:=0; i<len(mask); i++ {
-			mask[i] = true
-		}
-
-		max_value := float64(0)
-		for i:=0; i<histogram_count; i++ {
-			h := histogram_list[i]
-			v := h.GetPercentile(p).Item.Value
-			if v > max_value {
-				max_value = v
+			for _, p := range percentile_list {
+				histogram.AddPercentilePoint(p)
 			}
+
+			for i:=0; i<len(list); i++ {
+				v := list[i]
+				// log.Printf("original %v value: %v", i, v)
+				histogram.Enqueue(v)
+			}
+			histogram_list = append(histogram_list, histogram)
+		}
+	})
+
+
+	DEBUG := false
+	title := fmt.Sprintf("multiply %v histograms each window size %v to search:", histogram_count, window_size)
+	for _, p := range percentile_list {
+		title = fmt.Sprintf("%v %v",title, p*float64(100))
+	}
+	t.Run(title, func(b *testing.B) {
+
+		for pi := 0; pi < len(percentile_list); pi++ {
+			p := percentile_list[pi]
+
+			var opt_out_mask []bool = make([]bool, histogram_count)
+
+			start_point := float64(0)
+			max_subhistogram_length := 0
+			start_index := 0
+			for i:=0; i<histogram_count; i++ {
+				h := histogram_list[i]
+				v := h.GetPercentile(p).Item.Value
+				l := h.GetLengthOfSubHistograms()
+				if v > start_point {
+					start_point = v
+					start_index = h.GetIndexOfSubHistogram(v)
+				}
+				if l > max_subhistogram_length {
+					max_subhistogram_length = l
+				}
+			}
+
+			criteria_value := SearchPercentileByMultiply(
+				p, start_point, histogram_list, opt_out_mask, 
+				start_index, max_subhistogram_length-1, 
+				true, -1, 
+				float64(-1), float64(-1),
+				1, DEBUG,
+			)
+
+			if DEBUG {
+				log.Printf("   the point for %v percentile is %v", p*float64(100), criteria_value)
+				log.Println("")
+			}
+
 		}
 
-		prod, bursted_count := multiply_histograms(p, max_value, histogram_list, mask)
-
-		log.Printf("initial production to search %v%%: %v, bursted %v histograms, maximum value: %v, lower boundry: %v",
-			p*float64(100), prod, bursted_count, max_value,
-			math.Pow(p, float64(histogram_count)),
-		)
-
-
-	}
-
+	})
 
 	
 }

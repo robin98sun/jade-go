@@ -10,15 +10,15 @@ import (
 type SubBucketHistogram struct {
     BucketList []*HistogramItem
     BucketSize float64
-    LowwerBoundry float64
-    UpperBoundry float64
+    LowerBoundary float64
+    UpperBoundary float64
 }
 
 func NewSubBucketHistogram(unit float64, lower float64, upper float64) *SubBucketHistogram{
     var item *SubBucketHistogram = &SubBucketHistogram{
         BucketSize: unit,
-        LowwerBoundry: lower,
-        UpperBoundry: upper,
+        LowerBoundary: lower,
+        UpperBoundary: upper,
     }
     return item
 }
@@ -27,13 +27,13 @@ func (sb *SubBucketHistogram) CalcPosition(v float64) int64 {
     if sb.BucketSize == 0 {
         return int64(-1)
     }
-    idx_value := (v-sb.LowwerBoundry)/sb.BucketSize
+    idx_value := (v-sb.LowerBoundary)/sb.BucketSize
     if math.Abs(sb.BucketSize) < 1 {
         idx_value = math.Round(idx_value)
     }
     idx := int64(idx_value)
 
-    // log.Printf("     ....v: %v, bucket size: %v, lower boundry: %v, idx_value: %v, idx: %v", v, sb.BucketSize, sb.LowwerBoundry, idx_value, idx)
+    // log.Printf("     ....v: %v, bucket size: %v, lower boundary: %v, idx_value: %v, idx: %v", v, sb.BucketSize, sb.LowerBoundary, idx_value, idx)
     return idx
 }
 
@@ -91,9 +91,14 @@ func (b *BucketHistogram) CalcPosition(v float64) (int64, float64, float64) {
         idx_value = math.Round(idx_value)
     }
     idx := int64(idx_value)
+    lower, upper := b.GetLowerAndUpperBoundaries(idx)
+    return idx, lower, upper
+}
+
+func (b *BucketHistogram) GetLowerAndUpperBoundaries(idx int64) (float64, float64) {
     lower := float64(idx)*b.SubBucketHistogramSize
     upper := float64(idx+1)*b.SubBucketHistogramSize
-    return idx, lower, upper
+    return lower, upper
 }
 
 func (b *BucketHistogram) Insert(n *HistogramItem) {
