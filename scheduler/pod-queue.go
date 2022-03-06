@@ -13,16 +13,26 @@ type PodQueue struct {
 	Queue        []*PodQueueItem
 	ItemsInQueue map[string]*PodQueueItem
 	mutex        *sync.Mutex
-	Histogram 		 *histogram.Histogram
+	HistogramServiceTime *histogram.Histogram
+	HistogramInQueueTime *histogram.Histogram
+	HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
 }
 
 func NewPodQueue() *PodQueue {
+	h_st := histogram.NewHistogram(10000, float64(10), 1)
+	h_st.AddPercentilePoint(float64(0.99))
+	h_qt := histogram.NewHistogram(10000, float64(10), 1)
+	h_qt.AddPercentilePoint(float64(0.99))
+	h_ct := histogram.NewHistogram(10000, float64(10), 1)
+	h_ct.AddPercentilePoint(float64(0.99))
 	return &PodQueue{
 		Queue:        []*PodQueueItem{},
 		mutex:        &sync.Mutex{},
 		ItemsInQueue: make(map[string]*PodQueueItem),
-		Histogram:	  histogram.NewHistogram(100000, 10, 0.1),
+		HistogramServiceTime:  		h_st,
+		HistogramInQueueTime:  		h_qt,
+		HistogramCommunicationTime: h_ct,
 		dequeueClock: 0,
 	}
 }

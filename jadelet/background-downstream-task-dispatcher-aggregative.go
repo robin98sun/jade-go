@@ -5,6 +5,7 @@ import (
 	"sort"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/histogram"
 )
 
 func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
@@ -36,17 +37,22 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 		j.log.Printf("ERROR when dispatching subtask to pod[%v]: the pod is busy", pod.GetKey())
 		return
 	}
-	j.PodCache.SetPodBusy(pod)
-	queue := j.PodCache.GetPodQueue(pod)
-	queueItem := queue.Dequeue(j.log.Printf)
+	podCacheItem := j.PodCache.SetPodBusy(pod)
+	queueItem := podCacheItem.Queue.Dequeue(j.log.Printf)
 	if queueItem == nil {
-		j.PodCache.SetPodIdle(pod)
+		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1))
 		return
 	}
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	if inQueueTime >= 0 {
+		podCacheItem.Queue.Lock()
+		podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime)
+		podCacheItem.Queue.Unlock()
+	}
+	
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
 	_, reqlen, _ := j.HTTPCommunicate(
@@ -107,13 +113,34 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			fanoutDegree := len(workerSubtasks)
 			j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
 			j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
-			budget := taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
-			if budget > 0 {
-				j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
-			}
+
+			
 			priority := taskItem.Priority
 			if priority == 0 {
 				priority = scheduler.TaskDefaultPriority
+			}
+
+			// calc 99 percentile for prod of histograms 
+			budget := float64(0)
+			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
+				j.PodCache.LockData()
+				histogram_list := []*histogram.Histogram{}
+				for _, subtaskOnNode := range workerSubtasks {
+					podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
+					histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+				}
+
+				tail_latency := histogram.CalcPercentileOfProduct(float64(0.99), histogram_list, false)
+				j.PodCache.UnlockData()
+
+				if tail_latency > 0 {
+					budget = taskItem.SLO.TailLatency99InMilliseconds - tail_latency
+				}
+			} else {
+				budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+				if budget > 0 {
+					j.log.Printf("[task dispatcher] task[%v] budget: %v", task.GetKey(), budget)
+				}
 			}
 
 			// sort available subnodes if needed
@@ -130,6 +157,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 			// 2022-02-19
 			// get online-statistics for the selected worker pods
+
 			if taskItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
 				
 			}

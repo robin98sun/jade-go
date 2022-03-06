@@ -55,7 +55,7 @@ func main() {
 		rest.Put("/app/listener", j.CollectAppMsg),
 		rest.Get("/taskResults", j.GetAggregativeTaskResults),
 		// for stat
-		rest.Get("/dumpStat", j.DumpStat),
+		// rest.Get("/dumpStat", j.DumpStat),
 		rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
 		rest.Delete("/podCache", j.ClearPodCache),
 		rest.Get("/jobs", j.GetJobIdList),

@@ -35,13 +35,13 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.Node.Key(),
 			)
 			// save result and stat
-			subtask := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
+			subtask, serviceRequestTime, communicationTime := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
 			if subtask != nil && subtask.Pod != nil {
 				j.DoneRequest(w, r, "message received")
 				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				
 				// then dequeue or release the pod queue
-				j.PodCache.SetPodIdle(subtask.Pod)
+				j.PodCache.SetPodIdle(subtask.Pod, serviceRequestTime, communicationTime)
 
 				// forward aggregator subtask to upper tier if possible
 				if subtask.ModuleName == string(kernel.AppModuleAggregator) && j.HasUpperNode() {
@@ -64,13 +64,13 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 	}
 }
 
-func (j *JADE) DumpStat(w rest.ResponseWriter, r *rest.Request) {
-	if j.TaskCache != nil {
-		j.DoneRequest(w, r, j.TaskCache.Stat)
-	} else {
-		j.PeacefulFatalRequest(w, r, "Task cache is not available")
-	}
-}
+// func (j *JADE) DumpStat(w rest.ResponseWriter, r *rest.Request) {
+// 	if j.TaskCache != nil {
+// 		j.DoneRequest(w, r, j.TaskCache.Stat)
+// 	} else {
+// 		j.PeacefulFatalRequest(w, r, "Task cache is not available")
+// 	}
+// }
 
 func (j *JADE) GetAggregativeTaskResults(w rest.ResponseWriter, r *rest.Request) {
 	if j.TaskCache == nil || len(j.TaskCache.Cache) == 0 {

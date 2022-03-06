@@ -3,7 +3,7 @@ package scheduler
 import (
 	"sync"
 	"time"
-	"uta.edu/aces/jadesdk"
+	// "uta.edu/aces/jadesdk"
 )
 
 // the shape of task cache:
@@ -37,14 +37,14 @@ import (
 type TaskCache struct {
 	Cache map[string]*TaskCacheTaskItem
 	mutex *sync.Mutex
-	Stat  map[string]map[string]map[string]*jadesdk.Stat // app -> module -> fanout degree -> stat
+	// Stat  map[string]map[string]map[string]*jadesdk.Stat // app -> module -> fanout degree -> stat
 }
 
 func NewTaskCache() *TaskCache {
 	inst := &TaskCache{
 		Cache: make(map[string]*TaskCacheTaskItem),
 		mutex: &sync.Mutex{},
-		Stat:  make(map[string]map[string]map[string]*jadesdk.Stat),
+		// Stat:  make(map[string]map[string]map[string]*jadesdk.Stat),
 	}
 	return inst
 }
@@ -90,14 +90,14 @@ func (c *TaskCache) Clear() {
 	c.Cache = make(map[string]*TaskCacheTaskItem)
 
 
-	if c.Stat == nil {
-		return
-	}
+	// if c.Stat == nil {
+	// 	return
+	// }
 
-	for k := range c.Stat {
-		delete(c.Stat, k)
-	}
-	c.Stat = make(map[string]map[string]map[string]*jadesdk.Stat)
+	// for k := range c.Stat {
+	// 	delete(c.Stat, k)
+	// }
+	// c.Stat = make(map[string]map[string]map[string]*jadesdk.Stat)
 }
 
 type TaskCacheTaskItem struct {

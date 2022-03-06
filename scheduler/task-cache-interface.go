@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"strconv"
+	// "strconv"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
@@ -126,9 +126,9 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 }
 
 func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
-) *kernel.SubTask {
+) (*kernel.SubTask, float64, float64) {
 	if c == nil {
-		return nil
+		return nil, float64(-1), float64(-1)
 	}
 	result := msg.Updates 
 	stat := msg.Stat
@@ -138,11 +138,11 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	defer c.mutex.Unlock()
 	task := c.GetTask(taskKey, false)
 	if task == nil {
-		return nil
+		return nil, float64(-1), float64(-1)
 	}
 	subtask := task.Task.GetSubtask(subtaskKey)
 	if subtask == nil {
-		return nil
+		return nil, float64(-1), float64(-1)
 	}
 
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
@@ -169,7 +169,10 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.RetryCountOfReceiving = retryCount
 	subtaskItem.ReportProcessingTime = subtaskItem.FinishTimestamp.Sub(timestampReceiving)
 	
-	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp) + subtaskItem.PreDispatchingTime
+	// subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp) + subtaskItem.PreDispatchingTime
+	subtaskItem.RequestTime = subtaskItem.FinishTimestamp.Sub(subtaskItem.DispatchTimestamp) 
+	// save to histogram
+
 
 	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime
 	subtaskItem.CommunicationTime -= subtaskItem.ReportProcessingTime
@@ -179,49 +182,49 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	}
 	subtaskItem.MetricsEnv = metricsEnv
 
-	c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
+	// c.SaveStatOfModule(subtask.AppName, subtask.ModuleName, subtask.Fanout, subtaskItem)
 
 	c.Cache[taskKey].LastUpdateTimestamp = time.Now()
-	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask
+	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask, float64(subtaskItem.RequestTime)/float64(time.Millisecond), float64(subtaskItem.CommunicationTime)/float64(time.Millisecond)
 }
 
-func (c *TaskCache) SaveStatOfModule(
-	appName string, moduleName string,
-	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
-) {
-	if c == nil || subtaskItem == nil {
-		return
-	}
+// func (c *TaskCache) SaveStatOfModule(
+// 	appName string, moduleName string,
+// 	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
+// ) {
+// 	if c == nil || subtaskItem == nil {
+// 		return
+// 	}
 
-	if _, ok := c.Stat[appName]; !ok {
-		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
-	}
-	appItem := c.Stat[appName]
+// 	if _, ok := c.Stat[appName]; !ok {
+// 		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
+// 	}
+// 	appItem := c.Stat[appName]
 
-	if _, ok := appItem[moduleName]; !ok {
-		appItem[moduleName] = make(map[string]*jadesdk.Stat)
-	}
-	fanouts := appItem[moduleName]
+// 	if _, ok := appItem[moduleName]; !ok {
+// 		appItem[moduleName] = make(map[string]*jadesdk.Stat)
+// 	}
+// 	fanouts := appItem[moduleName]
 
-	realFanoutDegree := fanoutDegree
-	if realFanoutDegree <= 0 {
-		realFanoutDegree = 1
-	}
-	fanoutKey := strconv.Itoa(realFanoutDegree)
-	if _, ok := fanouts[fanoutKey]; !ok {
-		fanouts[fanoutKey] = jadesdk.NewStat()
-	}
+// 	realFanoutDegree := fanoutDegree
+// 	if realFanoutDegree <= 0 {
+// 		realFanoutDegree = 1
+// 	}
+// 	fanoutKey := strconv.Itoa(realFanoutDegree)
+// 	if _, ok := fanouts[fanoutKey]; !ok {
+// 		fanouts[fanoutKey] = jadesdk.NewStat()
+// 	}
 
-	stat := fanouts[fanoutKey]
-	stat.PreService.AddDuration(subtaskItem.PreServiceTime)
-	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
-	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
-	stat.Service.AddDuration(subtaskItem.ServiceTime)
-	stat.Request.AddDuration(subtaskItem.RequestTime)
-	stat.Communication.AddDuration(subtaskItem.CommunicationTime)
-	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
-	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
-}
+// 	stat := fanouts[fanoutKey]
+// 	stat.PreService.AddDuration(subtaskItem.PreServiceTime)
+// 	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
+// 	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
+// 	stat.Service.AddDuration(subtaskItem.ServiceTime)
+// 	stat.Request.AddDuration(subtaskItem.RequestTime)
+// 	stat.Communication.AddDuration(subtaskItem.CommunicationTime)
+// 	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
+// 	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
+// }
 
 type TaskResult struct {
 	Status TaskStatus  `json:"status,omitempty"`
@@ -483,9 +486,9 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 	return subtasks
 }
 
-func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, timestampSending time.Time) {
+func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, timestampSending time.Time) float64 {
 	if c == nil || len(c.Cache) == 0 {
-		return
+		return float64(-1)
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -508,11 +511,14 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, 
 						subtaskItem.Priority = item.Priority
 						subtaskItem.Budget = item.Budget
 						subtaskItem.PreDispatchingTime = timestampSending.Sub(item.DispatchTime)
+
+						return float64(subtaskItem.QueueingTime)/float64(time.Millisecond)
 					}
 				}
 			}
 		}
 	}
+	return float64(-1)
 }
 
 func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCacheSubtaskItem {

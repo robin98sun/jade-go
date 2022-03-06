@@ -12,6 +12,8 @@ import (
 	// "sort"
 )
 
+var verbose bool = false
+
 func TestScheduler_CreateHistogram(t *testing.T) {
 
 	sample_mean := 100
@@ -119,23 +121,25 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 
 		assert.Equal(t, int64(window_size), sumAllBuckets, "histogram queue length should equal window size")
 
-		log.Printf("window size: %v, sample amount: %v, percentile points: %v, height of avl tree: %v", 
-			window_size, sample_size, len(percentile_list),
-			histogram.RootItem.Height,
-		)
-		log.Printf("   nodes: %v (%v%%, %v%%, %v%%), amount of buckets: %v (%v%%, %v%%), maximum possible buckets: %v", 
-			node_amount, 
-			node_amount*100/window_size, 
-			node_amount*100/bucket_count, 
-			node_amount*100/max_possible_bucket_count,
-			bucket_count, 
-			bucket_count*100/window_size,
-			bucket_count*100/max_possible_bucket_count,
-			max_possible_bucket_count,
-		)
-		log.Printf("   [data distribution] mean: %v, variance %v, min: %v, max: %v", 
-			avg_value, variance, min_value, max_value,
-		)
+		if verbose {
+			log.Printf("window size: %v, sample amount: %v, percentile points: %v, height of avl tree: %v", 
+				window_size, sample_size, len(percentile_list),
+				histogram.RootItem.Height,
+			)
+			log.Printf("   nodes: %v (%v%%, %v%%, %v%%), amount of buckets: %v (%v%%, %v%%), maximum possible buckets: %v", 
+				node_amount, 
+				node_amount*100/window_size, 
+				node_amount*100/bucket_count, 
+				node_amount*100/max_possible_bucket_count,
+				bucket_count, 
+				bucket_count*100/window_size,
+				bucket_count*100/max_possible_bucket_count,
+				max_possible_bucket_count,
+			)
+			log.Printf("   [data distribution] mean: %v, variance %v, min: %v, max: %v", 
+				avg_value, variance, min_value, max_value,
+			)
+		}
 		pstr := ""
 		for _, p := range percentile_list {
 			pstr = fmt.Sprintf("%s%v%%: %v, ", pstr,
@@ -143,9 +147,11 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 				histogram.GetPercentile(p).Item.Value,
 			)
 		}
-		log.Printf("   percentiles: %s", pstr)
+		if verbose {
+			log.Printf("   percentiles: %s", pstr)
 
-		log.Println("")
+			log.Println("")
+		}
 	}
 	
 }
@@ -189,7 +195,6 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 	})
 
 
-	DEBUG := false
 	title := fmt.Sprintf("multiply %v histograms each window size %v to search:", len(histogram_list), window_size)
 	for _, p := range percentile_list {
 		title = fmt.Sprintf("%v %v",title, p*float64(100))
@@ -199,37 +204,7 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 		for pi := 0; pi < len(percentile_list); pi++ {
 			p := percentile_list[pi]
 
-			var opt_out_mask []bool = make([]bool, histogram_count)
-
-			start_point := float64(0)
-			max_subhistogram_length := 0
-			start_index := 0
-			for i:=0; i<histogram_count; i++ {
-				h := histogram_list[i]
-				v := h.GetPercentile(p).Item.Value
-				l := h.GetLengthOfSubHistograms()
-				if v > start_point {
-					start_point = v
-					start_index = h.GetIndexOfSubHistogram(v)
-				}
-				if l > max_subhistogram_length {
-					max_subhistogram_length = l
-				}
-			}
-
-			criteria_value := SearchPercentileByMultiply(
-				p, start_point, histogram_list, opt_out_mask, 
-				start_index, max_subhistogram_length-1, 
-				true, -1, 
-				float64(-1), float64(-1),
-				1, DEBUG,
-			)
-
-			if DEBUG {
-				log.Printf("   the point for %v percentile is %v", p*float64(100), criteria_value)
-				log.Println("")
-			}
-
+			CalcPercentileOfProduct(p, histogram_list, verbose)
 		}
 
 	})

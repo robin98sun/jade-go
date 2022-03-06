@@ -9,9 +9,11 @@ const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
 	Task            *kernel.Task                            `json:"task,omitempty"`
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
+
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
+	SLO 			*TaskDispatchingItemSLO `json:"slo,omitempty"`
 	arriveTimestamp time.Time
 }
 
@@ -96,6 +98,11 @@ func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDis
 
 type TaskDispatchingItemBudget struct {
 	FanoutTable []float64 `json:"fanoutTable,omitempty"`
+	MaximumMillisecondsInQueue float64 `json:"maximumMilliseconds,omitempty"`
+}
+
+type TaskDispatchingItemSLO struct {
+	TailLatency99InMilliseconds float64 `json:"tailLatency99InMilliseconds,omitempty"`
 }
 
 func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {

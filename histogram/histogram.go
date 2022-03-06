@@ -303,7 +303,7 @@ func SearchPercentileByMultiply(
 		last_prod float64,
 		last_criteria float64,
 		iteration_count int,
-		DEBUG bool,
+		verbose bool,
 	) (float64){
 	
 	if lower_search_index > upper_search_index {
@@ -387,7 +387,7 @@ func SearchPercentileByMultiply(
 							p, -1, histogram_list, opt_out_mask,
 							0, sizeOfSubhistogram-1, true, 
 							mid, prod, criteria_value,
-							1, DEBUG,
+							1, verbose,
 						)
 					}
 				}
@@ -410,7 +410,7 @@ func SearchPercentileByMultiply(
 							p, -1, histogram_list, opt_out_mask,
 							0, sizeOfSubhistogram-1, true, 
 							mid, prod, criteria_value,
-							1, DEBUG,
+							1, verbose,
 						)
 						break
 					}
@@ -424,7 +424,7 @@ func SearchPercentileByMultiply(
 		}
 	}
 
-	if DEBUG {
+	if verbose {
 		if subhistogram_index < 0 && iteration_count == 1 {
 			log.Printf("iterations to search %v percentile:", p*float64(100))
 		}
@@ -456,7 +456,7 @@ func SearchPercentileByMultiply(
 	} else if lower > upper {
 		if last_criteria >= 0 && last_prod >= 0 {
 			if math.Abs(p-last_prod) < math.Abs(p-prod) {
-				if DEBUG {
+				if verbose {
 					log.Print("   due to larger distance, the last iteration is discarded")
 				}
 				return last_criteria
@@ -470,7 +470,58 @@ func SearchPercentileByMultiply(
 			subhistogram_index, 
 			prod, criteria_value,
 			iteration_count+1,
-			DEBUG,
+			verbose,
 		)
 	}
 }
+
+func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, verbose bool) float64{
+
+	max_subhistogram_length := 0
+	does_percentile_is_tracked_by_all_histograms := true
+	percentile_key := PercentileKey(percentile)
+	for _, histogram := range histogram_list {
+		if does_percentile_is_tracked_by_all_histograms {
+			if _, e := histogram.Percentiles[percentile_key]; !e {
+				does_percentile_is_tracked_by_all_histograms = false
+			}
+		}
+		l := histogram.GetLengthOfSubHistograms()
+		if l > max_subhistogram_length {
+			max_subhistogram_length = l
+		}
+	}
+
+	var opt_out_mask []bool = make([]bool, len(histogram_list))
+
+	start_point := float64(-1)
+	start_index := 0
+	if does_percentile_is_tracked_by_all_histograms {
+		for i:=0; i<len(histogram_list); i++ {
+			h := histogram_list[i]
+			v := h.GetPercentile(percentile).Item.Value
+			if v > start_point {
+				start_point = v
+				start_index = h.GetIndexOfSubHistogram(v)
+			}
+		}
+	}
+
+	criteria_value := SearchPercentileByMultiply(
+		percentile, start_point, histogram_list, opt_out_mask, 
+		start_index, max_subhistogram_length-1, 
+		true, -1, 
+		float64(-1), float64(-1),
+		1, verbose,
+	)
+
+	if verbose {
+		log.Printf("   the point for %v percentile is %v", percentile*float64(100), criteria_value)
+		log.Println("")
+	}
+
+	return criteria_value
+}
+
+
+

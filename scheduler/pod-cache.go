@@ -116,26 +116,34 @@ func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.A
 	return inst
 }
 
-func (p *PodCache) SetPodIdle(pod *kernel.Pod) {
-	p.setPodIdleOrNot(pod, true)
+func (p *PodCache) SetPodIdle(pod *kernel.Pod, serviceRequestTime float64, communicationTime float64) *PodCacheItem {
+	return p.setPodIdleOrNot(pod, true, serviceRequestTime, communicationTime)
 }
-func (p *PodCache) SetPodBusy(pod *kernel.Pod) {
-	p.setPodIdleOrNot(pod, false)
+func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
+	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1))
 }
-func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool) {
+func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
 	p.LockData()
 	defer p.UnlockData()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
-		return
+		return nil
 	}
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
 				podItem.IsIdle = idle
+				if serviceRequestTime >= 0 {
+					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime)
+				}
+				if communicationTime >= 0 {
+					podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime)
+				}
+				return podItem
 			}
 		}
 	}
+	return nil
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 	p.LockData()
