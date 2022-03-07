@@ -12,6 +12,7 @@ import (
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
+	"fmt"
 )
 
 // JADE to instantiate JADE memory structure
@@ -200,10 +201,15 @@ func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) (
 		subnodeExists = false
 	} else if _, exists := j.Subnodes[payload.NodeID]; !exists {
 		subnodeExists = false
+		msgstr := "WARNING: unknown visitor[%v], where existing subnodes are:"
+		for nid, _ := range j.Subnodes {
+			msgstr = fmt.Sprintf("%v %v,", msgstr, nid)
+		}
+		j.log.Printf(msgstr)
 	}
 
 	if !subnodeExists {
-		err = errors.New("Unknown visitor")
+		err = errors.New(fmt.Sprintf("Unknown visitor: %v", payload.NodeID))
 		rest.Error(w, err.Error(), http.StatusForbidden)
 		return nil, payload, err
 	}
