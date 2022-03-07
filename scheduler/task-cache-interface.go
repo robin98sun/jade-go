@@ -33,6 +33,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 	if _, e := c.Cache[taskKey]; !e {
 		if taskItem != nil && taskKey == taskItem.Task.GetKey() {
 			c.Cache[taskKey] = NewTaskCacheTaskItem(taskItem)
+			printf("caching task[%v] with SLO %v, in cache SLO: %v", taskKey, taskItem.SLO, c.Cache[taskKey].task.SLO)
 		} else {
 			return nil
 		}

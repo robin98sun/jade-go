@@ -178,7 +178,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		taskItem := disptachItem.DispatchingItem
 		task := taskItem.Task
 		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
-		j.log.Printf("evaluating task[%v], report to [%v]", task.GetKey(), reportTo)
+		j.log.Printf("evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo, taskItem.SLO)
 		if reportTo == nil {
 			j.log.Printf("ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
 			continue
