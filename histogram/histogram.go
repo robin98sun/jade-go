@@ -20,6 +20,8 @@ type Histogram struct {
 	MinItem 	*HistogramItem
 	MaxItem     *HistogramItem
 	Percentiles	map[string]*PercentileItem
+	Mean 		float64
+	Variance	float64
 }
 
 type PercentileItem struct {
@@ -61,6 +63,13 @@ func NewHistogram(size int64, subBucketHistogramSize float64, accuracy int) *His
 		Accuracy: accuracy_factor,
 	}
 	return h
+}
+
+func (h *Histogram) GetWaterMark() float64 {
+	if h.QueueSize <= 0 {
+		return float64(0)
+	}
+	return float64(h.Count)/float64(h.QueueSize)
 }
 
 func (h *Histogram) GetIndexOfSubHistogram(v float64) int {
@@ -194,7 +203,18 @@ func (h *Histogram) Enqueue(incomingValue float64) *HistogramItem{
 		h.BucketHistogram.Insert(item)
 	}
 	h.Queue = append(h.Queue, item)
+
+	// mean and variance and count
 	h.Count += 1
+	meanPre := h.Mean
+	h.Mean = (h.Mean * float64(h.Count-1) + v) / float64(h.Count)
+
+	a := float64(h.Count-1)/float64(h.Count)*h.Variance
+	b := float64(h.Count-1)/float64(h.Count)*math.Pow(h.Mean - meanPre, 2)
+	c := float64(1)/float64(h.Count)*math.Pow(v - h.Mean, 2)
+
+	h.Variance = a + b + c
+
 	if h.QueueSize > 0 && h.Count > h.QueueSize {
 		result = h.Dequeue()
 	}
@@ -289,6 +309,21 @@ func (h *Histogram) Dequeue() *HistogramItem {
 			
 		}
 	}
+
+	if item != nil && h.Count > 0 {
+		meanPre := h.Mean
+		h.Mean = (h.Mean * float64(h.Count+1) - item.Value) / float64(h.Count)
+
+		a := float64(h.Count+1)/float64(h.Count)*h.Variance
+		b := math.Pow(meanPre - h.Mean, 2)
+		c := float64(1)/float64(h.Count)*math.Pow(item.Value - meanPre, 2)
+
+		h.Variance = a - b - c
+	} else if item != nil && h.Count == 0 {
+		h.Mean = 0
+		h.Variance = 0
+	}
+
 	return item
 }
 

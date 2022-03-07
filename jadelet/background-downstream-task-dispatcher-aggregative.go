@@ -139,7 +139,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
 						task.GetKey(), budget, fanoutDegree, tail_latency)
 				}
-			} else {
+			} 
+			if budget == float64(0) {
 				budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 				if budget > 0 {
 					j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task: %v", task.GetKey(), budget)
