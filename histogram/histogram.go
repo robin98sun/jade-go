@@ -477,9 +477,20 @@ func SearchPercentileByMultiply(
 
 func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, verbose bool) float64{
 
+	if len(histogram_list) == 0 {
+		return float64(0)
+	} 
+	
+	percentile_key := PercentileKey(percentile)
+
+	if len(histogram_list) == 1 {
+		if _, e := histogram_list[0].Percentiles[percentile_key]; !e {
+			return histogram_list[0].GetPercentile(percentile).Item.Value
+		}
+	}
+
 	max_subhistogram_length := 0
 	does_percentile_is_tracked_by_all_histograms := true
-	percentile_key := PercentileKey(percentile)
 	for _, histogram := range histogram_list {
 		if does_percentile_is_tracked_by_all_histograms {
 			if _, e := histogram.Percentiles[percentile_key]; !e {
