@@ -122,6 +122,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 			// calc 99 percentile for prod of histograms 
 			budget := float64(0)
+			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
 			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
 				j.PodCache.LockData()
 				histogram_list := []*histogram.Histogram{}
