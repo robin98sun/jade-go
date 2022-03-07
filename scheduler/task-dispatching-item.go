@@ -9,7 +9,7 @@ const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
 	Task            *kernel.Task                            `json:"task,omitempty"`
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
-	Slo 			*TaskDispatchingItemSLO `json:"slo,omitempty"`
+	SLO 			*TaskDispatchingItemSLO 				`json:"slo,omitempty"`
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
@@ -64,12 +64,12 @@ func (t *TaskDispatchingItem) GetArriveTime() time.Time {
 }
 
 type TaskDispatchingOptions struct {
-	SaveResultInCache         bool   `json:"saveResultInCache,omitempty"`
-	PersistCache              bool   `json:"persistCache,omitempty"`
-	EstimatedServiceTimeModel string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
-	EstimatedMeanServiceTime  float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
-	ServiceTimeList        []float64 `json:"serviceTimeList,omitempty"` // in milliseconds
-	SortSubnodes bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
+	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
+	PersistCache              	bool   `json:"persistCache,omitempty"`
+	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
+	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
+	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
+	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 }
 
 type TaskDispatchingItemReportTo struct {
