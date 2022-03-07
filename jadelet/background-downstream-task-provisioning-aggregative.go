@@ -29,7 +29,6 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	goodTaskCache := make(map[string]*DispatchItemWithAggregator) // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
-		j.log.Printf("evaluating aggregative task with SLO: %v", taskItem.SLO)
 		if j.IsCoordinator() {
 			// allocate an aggregator pod if needed
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]

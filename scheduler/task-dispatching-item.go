@@ -42,6 +42,9 @@ func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
 	if !t.arriveTimestamp.IsZero() {
 		inst.arriveTimestamp = t.arriveTimestamp
 	}
+	if t.SLO != nil {
+		inst.SLO = t.SLO
+	}
 	return inst
 }
 
