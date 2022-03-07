@@ -122,8 +122,11 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 			// calc 99 percentile for prod of histograms 
 			budget := float64(0)
-			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
-			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
+			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.Slo)
+			if taskItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
+				
+			}
+			if taskItem.Slo != nil && taskItem.Slo.TailLatency99InMilliseconds > 0 {
 				j.PodCache.LockData()
 				histogram_list := []*histogram.Histogram{}
 				for _, subtaskOnNode := range workerSubtasks {
@@ -135,7 +138,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				j.PodCache.UnlockData()
 
 				if tail_latency > 0 {
-					budget = taskItem.SLO.TailLatency99InMilliseconds - tail_latency
+					budget = taskItem.Slo.TailLatency99InMilliseconds - tail_latency
 					j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
 						task.GetKey(), budget, fanoutDegree, tail_latency)
 				}
@@ -162,9 +165,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// 2022-02-19
 			// get online-statistics for the selected worker pods
 
-			if taskItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
-				
-			}
 			// end of online-statistics
 
 			// enqueue each worker subtask

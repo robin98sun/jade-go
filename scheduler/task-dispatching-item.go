@@ -9,11 +9,10 @@ const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
 	Task            *kernel.Task                            `json:"task,omitempty"`
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
-
+	Slo 			*TaskDispatchingItemSLO `json:"slo,omitempty"`
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
-	SLO 			*TaskDispatchingItemSLO `json:"slo,omitempty"`
 	arriveTimestamp time.Time
 }
 
