@@ -125,7 +125,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
 			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
 				j.log.Printf("[task dispatcher] going to calculate tail latency")
-				j.PodCache.LockData()
 				histogram_list := []*histogram.Histogram{}
 				for _, subtaskOnNode := range workerSubtasks {
 					podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
@@ -135,7 +134,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 				tail_latency := histogram.CalcPercentileOfProduct(float64(0.99), histogram_list, false)
 				j.log.Printf("[task dispatcher] tail latency of %v histograms is %v", len(histogram_list), tail_latency)
-				j.PodCache.UnlockData()
 
 				if tail_latency > 0 {
 					budget = taskItem.SLO.TailLatency99InMilliseconds - tail_latency
