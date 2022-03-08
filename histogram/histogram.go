@@ -545,7 +545,11 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 	if does_percentile_is_tracked_by_all_histograms {
 		for i:=0; i<len(histogram_list); i++ {
 			h := histogram_list[i]
-			v := h.GetPercentile(percentile).Item.Value
+			r := h.GetPercentile(percentile)
+			v := start_point
+			if r != nil && r.Item != nil {
+				v = r.Item.Value
+			}
 			if v > start_point {
 				start_point = v
 				start_index = h.GetIndexOfSubHistogram(v)
