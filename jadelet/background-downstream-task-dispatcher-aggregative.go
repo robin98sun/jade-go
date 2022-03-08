@@ -123,10 +123,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// calc 99 percentile for prod of histograms 
 			budget := float64(0)
 			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
-			if taskItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
-				
-			}
 			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
+				j.log.Printf("[task dispatcher] going to calculate tail latency")
 				j.PodCache.LockData()
 				histogram_list := []*histogram.Histogram{}
 				for _, subtaskOnNode := range workerSubtasks {
@@ -146,11 +144,13 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 			} 
 			if budget == float64(0) {
+				j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
 				budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 				if budget > 0 {
 					j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task: %v", task.GetKey(), budget)
 				}
 			}
+			j.log.Printf("[task dispatcher] budget evaluation is done")
 
 			// sort available subnodes if needed
 			if taskItem.Options != nil && taskItem.Options.SortSubnodes {
