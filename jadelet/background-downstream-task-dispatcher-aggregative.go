@@ -133,8 +133,10 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
 					histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
 				}
+				j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
 
 				tail_latency := histogram.CalcPercentileOfProduct(float64(0.99), histogram_list, false)
+				j.log.Printf("[task dispatcher] tail latency of %v histograms is %v", len(histogram_list), tail_latency)
 				j.PodCache.UnlockData()
 
 				if tail_latency > 0 {
