@@ -140,6 +140,16 @@ func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string
 	return 0
 }
 
+func (t *TaskDispatchingItem) GetDeterministicBudget(moduleName string) float64 {
+	if t.Budgets == nil || len(t.Budgets) == 0 {
+		return 0
+	}
+	if budgetItem, e := t.Budgets[moduleName]; e {
+		return budgetItem.MaximumMillisecondsInQueue
+	}
+	return 0
+}
+
 // Status
 
 type TaskStatus string

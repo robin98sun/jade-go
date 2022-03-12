@@ -170,7 +170,7 @@ func (q *PodQueue) Enqueue(
 			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueType: %v", podKey, queueType)
 		}
 		q.Queue = append(q.Queue, newItem)
-	} else if queueType == kernel.TaskQueuingDDL || queueType == kernel.TaskQueuingPRQ {
+	} else if queueType == kernel.TaskQueuingDDL || queueType == kernel.TaskQueuingPRQ || queueType == kernel.TaskQueuingClass {
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using queueType: %v, budget: %v, priority: %v", podKey, queueType, newItem.Budget, newItem.Priority)
 		}
@@ -182,7 +182,7 @@ func (q *PodQueue) Enqueue(
 			}
 		} else {
 			point := -1
-			if queueType == kernel.TaskQueuingDDL {
+			if queueType == kernel.TaskQueuingDDL || queueType == kernel.TaskQueuingClass {
 				point = q.search_insertion_place(0, qlen, newItem.Deadline, -1)
 
 				// this is for the sanity check, to use the most simplest formation

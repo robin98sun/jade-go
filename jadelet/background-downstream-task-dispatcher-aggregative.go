@@ -122,36 +122,43 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 			// calc 99 percentile for prod of histograms 
 			budget := float64(0)
-			j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
-			if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
-				j.log.Printf("[task dispatcher] going to calculate tail latency")
-				
-				histogram_list := []*histogram.Histogram{}
-				for _, subtaskOnNode := range workerSubtasks {
-					podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
-					histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
-				}
-				j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
-				j.PodCache.LockData()
-				tail_latency := histogram.CalcPercentileOfProduct(float64(0.99), histogram_list, false)
-				j.PodCache.UnlockData()
-				j.log.Printf("[task dispatcher] tail latency of %v histograms is %v", len(histogram_list), tail_latency)
-				
+			if task.QueuingMechanism == kernel.TaskQueuingDDL {
+				if taskItem.SLO != nil && taskItem.SLO.TailLatency99InMilliseconds > 0 {
+					j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
+					j.log.Printf("[task dispatcher] going to calculate tail latency")
+					
+					histogram_list := []*histogram.Histogram{}
+					for _, subtaskOnNode := range workerSubtasks {
+						podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
+						histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+					}
+					j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
+					j.PodCache.LockData()
+					tail_latency := histogram.CalcPercentileOfProduct(float64(0.99), histogram_list, false)
+					j.PodCache.UnlockData()
+					j.log.Printf("[task dispatcher] tail latency of %v histograms is %v", len(histogram_list), tail_latency)
+					
 
-				if tail_latency > 0 {
-					budget = taskItem.SLO.TailLatency99InMilliseconds - tail_latency
-					j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
-						task.GetKey(), budget, fanoutDegree, tail_latency)
-				}
-			} 
-			if budget == float64(0) {
-				j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
-				budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
-				if budget > 0 {
-					j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task: %v", task.GetKey(), budget)
-				}
+					if tail_latency > 0 {
+						budget = taskItem.SLO.TailLatency99InMilliseconds - tail_latency
+						j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
+							task.GetKey(), budget, fanoutDegree, tail_latency)
+					}
+				} 
 			}
-			j.log.Printf("[task dispatcher] budget evaluation is done")
+			if task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass {
+				if budget == float64(0) {
+					j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
+					budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+					if budget > 0 {
+						j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
+					} else {
+						budget = taskItem.GetDeterministicBudget(string(kernel.AppModuleWorker))
+						j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
+					}
+				}
+				j.log.Printf("[task dispatcher] budget evaluation is done")
+			}
 
 			// sort available subnodes if needed
 			if taskItem.Options != nil && taskItem.Options.SortSubnodes {

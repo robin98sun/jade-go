@@ -6,6 +6,7 @@ const (
 	TaskQueuingFIFO TaskQueuingMechanism = "fifo"
 	TaskQueuingDDL                       = "ddl"
 	TaskQueuingPRQ						 = "prq"
+	TaskQueuingClass					 = "class"
 )
 
 type Task struct {
