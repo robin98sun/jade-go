@@ -18,7 +18,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 
 	sample_mean := 100
 	base_window_size := 10000
-	subhisto_size := 0.1
+	subhisto_size := 10
 	accuracy := 1
 	buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
 	for x := 1; x <= 5; x++ {
@@ -164,7 +164,7 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 	histogram_count := 1000
 
 	sample_mean := 100
-	subhisto_size := 10
+	subhisto_size := 0.1
 	accuracy := 1
 	// buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
 	percentile_list := []float64{
