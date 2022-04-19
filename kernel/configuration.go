@@ -10,6 +10,7 @@ type Conf struct {
 	Version      string                `json:"version"`
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`
+	Registry     *Node                 `json:"registry"`
 	Capabilities []*jadesdk.Capability `json:"capabilities"`
 	Capacity     *Capacity             `json:"capacity"`
 }
@@ -19,6 +20,7 @@ func NewConfiguration() *Conf {
 	c := &Conf{}
 	c.UpperNode = NewNode()
 	c.SelfNode = NewNode()
+	c.Registry = NewNode()
 	c.Capabilities = []*jadesdk.Capability{}
 	c.Capacity = NewCapacity()
 	return c

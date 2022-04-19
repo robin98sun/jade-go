@@ -41,6 +41,8 @@ func ReadConfFromEnv() *Conf {
 				c.UpperNode.Address = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Address = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.Address = envValue
 			}
 		case "PORT":
 			port, err := strconv.Atoi(envValue)
@@ -49,6 +51,8 @@ func ReadConfFromEnv() *Conf {
 					c.UpperNode.Port = port
 				} else if nameParts[1] == "SELFNODE" {
 					c.SelfNode.Port = port
+				} else if nameParts[1] == "REGISTRY" {
+					c.Registry.Port = port
 				}
 			}
 		case "PROTOCOL":
@@ -56,36 +60,48 @@ func ReadConfFromEnv() *Conf {
 				c.UpperNode.Protocol = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Protocol = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.Protocol = envValue
 			}
 		case "TOKEN":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.Token = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Token = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.Token = envValue
 			}
 		case "HOSTNAME":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.Hostname = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Hostname = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.Hostname = envValue
 			}
 		case "PODNAME":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.PodName = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.PodName = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.PodName = envValue
 			}
 		case "NAMESPACE":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.Namespace = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Namespace = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.Namespace = envValue
 			}
 		case "SERVICEEXTERNAL":
 			if nameParts[1] == "UPPERNODE" {
 				c.UpperNode.ServiceExternal = envValue
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.ServiceExternal = envValue
+			} else if nameParts[1] == "REGISTRY" {
+				c.Registry.ServiceExternal = envValue
 			}
 		}
 
