@@ -4,18 +4,22 @@ import (
 	"time"
 )
 
-func (j *JADE) retryRegister(msg string, seconds int, retryCnt int) {
+func (j *JADE) retryRegister(msg string, seconds int, retryCnt int64) {
 	// j.log.Println(msg)
 	j.RegisterStatus = msg
 	time.Sleep(time.Second * time.Duration(seconds))
-	j.Register(retryCnt + 1)
+	j.RegisterToUpperNode(retryCnt)
 }
 
 // Register to upper node
-func (j *JADE) Register(retryCnt int) {
-	if retryCnt > 999999999 {
-		j.log.Println("Retried maximum times, will no longer register to upper node")
-		return
+func (j *JADE) RegisterToUpperNode(retryPointer int64) {
+	// if retryCnt > 999999999 {
+	// 	j.log.Println("Retried maximum times, will no longer register to upper node")
+	// 	return
+	// }
+	retryCnt := retryPointer
+	if retryCnt > int64(999999999999) {
+		retryCnt = int64(1)
 	}
 
 	// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
@@ -25,7 +29,7 @@ func (j *JADE) Register(retryCnt int) {
 			j.MakeUpAddressForNode(j.Config.UpperNode)
 		}
 		if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
-			j.retryRegister("Upper node is empty, will retry in 10 seconds", 10, retryCnt+1)
+			j.retryRegister("Upper node is empty, will retry in 60 seconds", 60, retryCnt+1)
 			return
 		}
 		// }
@@ -51,7 +55,9 @@ func (j *JADE) Register(retryCnt int) {
 
 	j.sdk.HTTPCommunicate(
 		"register to master node",
-		sn.Protocol, "PUT", "/$jade$/registerNode",
+		sn.Protocol, "PUT", "/$jade$/registerSubnode",
 		un.GetSDKNode(), payload, 0, -1,
 	)
+
+	j.retryRegister("heartbeat to upper node", 60, int64(0))
 }

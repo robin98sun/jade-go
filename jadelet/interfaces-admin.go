@@ -19,7 +19,7 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 	j.Config = c
 	w.WriteJson(c)
 	// renew itself in upper node
-	go j.Register(0)
+	// go j.RegisterToUpperNode(0)
 }
 
 // AddCapability add a capability to self-node
@@ -33,7 +33,7 @@ func (j *JADE) AddCapability(w rest.ResponseWriter, r *rest.Request) {
 	j.Config.AddOrUpdateCapability(&nc)
 	w.WriteJson(nc)
 	// renew itself in upper node
-	go j.Register(0)
+	// go j.RegisterToUpperNode(0)
 }
 
 // DeleteCapability delete a capability of self-node
@@ -47,7 +47,7 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 	deleted := j.Config.DeleteCapability(nc.Name)
 	w.WriteJson(deleted)
 	// renew itself in upper node
-	go j.Register(0)
+	// go j.RegisterToUpperNode(0)
 }
 
 func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {

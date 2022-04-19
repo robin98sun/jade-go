@@ -45,7 +45,7 @@ func main() {
 	}
 	router, err := rest.MakeRouter(
 		// Control path upstream
-		rest.Put("/registerNode", j.RegisterNode),
+		rest.Put("/registerSubnode", j.RegisterSubnode),
 		rest.Post("/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
 		rest.Post("/taskReceiver", j.TaskReceiver),

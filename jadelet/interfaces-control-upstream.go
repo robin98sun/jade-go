@@ -7,7 +7,7 @@ import (
 )
 
 // RegisterNode receive and process node registration
-func (j *JADE) RegisterNode(w rest.ResponseWriter, r *rest.Request) {
+func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
 	_, payload, err := j.ValidateRequest(w, r)
 	if err != nil {

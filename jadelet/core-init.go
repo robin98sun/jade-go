@@ -37,6 +37,6 @@ func (j *JADE) Init() {
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
-	go j.Register(0)
+	go j.RegisterToUpperNode(int64(0))
 	// go j.routimeForPodQueues(1000)
 }

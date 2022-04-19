@@ -54,6 +54,9 @@ func (j *JADE) Verbose(on bool) {
 
 func (j *JADE) PrintConfig() {
 	j.log.Println("configurations from environment:")
+	j.log.Println("registry node:")
+	j.log.Println(j.Config.RegistryNode)
+	j.log.Println("")
 	j.log.Println("upper node:")
 	j.log.Println(j.Config.UpperNode)
 	j.log.Println("")

@@ -20,7 +20,7 @@ func NewConfiguration() *Conf {
 	c := &Conf{}
 	c.UpperNode = NewNode()
 	c.SelfNode = NewNode()
-	c.Registry = NewNode()
+	c.RegistryNode = NewNode()
 	c.Capabilities = []*jadesdk.Capability{}
 	c.Capacity = NewCapacity()
 	return c
