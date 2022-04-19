@@ -43,6 +43,7 @@ type JADE struct {
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
 	dist            *scheduler.Dist
+	registrationMutex *sync.Mutex
 }
 
 func NewJadelet() *JADE {

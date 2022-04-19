@@ -49,6 +49,9 @@ func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	nodekey := payload.Node.Key()
 
+	j.registrationMutex.Lock()
+	defer j.registrationMutex.Unlock()
+	
 	nodeCache := j.Subnodes
 	if nodeType == JadeNodeTypeNeighbor {
 		nodeCache = j.Neighbors
