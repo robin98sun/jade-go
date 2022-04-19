@@ -42,7 +42,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Address = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.Address = envValue
+				c.RegistryNode.Address = envValue
 			}
 		case "PORT":
 			port, err := strconv.Atoi(envValue)
@@ -52,7 +52,7 @@ func ReadConfFromEnv() *Conf {
 				} else if nameParts[1] == "SELFNODE" {
 					c.SelfNode.Port = port
 				} else if nameParts[1] == "REGISTRY" {
-					c.Registry.Port = port
+					c.RegistryNode.Port = port
 				}
 			}
 		case "PROTOCOL":
@@ -61,7 +61,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Protocol = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.Protocol = envValue
+				c.RegistryNode.Protocol = envValue
 			}
 		case "TOKEN":
 			if nameParts[1] == "UPPERNODE" {
@@ -69,7 +69,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Token = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.Token = envValue
+				c.RegistryNode.Token = envValue
 			}
 		case "HOSTNAME":
 			if nameParts[1] == "UPPERNODE" {
@@ -77,7 +77,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Hostname = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.Hostname = envValue
+				c.RegistryNode.Hostname = envValue
 			}
 		case "PODNAME":
 			if nameParts[1] == "UPPERNODE" {
@@ -85,7 +85,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.PodName = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.PodName = envValue
+				c.RegistryNode.PodName = envValue
 			}
 		case "NAMESPACE":
 			if nameParts[1] == "UPPERNODE" {
@@ -93,7 +93,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.Namespace = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.Namespace = envValue
+				c.RegistryNode.Namespace = envValue
 			}
 		case "SERVICEEXTERNAL":
 			if nameParts[1] == "UPPERNODE" {
@@ -101,7 +101,7 @@ func ReadConfFromEnv() *Conf {
 			} else if nameParts[1] == "SELFNODE" {
 				c.SelfNode.ServiceExternal = envValue
 			} else if nameParts[1] == "REGISTRY" {
-				c.Registry.ServiceExternal = envValue
+				c.RegistryNode.ServiceExternal = envValue
 			}
 		}
 

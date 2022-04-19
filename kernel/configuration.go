@@ -10,7 +10,7 @@ type Conf struct {
 	Version      string                `json:"version"`
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`
-	Registry     *Node                 `json:"registry"`
+	RegistryNode *Node                 `json:"registryNode"`
 	Capabilities []*jadesdk.Capability `json:"capabilities"`
 	Capacity     *Capacity             `json:"capacity"`
 }
