@@ -2,11 +2,20 @@ package kernel
 
 import (
 	"uta.edu/aces/jadesdk"
+	"sync"
 )
 
 // CapabilityCache in a two layers structure: capabilityName: capabilityValue: [ NodeID ]
 type CapabilityCache struct {
-	cache map[string]map[string]capabilityCacheItem
+	cache 	map[string]map[string]capabilityCacheItem
+	mutex   *sync.Mutex
+}
+
+func NewCapabilityCache() *CapabilityCache {
+	return &CapabilityCache{
+		cache: make(map[string]map[string]capabilityCacheItem),
+		mutex: &sync.Mutex{},
+	}
 }
 
 type capabilityCacheItem struct {
@@ -17,6 +26,8 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	if nodeId == "" || len(capabilities) == 0 {
 		return
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	// initialize as needed
 	if len(c.cache) == 0 {
 		c.cache = make(map[string]map[string]capabilityCacheItem)
@@ -60,6 +71,8 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 	if len(cap.Value) == 0 {
 		value = "N/A"
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if subcache, subcacheExist := c.cache[cap.Name]; subcacheExist {
 		if item, itemExist := subcache[value]; itemExist {
 			nodes := item.nodes
@@ -80,6 +93,8 @@ type capabilityWithNodes struct {
 
 func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	var result []capabilityWithNodes
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for capName, subcache := range c.cache {
 		for capValue, item := range subcache {
 			result = append(result, capabilityWithNodes{
@@ -99,6 +114,8 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capabil
 		return nil
 	}
 	var nodes []string
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, cap := range capabilities {
 		tmpnodes := c.getNodes(cap, nodefilter)
 		if len(tmpnodes) == 0 {
@@ -118,6 +135,8 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capabil
 
 func (c *CapabilityCache) SelectNodesCollectively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
 	var nodes []string
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, cap := range capabilities {
 		tmpnodes := c.getNodes(cap, nodefilter)
 		if len(tmpnodes) == 0 {

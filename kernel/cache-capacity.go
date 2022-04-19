@@ -1,7 +1,12 @@
 package kernel
 
+import (
+	"sync"
+)
+
 type CapacityCache struct {
 	cache map[string]capacityCacheItem
+	mutex *sync.Mutex
 }
 
 type capacityCacheItem struct {
@@ -9,10 +14,19 @@ type capacityCacheItem struct {
 	status *CapacityStatus
 }
 
+func NewCapacityCache() *CapacityCache {
+	return &CapacityCache{
+		cache: make(map[string]capacityCacheItem),
+		mutex: &sync.Mutex{},
+	}
+}
+
 func (c *CapacityCache) Set(nodeId string, maxcap *Capacity, remcap *Capacity) {
 	if nodeId == "" || (maxcap == nil && remcap == nil) {
 		return
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if c.cache == nil {
 		c.cache = make(map[string]capacityCacheItem)
 	}
@@ -46,6 +60,8 @@ func (c *CapacityCache) GetMaximumCapacity(nodeId string) *Capacity {
 	if nodeId == "" {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if item, exists := c.cache[nodeId]; exists {
 		if item.status != nil && item.status.MaximumCapacity != nil {
 			return item.status.MaximumCapacity
@@ -58,6 +74,8 @@ func (c *CapacityCache) GetRemainingCapacity(nodeId string) *Capacity {
 	if nodeId == "" {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if item, exists := c.cache[nodeId]; exists {
 		if item.status != nil && item.status.RemainingCapacity != nil {
 			return item.status.RemainingCapacity
@@ -71,6 +89,8 @@ func (c *CapacityCache) SelectAvailableNodes(cap *Capacity) []string {
 	if cap == nil || c.cache == nil {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	var result []string
 	for nodeID, item := range c.cache {
 		if item.status == nil || item.status.RemainingCapacity == nil {
@@ -89,6 +109,8 @@ func (c *CapacityCache) FilterAvailableNodes(capableNodes []string, au *Allocati
 	if au == nil || c.cache == nil || len(capableNodes) == 0 {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	var result []string
 	for _, nodeID := range capableNodes {
 		if item, exists := c.cache[nodeID]; exists {

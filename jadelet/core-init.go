@@ -17,10 +17,10 @@ func (j *JADE) Init() {
 	j.sdk = jadesdk.NewJadeSDK()
 	j.Subnodes = make(map[string]*kernel.Node)
 	j.Neighbors = make(map[string]*kernel.Node)
-	j.subnodeCapabilityCache = &kernel.CapabilityCache{}
-	j.subnodeCapacityCache = &kernel.CapacityCache{}
-	j.neighborCapabilityCache = &kernel.CapabilityCache{}
-	j.neighborCapacityCache = &kernel.CapacityCache{}
+	j.subnodeCapabilityCache = kernel.NewCapabilityCache()
+	j.subnodeCapacityCache = kernel.NewCapacityCache()
+	j.neighborCapabilityCache = kernel.NewCapabilityCache()
+	j.neighborCapacityCache = kernel.NewCapacityCache()
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
