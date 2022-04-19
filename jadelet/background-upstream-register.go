@@ -24,31 +24,17 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 	}
 
 	// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
-	if nodeType == JadeNodeTypeUpperNode {
-
-	}
-	if nodeType == JadeNodeTypeUpperNode && (j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty()) {
-		if j.Config.UpperNode != nil {
-			j.MakeUpAddressForNode(j.Config.UpperNode)
-		}
-		if j.Config.UpperNode == nil || j.Config.UpperNode.IsAddrEmpty() {
-			j.retryRegister(nodeType, fmt.Sprintf("%v node is empty, will retry in 60 seconds", nodeType), 60, retryCnt+1)
-			return
-		}
-	} else if nodeType == JadeNodeTypeRegistryNode && (j.Config.RegistryNode == nil || j.Config.RegistryNode.IsAddrEmpty()) {
-		if j.Config.RegistryNode != nil {
-			j.MakeUpAddressForNode(j.Config.RegistryNode)
-		}
-		if j.Config.RegistryNode == nil || j.Config.RegistryNode.IsAddrEmpty() {
-			j.retryRegister(nodeType, fmt.Sprintf("%v node is empty, will retry in 60 seconds", nodeType), 60, retryCnt+1)
-			return
-		}
-	}
-
 	// Find UpperNode IP in cluster
 	tn := j.Config.UpperNode
 	if nodeType == JadeNodeTypeRegistryNode {
 		tn = j.Config.RegistryNode
+	}
+	if tn == nil || tn.IsAddrEmpty() {
+		j.MakeUpAddressForNode(tn)
+	}
+	if tn == nil || tn.IsAddrEmpty() {
+		j.retryRegister(nodeType, fmt.Sprintf("%v node is empty, will retry in 60 seconds", nodeType), 60, retryCnt+1)
+		return
 	}
 
 	// Check self-node accessibility

@@ -16,6 +16,7 @@ func (j *JADE) Init() {
 	// Initialize caches and queues
 	j.sdk = jadesdk.NewJadeSDK()
 	j.Subnodes = make(map[string]*kernel.Node)
+	j.Neighbors = make(map[string]*kernel.Node)
 	j.subnodeCapabilityCache = &kernel.CapabilityCache{}
 	j.subnodeCapacityCache = &kernel.CapacityCache{}
 	j.CapacityStatus = &kernel.CapacityStatus{}
