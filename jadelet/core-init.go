@@ -19,6 +19,8 @@ func (j *JADE) Init() {
 	j.Neighbors = make(map[string]*kernel.Node)
 	j.subnodeCapabilityCache = &kernel.CapabilityCache{}
 	j.subnodeCapacityCache = &kernel.CapacityCache{}
+	j.neighborCapabilityCache = &kernel.CapabilityCache{}
+	j.neighborCapacityCache = &kernel.CapacityCache{}
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
