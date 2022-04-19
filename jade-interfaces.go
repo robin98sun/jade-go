@@ -45,6 +45,7 @@ func main() {
 	}
 	router, err := rest.MakeRouter(
 		// Control path upstream
+		rest.Put("/registerNeighbor", j.RegisterNeighbor),
 		rest.Put("/registerSubnode", j.RegisterSubnode),
 		rest.Post("/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
@@ -68,12 +69,14 @@ func main() {
 		rest.Get("/debug/externalIP", j.ShowExternalIP),
 		rest.Get("/debug/node", j.ShowNode),
 		rest.Get("/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/debug/neighbors", j.ShowNeighbors),
 		rest.Post("/debug/collectTraces", j.ShowTraces),
 		rest.Get("/debug/podCache", j.ShowPodCache),
 		rest.Get("/debug/taskCache", j.ShowTaskCache),
 		rest.Get("/debug/capabilityCache", j.ShowCapabilityCache),
 		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
-		rest.Post("/debug/searchNodes", j.SearchNodes),
+		rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
+		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
 	)
 	if err != nil {
 		log.Fatal(err)

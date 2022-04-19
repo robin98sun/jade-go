@@ -71,13 +71,19 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 	return envVars
 }
 
-func (j *JADE) selectAvaiableNodes(requirements *kernel.Requirements) []string {
+func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.Requirements) []string {
 	var capableNodes []string
+	capabilityCache := j.subnodeCapabilityCache
+	capacityCache := j.subnodeCapabilityCache
+	if nodeType == JadeNodeTypeNeighbor {
+		capabilityCache = j.neighborCapabilityCache
+		capacityCache = j.neighborCapabilityCache
+	}
 	if len(requirements.Exclusive) > 0 {
-		capableNodes = j.capabilityCache.SelectNodesExclusively(requirements.Exclusive, nil)
+		capableNodes = capabilityCache.SelectNodesExclusively(requirements.Exclusive, nil)
 	}
 	if len(requirements.Exclusive) > 0 && len(capableNodes) > 0 || len(requirements.Exclusive) == 0 {
-		capableNodes = j.capabilityCache.SelectNodesCollectively(requirements.Collective, capableNodes)
+		capableNodes = capacityCache.SelectNodesCollectively(requirements.Collective, capableNodes)
 	}
 	return capableNodes
 }

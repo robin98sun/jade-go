@@ -16,8 +16,8 @@ func (j *JADE) Init() {
 	// Initialize caches and queues
 	j.sdk = jadesdk.NewJadeSDK()
 	j.Subnodes = make(map[string]*kernel.Node)
-	j.capabilityCache = &kernel.CapabilityCache{}
-	j.capacityCache = &kernel.CapacityCache{}
+	j.subnodeCapabilityCache = &kernel.CapabilityCache{}
+	j.subnodeCapacityCache = &kernel.CapacityCache{}
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
@@ -37,6 +37,7 @@ func (j *JADE) Init() {
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
-	go j.RegisterToUpperNode(int64(0))
+	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
+	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
 	// go j.routimeForPodQueues(1000)
 }

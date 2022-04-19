@@ -15,16 +15,28 @@ import (
 	"fmt"
 )
 
+type JadeNodeType string
+const (
+	JadeNodeTypeUpperNode 	JadeNodeType = "upper"
+	JadeNodeTypeRegistryNode		     = "registry"
+	JadeNodeTypeSelfNode 			  	 = "self"
+	JadeNodeTypeSubnode 			  	 = "subnode"
+	JadeNodeTypeNeighbor 			  	 = "neighbor"
+)
+
 // JADE to instantiate JADE memory structure
 type JADE struct {
 	Config          *kernel.Conf             `json:"config"`
 	Provisioner     *provisioner.Provisioner `json:"provisioner"`
 	Kube            *kube.KubeClient         `json:"kube"`
 	Subnodes        map[string]*kernel.Node  `json:"subnodes"`
+	Neighbors       map[string]*kernel.Node  `json:"neighbors"`
 	RegisterStatus  string                   `json:"registerStatus"`
 	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
-	capabilityCache *kernel.CapabilityCache
-	capacityCache   *kernel.CapacityCache
+	subnodeCapabilityCache *kernel.CapabilityCache
+	subnodeCapacityCache   *kernel.CapacityCache
+	neighborCapabilityCache *kernel.CapabilityCache
+	neighborCapacityCache   *kernel.CapacityCache
 	log             *kernel.Logger
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
 	PodCache        *scheduler.PodCache  `json:"podCache"`

@@ -113,21 +113,38 @@ func (j *JADE) ShowSubnodes(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.Subnodes)
 }
 
+// ShowSubnodes show all neighbors registered
+func (j *JADE) ShowNeighbors(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteJson(j.Neighbors)
+}
+
 // ShowCapabilityCache will print all capabilities and their nodes
 func (j *JADE) ShowCapabilityCache(w rest.ResponseWriter, r *rest.Request) {
-	result := j.capabilityCache.AllCapabilitiesWithNodes()
+	result := j.subnodeCapabilityCache.AllCapabilitiesWithNodes()
 	w.WriteJson(result)
 }
 
-// SearchNodes search nodes according a list of capabilities
-func (j *JADE) SearchNodes(w rest.ResponseWriter, r *rest.Request) {
+// SearchNodes search subnodes according a list of capabilities
+func (j *JADE) SearchSubnodes(w rest.ResponseWriter, r *rest.Request) {
 	requirements := &kernel.Requirements{}
 	err := r.DecodeJsonPayload(&requirements)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	nodes := j.selectAvaiableNodes(requirements)
+	nodes := j.selectAvaiableNodes(JadeNodeTypeSubnode, requirements)
+	w.WriteJson(nodes)
+}
+
+// SearchNodes search neighbors according a list of capabilities
+func (j *JADE) SearchNeighbors(w rest.ResponseWriter, r *rest.Request) {
+	requirements := &kernel.Requirements{}
+	err := r.DecodeJsonPayload(&requirements)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	nodes := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
 	w.WriteJson(nodes)
 }
 
@@ -137,8 +154,8 @@ func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
 	result["remaining"] = make(map[string]*kernel.Capacity)
 	result["maximum"] = make(map[string]*kernel.Capacity)
 	for nodeID := range j.Subnodes {
-		result["remaining"][nodeID] = j.capacityCache.GetRemainingCapacity(nodeID)
-		result["maximum"][nodeID] = j.capacityCache.GetMaximumCapacity(nodeID)
+		result["remaining"][nodeID] = j.subnodeCapacityCache.GetRemainingCapacity(nodeID)
+		result["maximum"][nodeID] = j.subnodeCapacityCache.GetMaximumCapacity(nodeID)
 	}
 	w.WriteJson(result)
 }

@@ -16,22 +16,8 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	nodekey := payload.Node.Key()
-	if _, exists := j.Subnodes[nodekey]; exists {
-		// j.DoneRequest(w, r, "already registered")
-		// return
-		j.log.Printf("updating information for existing subnode[%v]", nodekey)
-	} else {
-		j.log.Printf("registering information for new subnode[%v]", nodekey)
-	}
-
-	// Save the sub node in its sub node array
-	j.Subnodes[nodekey] = payload.Node
-
-	// En-cache capabilities
-	j.capabilityCache.Set(nodekey, payload.Capabilities)
-	// En-cache capacity
-	j.capacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	j.registerNode(JadeNodeTypeSubnode, payload)
+	
 	// finish the request
 	j.DoneRequest(w, r, nil)
 	// start the pod queue
@@ -43,6 +29,52 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 			go j.routineForPodQueues(1)
 		}
 	}
+}
+
+func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
+	// Validation
+	_, payload, err := j.ValidateRequest(w, r)
+	if err != nil {
+		// the request has been rejected by validator
+		j.PeacefulFatalRequest(w, r, err.Error())
+		return
+	}
+
+	j.registerNode(JadeNodeTypeNeighbor, payload)
+	
+	// finish the request
+	j.DoneRequest(w, r, nil)
+}
+
+func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
+	nodekey := payload.Node.Key()
+
+	nodeCache := j.Subnodes
+	if nodeType == JadeNodeTypeNeighbor {
+		nodeCache = j.Neighbors
+	}
+	if _, exists := nodeCache[nodekey]; exists {
+		j.log.Printf("updating information for existing %v[%v]", nodeType, nodekey)
+	} else {
+		j.log.Printf("registering information for new %v[%v]", nodeType, nodekey)
+	}
+
+	// Save the sub node in its sub node array
+	nodeCache[nodekey] = payload.Node
+
+	// En-cache capabilities
+	if nodeType == JadeNodeTypeSubnode {
+		j.subnodeCapabilityCache.Set(nodekey, payload.Capabilities)
+	} else if nodeType == JadeNodeTypeNeighbor {
+		j.neighborCapabilityCache.Set(nodekey, payload.Capabilities)
+	}
+	// En-cache capacity
+	if nodeType == JadeNodeTypeSubnode {
+		j.subnodeCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	} else if nodeType == JadeNodeTypeNeighbor {
+		j.neighborCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	}
+
 }
 
 func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {

@@ -86,7 +86,6 @@ func (c *Container) SetISAInImage(isa string) {
 
 // predefined module names
 type AppModule string
-
 const (
 	AppModuleAggregator AppModule = "aggregator"
 	AppModuleWorker               = "worker"

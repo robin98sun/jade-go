@@ -190,7 +190,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		// 1. search all required sub-nodes
 		availableNodes := []string{}
 		if j.IsCoordinator() {
-			availableNodes = j.selectAvaiableNodes(task.Requirements)
+			availableNodes = j.selectAvaiableNodes(JadeNodeTypeSubnode, task.Requirements)
 			j.log.Printf("found {%v} available nodes: %v", len(availableNodes), availableNodes)
 		} else {
 			availableNodes = []string{j.SelfNodeKey()}
