@@ -49,7 +49,11 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 	}
 
 	// Prepare payload of registering
-	payload := j.GeneratePayloadOfRequest(tn, nil, j.Config.Capabilities, j.Config.Capacity)
+	capacity := j.Config.Capacity
+	if nodeType == JadeNodeTypeRegistryNode {
+		capacity = nil
+	}
+	payload := j.GeneratePayloadOfRequest(tn, nil, j.subnodeCapabilityCache.GetAllCapabilities(), capacity)
 	payload.Node = sn.MiniNode()
 	payload.NodeID = sn.Key()
 

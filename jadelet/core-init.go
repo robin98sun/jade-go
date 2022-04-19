@@ -30,6 +30,10 @@ func (j *JADE) Init() {
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
+		j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
+	}
 	// read env metrics if the addon is deployed
 	
 	// setup k8s client instance

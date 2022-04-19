@@ -19,7 +19,8 @@ func NewCapabilityCache() *CapabilityCache {
 }
 
 type capabilityCacheItem struct {
-	nodes []string
+	nodes map[string]bool
+	capability *jadesdk.Capability
 }
 
 func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability) {
@@ -32,6 +33,15 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	if len(c.cache) == 0 {
 		c.cache = make(map[string]map[string]capabilityCacheItem)
 	}
+	// remove the node from existing cache first
+	for _, subcache := range c.cache {
+		for _, item := range subcache {
+			if _, exists := item.nodes[nodeId]; exists {
+				delete(item.nodes, nodeId)
+			}
+		}
+	}
+	// then insert the node back with new capabilities
 	// iterate the capabilities
 	for _, cap := range capabilities {
 		if cap.Name == "" {
@@ -53,11 +63,36 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 		// value for subcache is an item which wraps an array of nodeid
 		if item, itemExist := subcache[value]; !itemExist {
 			item := capabilityCacheItem{}
-			item.nodes = append(item.nodes, nodeId)
+			item.nodes[nodeId] = true
 			subcache[value] = item
+			item.capability = cap
 		} else {
-			item.nodes = append(item.nodes, nodeId)
-			subcache[value] = item
+			item.nodes[nodeId] = true
+		}
+	}
+}
+
+func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	var mergedCapabilitis = make([]*jadesdk.Capability,0)
+	for _, subcache := range c.cache {
+		for _, item := range subcache { 
+			mergedCapabilitis = append(mergedCapabilitis, item.capability)
+		}
+	}
+	return mergedCapabilitis
+}
+
+func (c *CapabilityCache) DeleteNode(nodeId string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for _, subcache := range c.cache {
+		for _, item := range subcache {
+			if _, exists := item.nodes[nodeId]; exists {
+				delete(item.nodes, nodeId)
+			}
 		}
 	}
 }
@@ -75,7 +110,10 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 	defer c.mutex.Unlock()
 	if subcache, subcacheExist := c.cache[cap.Name]; subcacheExist {
 		if item, itemExist := subcache[value]; itemExist {
-			nodes := item.nodes
+			var nodes []string = make([]string,0)
+			for node, _ := range item.nodes {
+				nodes = append(nodes, node)
+			}
 			if nodefilter == nil {
 				return nodes
 			} else {
@@ -97,12 +135,17 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	defer c.mutex.Unlock()
 	for capName, subcache := range c.cache {
 		for capValue, item := range subcache {
+			nodes := make([]string, len(item.nodes))
+			i := 0
+			for nodeId := range item.nodes {
+				nodes[i] = nodeId
+			}
 			result = append(result, capabilityWithNodes{
 				Capability: jadesdk.Capability{
 					Name:  capName,
 					Value: capValue,
 				},
-				Nodes: item.nodes,
+				Nodes: nodes,
 			})
 		}
 	}

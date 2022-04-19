@@ -16,7 +16,25 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	originalNodeKey := ""
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		originalNodeKey = j.Config.SelfNode.Key()
+	}
 	j.Config = c
+
+	newNodeKey := ""
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		newNodeKey = j.Config.SelfNode.Key()
+	}
+	if originalNodeKey != newNodeKey && originalNodeKey != "" {
+		j.subnodeCapabilityCache.DeleteNode(originalNodeKey)
+		j.neighborCapabilityCache.DeleteNode(originalNodeKey)
+	}
+
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		j.subnodeCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
+		j.neighborCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
+	}
 	w.WriteJson(c)
 	// renew itself in upper node
 	// go j.RegisterToUpperNode(0)

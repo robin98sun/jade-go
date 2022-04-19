@@ -51,7 +51,7 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 
 	j.registrationMutex.Lock()
 	defer j.registrationMutex.Unlock()
-	
+
 	nodeCache := j.Subnodes
 	if nodeType == JadeNodeTypeNeighbor {
 		nodeCache = j.Neighbors
@@ -66,16 +66,21 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	nodeCache[nodekey] = payload.Node
 
 	// En-cache capabilities
-	if nodeType == JadeNodeTypeSubnode {
-		j.subnodeCapabilityCache.Set(nodekey, payload.Capabilities)
-	} else if nodeType == JadeNodeTypeNeighbor {
-		j.neighborCapabilityCache.Set(nodekey, payload.Capabilities)
+	if len(payload.Capabilities) > 0 {
+		if nodeType == JadeNodeTypeSubnode {
+			j.subnodeCapabilityCache.Set(nodekey, payload.Capabilities)
+		} else if nodeType == JadeNodeTypeNeighbor {
+			j.neighborCapabilityCache.Set(nodekey, payload.Capabilities)
+		}
 	}
+
 	// En-cache capacity
-	if nodeType == JadeNodeTypeSubnode {
-		j.subnodeCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
-	} else if nodeType == JadeNodeTypeNeighbor {
-		j.neighborCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	if payload.Capacity != nil {
+		if nodeType == JadeNodeTypeSubnode {
+			j.subnodeCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+		} else if nodeType == JadeNodeTypeNeighbor {
+			j.neighborCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+		}
 	}
 
 }
