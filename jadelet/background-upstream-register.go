@@ -49,7 +49,7 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 	}
 
 	// Prepare payload of registering
-	payload := j.GeneratePayloadOfRequest(nil, nil, j.Config.Capabilities, j.Config.Capacity)
+	payload := j.GeneratePayloadOfRequest(tn, nil, j.Config.Capabilities, j.Config.Capacity)
 	payload.Node = sn.MiniNode()
 	payload.NodeID = sn.Key()
 
@@ -58,7 +58,7 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		apiPath = "/$jade$/registerNeighbor"
 	}
 	j.sdk.HTTPCommunicate(
-		"register to master node",
+		fmt.Sprintf("register to %v node", nodeType),
 		sn.Protocol, "PUT", apiPath,
 		tn.GetSDKNode(), payload, 0, -1,
 	)

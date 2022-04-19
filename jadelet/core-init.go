@@ -44,3 +44,4 @@ func (j *JADE) Init() {
 	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
 	// go j.routimeForPodQueues(1000)
 }
+
