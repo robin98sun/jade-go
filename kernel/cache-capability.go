@@ -47,7 +47,7 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	// then insert the node back with new capabilities
 	// iterate the capabilities
 	for _, cap := range capabilities {
-		log.Printf("  capability name: %v, value: %v", cap.Name, cap.Value)
+		log.Printf("  capability: %v", cap)
 
 		if cap.Name == "" {
 			continue
@@ -85,9 +85,13 @@ func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
 	defer c.mutex.Unlock()
 	log.Printf("getting all capabilities from all subnodes")
 	var mergedCapabilitis = make([]*jadesdk.Capability,0)
-	for _, subcache := range c.cache {
-		for _, item := range subcache { 
-			mergedCapabilitis = append(mergedCapabilitis, item.capability)
+	for name, subcache := range c.cache {
+		for value, _ := range subcache { 
+			// mergedCapabilitis = append(mergedCapabilitis, item.capability)
+			mergedCapabilitis = append(mergedCapabilitis, &jadesdk.Capability{
+				Name: name,
+				Value: value,
+			})
 		}
 	}
 	log.Printf("got %v capabilities from all subnodes", len(mergedCapabilitis))
