@@ -155,7 +155,11 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 				nodes[i] = nodeId
 			}
 			result = append(result, capabilityWithNodes{
-				Capability: item.capability,
+				// Capability: item.capability,
+				Capability: &jadesdk.Capability{
+					Name: name,
+					Value: value,
+				},
 				Nodes: nodes,
 			})
 		}
