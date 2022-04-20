@@ -30,6 +30,8 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	log.Printf("setting capability cache for node %v with %v capabilities", ndoeId, len(capabilities))
 	// initialize as needed
 	if len(c.cache) == 0 {
 		c.cache = make(map[string]map[string]capabilityCacheItem)
@@ -45,6 +47,8 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	// then insert the node back with new capabilities
 	// iterate the capabilities
 	for _, cap := range capabilities {
+		log.Printf("  capability name: %v, value: %v", cap.Name, cap.Value)
+
 		if cap.Name == "" {
 			continue
 		}
@@ -71,6 +75,7 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 			item.nodes[nodeId] = true
 		}
 	}
+	log.Printf("after setting capability cache lenght: %v",len(c.cache))
 }
 
 func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
