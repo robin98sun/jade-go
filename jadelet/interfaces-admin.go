@@ -10,6 +10,7 @@ import (
 
 // UpdateConfigurations to configure JADE at runtime
 func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
+	j.log.Println("updating configuration")
 	c := kernel.NewConfiguration()
 	err := r.DecodeJsonPayload(c)
 	if err != nil {
@@ -27,11 +28,13 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 		newNodeKey = j.Config.SelfNode.Key()
 	}
 	if originalNodeKey != newNodeKey && originalNodeKey != "" {
+		j.log.Printf("removing old capabilities for old nodekey[%v] while updating configuration", originalNodeKey)
 		j.subnodeCapabilityCache.DeleteNode(originalNodeKey)
 		j.neighborCapabilityCache.DeleteNode(originalNodeKey)
 	}
 
 	if newNodeKey != "" {
+		j.log.Printf("setting new capabilities for new nodekey[%v] while updating configuration", newNodeKey)
 		j.subnodeCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
 		j.neighborCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
 	}

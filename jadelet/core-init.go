@@ -31,6 +31,7 @@ func (j *JADE) Init() {
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 	if !j.Config.SelfNode.IsAddrEmpty() {
+		j.log.Printf("setting capabilities during initializing")
 		j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
 		j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
 	}
