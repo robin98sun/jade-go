@@ -3,6 +3,7 @@ package kernel
 import (
 	"uta.edu/aces/jadesdk"
 	"sync"
+	"log"
 )
 
 // CapabilityCache in a two layers structure: capabilityName: capabilityValue: [ NodeID ]
@@ -102,12 +103,12 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 	if cap == nil || cap.Name == "" {
 		return nil
 	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	value := cap.Value
 	if len(cap.Value) == 0 {
 		value = "N/A"
 	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
 	if subcache, subcacheExist := c.cache[cap.Name]; subcacheExist {
 		if item, itemExist := subcache[value]; itemExist {
 			var nodes []string = make([]string,0)
@@ -132,6 +133,7 @@ type capabilityWithNodes struct {
 func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	log.Println("collecting all capabilities with nodes")
 	var result []capabilityWithNodes
 	for _, subcache := range c.cache {
 		for _, item := range subcache {
@@ -146,6 +148,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 			})
 		}
 	}
+	log.Printf("collected %v capabilities with nodes, the capability cache length: %v", len(result), len(c.cache))
 	return result
 }
 
@@ -153,9 +156,9 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capabil
 	if len(capabilities) == 0 {
 		return nil
 	}
-	var nodes []string
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	var nodes []string
 	for _, cap := range capabilities {
 		tmpnodes := c.getNodes(cap, nodefilter)
 		if len(tmpnodes) == 0 {
@@ -174,9 +177,9 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capabil
 }
 
 func (c *CapabilityCache) SelectNodesCollectively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
-	var nodes []string
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	var nodes []string
 	for _, cap := range capabilities {
 		tmpnodes := c.getNodes(cap, nodefilter)
 		if len(tmpnodes) == 0 {

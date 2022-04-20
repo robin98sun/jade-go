@@ -23,6 +23,8 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		retryCnt = int64(1)
 	}
 
+	j.log.Printf("registering to %v node", nodeType)
+
 	// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
 	// Find UpperNode IP in cluster
 	tn := j.Config.UpperNode
@@ -67,5 +69,6 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		tn.GetSDKNode(), payload, 0, -1,
 	)
 
+	j.log.Printf("going to redo the registration to %v in 60 seconds", nodeType)
 	j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), 60, int64(0))
 }
