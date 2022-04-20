@@ -153,6 +153,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 			i := 0
 			for nodeId := range item.nodes {
 				nodes[i] = nodeId
+				i++
 			}
 			result = append(result, capabilityWithNodes{
 				// Capability: item.capability,
