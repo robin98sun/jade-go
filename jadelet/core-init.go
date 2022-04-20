@@ -31,12 +31,6 @@ func (j *JADE) Init() {
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 
-	j.log.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
-	if !j.Config.SelfNode.IsAddrEmpty() {
-		j.log.Printf("[init] setting capabilities during initializing")
-		j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
-		j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
-	}
 	// read env metrics if the addon is deployed
 	
 	// setup k8s client instance
@@ -47,6 +41,12 @@ func (j *JADE) Init() {
 	// Register to upper node
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
+	}
+	j.log.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		j.log.Printf("[init] setting capabilities during initializing")
+		j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
+		j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
 	}
 	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
 	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
