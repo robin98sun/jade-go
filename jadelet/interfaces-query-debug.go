@@ -119,8 +119,13 @@ func (j *JADE) ShowNeighbors(w rest.ResponseWriter, r *rest.Request) {
 }
 
 // ShowCapabilityCache will print all capabilities and their nodes
-func (j *JADE) ShowCapabilityCache(w rest.ResponseWriter, r *rest.Request) {
+func (j *JADE) ShowCapabilityCacheSubnodes(w rest.ResponseWriter, r *rest.Request) {
 	result := j.subnodeCapabilityCache.AllCapabilitiesWithNodes()
+	w.WriteJson(result)
+}
+
+func (j *JADE) ShowCapabilityCacheNeighbors(w rest.ResponseWriter, r *rest.Request) {
+	result := j.neighborCapabilityCache.AllCapabilitiesWithNodes()
 	w.WriteJson(result)
 }
 
