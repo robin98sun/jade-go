@@ -31,7 +31,7 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 		j.neighborCapabilityCache.DeleteNode(originalNodeKey)
 	}
 
-	if !j.Config.SelfNode.IsAddrEmpty() {
+	if newNodeKey != "" {
 		j.subnodeCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
 		j.neighborCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
 	}

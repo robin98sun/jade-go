@@ -25,13 +25,13 @@ type capabilityCacheItem struct {
 }
 
 func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability) {
+	log.Printf("setting capability cache for node %v with %v capabilities", nodeId, len(capabilities))
 	if nodeId == "" || len(capabilities) == 0 {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	log.Printf("setting capability cache for node %v with %v capabilities", nodeId, len(capabilities))
 	// initialize as needed
 	if len(c.cache) == 0 {
 		c.cache = make(map[string]map[string]capabilityCacheItem)
@@ -81,13 +81,14 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-
+	log.Printf("getting all capabilities from all subnodes")
 	var mergedCapabilitis = make([]*jadesdk.Capability,0)
 	for _, subcache := range c.cache {
 		for _, item := range subcache { 
 			mergedCapabilitis = append(mergedCapabilitis, item.capability)
 		}
 	}
+	log.Printf("got %v capabilities from all subnodes", len(mergedCapabilitis))
 	return mergedCapabilitis
 }
 
