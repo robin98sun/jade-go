@@ -147,8 +147,8 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	defer c.mutex.Unlock()
 	log.Println("collecting all capabilities with nodes")
 	var result []capabilityWithNodes
-	for _, subcache := range c.cache {
-		for _, item := range subcache {
+	for name, subcache := range c.cache {
+		for value, item := range subcache {
 			nodes := make([]string, len(item.nodes))
 			i := 0
 			for nodeId := range item.nodes {
