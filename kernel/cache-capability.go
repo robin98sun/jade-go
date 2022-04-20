@@ -31,7 +31,7 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	log.Printf("setting capability cache for node %v with %v capabilities", ndoeId, len(capabilities))
+	log.Printf("setting capability cache for node %v with %v capabilities", nodeId, len(capabilities))
 	// initialize as needed
 	if len(c.cache) == 0 {
 		c.cache = make(map[string]map[string]capabilityCacheItem)
