@@ -67,7 +67,9 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 		}
 		// value for subcache is an item which wraps an array of nodeid
 		if item, itemExist := subcache[value]; !itemExist {
-			item := capabilityCacheItem{}
+			item := capabilityCacheItem{
+				nodes: make(map[string]bool),
+			}
 			item.nodes[nodeId] = true
 			subcache[value] = item
 			item.capability = cap
