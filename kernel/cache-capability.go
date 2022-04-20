@@ -125,26 +125,23 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 }
 
 type capabilityWithNodes struct {
-	Capability jadesdk.Capability `json:"capability"`
+	Capability *jadesdk.Capability `json:"capability"`
 	Nodes      []string           `json:"nodes"`
 }
 
 func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
-	var result []capabilityWithNodes
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	for capName, subcache := range c.cache {
-		for capValue, item := range subcache {
+	var result []capabilityWithNodes
+	for _, subcache := range c.cache {
+		for _, item := range subcache {
 			nodes := make([]string, len(item.nodes))
 			i := 0
 			for nodeId := range item.nodes {
 				nodes[i] = nodeId
 			}
 			result = append(result, capabilityWithNodes{
-				Capability: jadesdk.Capability{
-					Name:  capName,
-					Value: capValue,
-				},
+				Capability: item.capability,
 				Nodes: nodes,
 			})
 		}
