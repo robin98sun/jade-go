@@ -265,9 +265,10 @@ func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload inte
 		payload.Token = targetNode.Token
 	}
 	if capabilities != nil && len(capabilities) > 0 {
-		for _, c := range capabilities {
-			payload.Capabilities = append(payload.Capabilities, c.MiniCapability())
-		}
+		payload.Capabilities = capabilities
+		// for _, c := range capabilities {
+			// payload.Capabilities = append(payload.Capabilities, c.MiniCapability())
+		// }
 	}
 	if capacity != nil {
 		payload.Capacity = capacity
