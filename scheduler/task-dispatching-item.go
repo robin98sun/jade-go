@@ -12,12 +12,7 @@ type TaskDispatchingOptions struct {
 	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
 	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
-	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes\
-
-	TTL							int64	`json:"hopsToStop,omitempty"` // the largest hops (broadcasting domains) it can reach,  
-																	  // if set as 0, it means only within current autonomy service domain
-																	  // if set as 1, it means only within current broadcasting domain
-
+	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 }
 
 const TaskDefaultPriority = 1000

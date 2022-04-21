@@ -1,4 +1,5 @@
 package kernel
+// if talking about "registry", it actually means kernel in the implementation
 
 import (
 	"uta.edu/aces/jadesdk"

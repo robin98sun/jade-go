@@ -31,21 +31,6 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 	}
 }
 
-func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
-	// Validation
-	_, payload, err := j.ValidateRequest(w, r)
-	if err != nil {
-		// the request has been rejected by validator
-		j.PeacefulFatalRequest(w, r, err.Error())
-		return
-	}
-
-	j.registerNode(JadeNodeTypeNeighbor, payload)
-	
-	// finish the request
-	j.DoneRequest(w, r, nil)
-}
-
 func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	nodekey := payload.Node.Key()
 

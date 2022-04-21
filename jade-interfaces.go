@@ -44,8 +44,12 @@ func main() {
 		api.Use(rest.DefaultCommonStack...)
 	}
 	router, err := rest.MakeRouter(
-		// Control path upstream
+		// Control path horizontal
 		rest.Put("/registerNeighbor", j.RegisterNeighbor),
+		rest.Post("/list", j.ListNeighbors),
+		rest.Post("/inquiry", j.NeighborInquiry),
+		rest.Post("/gossip", j.NeighborGossip),
+		// Control path upstream
 		rest.Put("/registerSubnode", j.RegisterSubnode),
 		rest.Post("/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
