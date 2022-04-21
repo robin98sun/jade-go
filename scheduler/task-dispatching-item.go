@@ -5,6 +5,21 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 )
 
+
+type TaskDispatchingOptions struct {
+	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
+	PersistCache              	bool   `json:"persistCache,omitempty"`
+	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
+	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
+	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
+	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes\
+
+	TTL							int64	`json:"hopsToStop,omitempty"` // the largest hops (broadcasting domains) it can reach,  
+																	  // if set as 0, it means only within current autonomy service domain
+																	  // if set as 1, it means only within current broadcasting domain
+
+}
+
 const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
 	Task            *kernel.Task                            `json:"task,omitempty"`
@@ -66,14 +81,6 @@ func (t *TaskDispatchingItem) GetArriveTime() time.Time {
 	return t.arriveTimestamp
 }
 
-type TaskDispatchingOptions struct {
-	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
-	PersistCache              	bool   `json:"persistCache,omitempty"`
-	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
-	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
-	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
-	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
-}
 
 type TaskDispatchingItemReportTo struct {
 	Node *kernel.Node `json:"node,omitempty"`
