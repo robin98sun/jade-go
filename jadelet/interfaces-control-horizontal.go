@@ -48,14 +48,16 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	var nodes []*kernel.Node
 	if len(nodekeys) > 0 {
-		nodes = make([]*kernel.Node, len(nodekeys))
-		
 		j.registryMutex.Lock()
 		defer j.registryMutex.Unlock()
 
-		for i, nodeKey := range nodekeys {
-			nodes[i] = j.Neighbors[nodeKey]	
-			j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[i])
+		for _, nodeKey := range nodekeys {
+			if _ , e := j.Neighbors[nodeKey]; e {
+				nodes = append(nodes, j.Neighbors[nodeKey])
+			} else if nodeKey == j.Config.SelfNode.Key() {
+				nodes = append(nodes, j.Config.SelfNode)
+			}
+			j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[len(nodes)-1])
 		}
 	}
 	
