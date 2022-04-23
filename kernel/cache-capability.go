@@ -25,7 +25,6 @@ type capabilityCacheItem struct {
 }
 
 func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability) {
-	log.Printf("setting capability cache for node %v with %v capabilities", nodeId, len(capabilities))
 	if nodeId == "" || len(capabilities) == 0 {
 		return
 	}
@@ -140,7 +139,6 @@ type capabilityWithNodes struct {
 func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Println("collecting all capabilities with nodes")
 	var result []capabilityWithNodes
 	for name, subcache := range c.cache {
 		for value, item := range subcache {
