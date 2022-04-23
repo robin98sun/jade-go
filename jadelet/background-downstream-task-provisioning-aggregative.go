@@ -34,6 +34,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 			aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 			if aggregatorPod == nil {
+				j.log.Println("there is no existing aggregator pod on this node, going to provision one")
 				// provision an aggregator pod
 				containerSettings := task.Application.GetModule(string(kernel.AppModuleAggregator))
 				containerSettings.SetISAInImage(j.Config.ISA)
@@ -83,13 +84,16 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			if aggregatorPod == nil {
 				// reject the task
 				rejectTaskCache[task.GetKey()] = taskItem
+				j.log.Println("there should be an aggregator pod on this node but doesn't, the task is going to be rejected")
 			} else {
+				j.log.Println("got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
 				newTaskItem := taskItem.CopyForSubtask(false)
 				// the reportTo is very tricky here
 				// it's different for aggregator and worker module
 				// please think carefully why they are different
-				// that's critical of testing whether your understandings of dataflow are correct
+				// that's critical of testing whether your understanding of dataflow is correct
 				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
+				j.log.Printf("the 'reportTo' for subtasks is %v", reportTo)
 				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
