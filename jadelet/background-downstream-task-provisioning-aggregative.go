@@ -93,7 +93,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// please think carefully why they are different
 				// that's critical of testing whether your understanding of dataflow is correct
 				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
-				j.log.Printf("the 'reportTo' for subtasks is %v", reportTo)
+				j.log.Printf("the 'reportTo' for aggregator is %v", reportTo)
 				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
@@ -108,6 +108,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				ackAggregatorSubtasks[task.GetKey()] = subtask.GetKey()
 			}
 		} else {
+			j.log.Println("This node is not an coordinator because it does not have any subnodes, so it's going to only deploy worker instead of aggregator")
 			goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 				DispatchingItem: taskItem,
 				AggregatorPod: nil,

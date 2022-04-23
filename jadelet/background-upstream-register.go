@@ -75,7 +75,7 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		)
 
 	} else {
-		j.log.Println("Can NOT register to %v node because it is empty in the configuration for now", nodeType)
+		j.log.Printf("Can NOT register to %v node because it is empty in the configuration for now", nodeType)
 	}
 
 	
