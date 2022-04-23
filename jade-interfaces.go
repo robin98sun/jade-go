@@ -46,7 +46,7 @@ func main() {
 	router, err := rest.MakeRouter(
 		// Control path horizontal
 		rest.Put("/registerNeighbor", j.RegisterNeighbor),
-		rest.Post("/list", j.ListNeighbors),
+		rest.Post("/eligibleNeighbors", j.ListNeighbors),
 		rest.Post("/inquiry", j.NeighborInquiry),
 		rest.Post("/gossip", j.NeighborGossip),
 		// Control path upstream

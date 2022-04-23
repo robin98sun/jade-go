@@ -26,7 +26,8 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(dispatchItem *scheduler.TaskD
 	}
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, task.Requirements, nil, nil)
 
-	apiPath := "/$jade$/list"
+	j.log.Printf("fetching eligible neighbors from registry node [%v], which is %v empty", j.Config.RegistryNode, j.Config.RegistryNode.IsAddrEmpty())
+	apiPath := "/$jade$/eligibleNeighbors"
 	res, _, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {
 		j.log.Println("ERROR when fetching eligible neighbors:", err.Error())

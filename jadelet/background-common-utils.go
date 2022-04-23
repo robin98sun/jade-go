@@ -57,6 +57,7 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 }
 
 func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.Requirements) []string {
+	j.log.Printf("Search %v nodes", nodeType)
 	var capableNodes []string
 	capabilityCache := j.subnodeCapabilityCache
 	capacityCache := j.subnodeCapabilityCache

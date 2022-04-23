@@ -109,8 +109,6 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 	if cap == nil || cap.Name == "" {
 		return nil
 	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
 	value := cap.Value
 	if len(cap.Value) == 0 {
 		value = "N/A"
