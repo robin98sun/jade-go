@@ -4,7 +4,6 @@ package kernel
 import (
 	"uta.edu/aces/jadesdk"
 	"sync"
-	"log"
 )
 
 // CapabilityCache in a two layers structure: capabilityName: capabilityValue: [ NodeID ]
@@ -48,8 +47,6 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	// then insert the node back with new capabilities
 	// iterate the capabilities
 	for _, cap := range capabilities {
-		log.Printf("  capability: %v", cap)
-
 		if cap.Name == "" {
 			continue
 		}
@@ -78,13 +75,11 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 			item.nodes[nodeId] = true
 		}
 	}
-	log.Printf("after setting capability cache lenght: %v",len(c.cache))
 }
 
 func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Printf("getting all capabilities from all subnodes")
 	var mergedCapabilitis = make([]*jadesdk.Capability,0)
 	for name, subcache := range c.cache {
 		for value, _ := range subcache { 
@@ -95,7 +90,6 @@ func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
 			})
 		}
 	}
-	log.Printf("got %v capabilities from all subnodes", len(mergedCapabilitis))
 	return mergedCapabilitis
 }
 
@@ -166,7 +160,6 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 			})
 		}
 	}
-	log.Printf("collected %v capabilities with nodes, the capability cache length: %v", len(result), len(c.cache))
 	return result
 }
 
