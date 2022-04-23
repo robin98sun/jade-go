@@ -49,7 +49,7 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(dispatchItem *scheduler.TaskD
 		if node_list, ok := res.([]*kernel.Node); ok {
 			return node_list
 		} else {
-			j.log.Println("ERROR: can not decode response while fetching eligible neighbors:", ok)
+			j.log.Printf("ERROR: can not decode response while fetching eligible neighbors: %v", res)
 		}
 	}
 	return nil
