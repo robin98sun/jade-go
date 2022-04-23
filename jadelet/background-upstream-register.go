@@ -23,52 +23,58 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		retryCnt = int64(1)
 	}
 
-	j.log.Printf("registering to %v node", nodeType)
+	retryInterval := 300
 
-	// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
-	// Find UpperNode IP in cluster
-	tn := j.Config.UpperNode
-	if nodeType == JadeNodeTypeRegistryNode {
-		tn = j.Config.RegistryNode
-	}
-	if tn == nil || tn.IsAddrEmpty() {
-		j.MakeUpAddressForNode(tn)
-	}
-	if tn == nil || tn.IsAddrEmpty() {
-		j.retryRegister(nodeType, fmt.Sprintf("%v node is empty, will retry in 60 seconds", nodeType), 60, retryCnt+1)
-		return
-	}
+	if (nodeType == JadeNodeTypeRegistryNode && !j.Config.RegistryNode.IsAddrEmpty()) || (nodeType == JadeNodeTypeUpperNode && !j.Config.UpperNode.IsAddrEmpty()) {
+		j.log.Printf("registering to %v node", nodeType)
 
-	// Check self-node accessibility
-	sn := j.Config.SelfNode
-	if sn.IsAddrEmpty() {
-		j.MakeUpAddressForNode(sn)
-		if sn.IsAddrEmpty() {
-			msg := fmt.Sprintf("ERROR when preparing self-node address for registering on %v node, the self-node address is empty, will retry in 10 seconds", nodeType)
-			j.retryRegister(nodeType, msg, 10, retryCnt+1)
+		// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
+		// Find UpperNode IP in cluster
+		tn := j.Config.UpperNode
+		if nodeType == JadeNodeTypeRegistryNode {
+			tn = j.Config.RegistryNode
+		}
+		if tn == nil || tn.IsAddrEmpty() {
+			j.MakeUpAddressForNode(tn)
+		}
+		if tn == nil || tn.IsAddrEmpty() {
+			j.retryRegister(nodeType, fmt.Sprintf("%v node is empty, will retry in 60 seconds", nodeType), 60, retryCnt+1)
 			return
 		}
+
+		// Check self-node accessibility
+		sn := j.Config.SelfNode
+		if sn.IsAddrEmpty() {
+			j.MakeUpAddressForNode(sn)
+			if sn.IsAddrEmpty() {
+				msg := fmt.Sprintf("ERROR when preparing self-node address for registering on %v node, the self-node address is empty, will retry in 10 seconds", nodeType)
+				j.retryRegister(nodeType, msg, 10, retryCnt+1)
+				return
+			}
+		}
+
+		// Prepare payload of registering
+		capacity := j.Config.Capacity
+		if nodeType == JadeNodeTypeRegistryNode {
+			capacity = nil
+		}
+		payload := j.GeneratePayloadOfRequest(tn, nil, j.subnodeCapabilityCache.GetAllCapabilities(), capacity)
+		payload.Node = sn.MiniNode()
+		payload.NodeID = sn.Key()
+
+		apiPath := "/$jade$/registerSubnode"
+		if nodeType == JadeNodeTypeRegistryNode {
+			apiPath = "/$jade$/registerNeighbor"
+		}
+		j.sdk.HTTPCommunicate(
+			fmt.Sprintf("register to %v node", nodeType),
+			sn.Protocol, "PUT", apiPath,
+			tn.GetSDKNode(), payload, 0, -1,
+		)
+
 	}
 
-	// Prepare payload of registering
-	capacity := j.Config.Capacity
-	if nodeType == JadeNodeTypeRegistryNode {
-		capacity = nil
-	}
-	payload := j.GeneratePayloadOfRequest(tn, nil, j.subnodeCapabilityCache.GetAllCapabilities(), capacity)
-	payload.Node = sn.MiniNode()
-	payload.NodeID = sn.Key()
-
-	apiPath := "/$jade$/registerSubnode"
-	if nodeType == JadeNodeTypeRegistryNode {
-		apiPath = "/$jade$/registerNeighbor"
-	}
-	j.sdk.HTTPCommunicate(
-		fmt.Sprintf("register to %v node", nodeType),
-		sn.Protocol, "PUT", apiPath,
-		tn.GetSDKNode(), payload, 0, -1,
-	)
-
-	// j.log.Printf("going to redo the registration to %v in 60 seconds", nodeType)
-	// j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), 60, int64(0))
+	
+	j.log.Printf("going to redo the registration to %v in %v seconds", nodeType, retryInterval)
+	j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), retryInterval, int64(0))
 }
