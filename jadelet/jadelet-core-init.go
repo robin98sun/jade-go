@@ -13,7 +13,7 @@ import (
 func (j *JADE) Init() {
 	j.log = &kernel.Logger{}
 	j.mutex = &sync.Mutex{}
-	j.registrationMutex = &sync.Mutex{}
+	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
 	j.sdk = jadesdk.NewJadeSDK()
 	j.Subnodes = make(map[string]*kernel.Node)

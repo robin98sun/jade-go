@@ -34,8 +34,8 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	nodekey := payload.Node.Key()
 
-	j.registrationMutex.Lock()
-	defer j.registrationMutex.Unlock()
+	j.registryMutex.Lock()
+	defer j.registryMutex.Unlock()
 
 	nodeCache := j.Subnodes
 	if nodeType == JadeNodeTypeNeighbor {

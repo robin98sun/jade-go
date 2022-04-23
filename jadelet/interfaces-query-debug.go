@@ -137,6 +137,7 @@ func (j *JADE) SearchSubnodes(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	
 	nodes := j.selectAvaiableNodes(JadeNodeTypeSubnode, requirements)
 	w.WriteJson(nodes)
 }

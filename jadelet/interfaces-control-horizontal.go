@@ -41,9 +41,22 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 		j.log.Println("[registry] ERROR of decoding content of requirements:", err.Error())
 		return
 	}
+
 	requirements := reqInst.Payload
 
-	nodes := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
+	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
+
+	var nodes []*kernel.Node
+	if len(nodekeys) > 0 {
+		nodes = make([]*kernel.Node, len(nodekeys))
+		
+		j.registryMutex.Lock()
+		defer j.registryMutex.Unlock()
+
+		for i, nodeKey := range nodekeys {
+			nodes[i] = j.Neighbors[nodeKey]	
+		}
+	}
 	
 	// finish the request
 	j.DoneRequest(w, r, nodes)
