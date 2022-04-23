@@ -38,7 +38,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode requirements of listing eligible neighbors: "+err.Error())
-		j.log.Println("[registry] ERROR of decoding content of provisioning:", err.Error())
+		j.log.Println("[registry] ERROR of decoding content of requirements:", err.Error())
 		return
 	}
 	requirements := reqInst.Payload

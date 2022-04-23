@@ -2,25 +2,10 @@ package jadelet
 
 import (
 	"strconv"
-
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 )
 
-func (j *JADE) evaluateTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
-	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
-	for taskKey, taskItem := range tasklist {
-		task := taskItem.Task
-		if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
-			if _, workerExists := task.Application.Modules[kernel.AppModuleWorker]; workerExists {
-				aggregativeTasks[taskKey] = taskItem
-			}
-		}
-	}
-	if len(aggregativeTasks) > 0 {
-		j.evaluateAggregativeTasks(aggregativeTasks)
-	}
-}
 
 func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDispatchingItem) {
 	node := j.GetNodeInControl(nodeID)

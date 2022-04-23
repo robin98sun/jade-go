@@ -13,6 +13,7 @@ type TaskDispatchingOptions struct {
 	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
+
 }
 
 const TaskDefaultPriority = 1000
@@ -24,6 +25,11 @@ type TaskDispatchingItem struct {
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
 	arriveTimestamp time.Time
+
+	// TTL is the maximum broadcast domains it can out reach
+	// if set 0, it means only within the autonomy service domain
+	// if set 1, it means broadcast in current broadcast domain which contain multiple neighboring ASDs
+	TTL             int64 	`json:"ttl,omitempty"` 
 }
 
 func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {

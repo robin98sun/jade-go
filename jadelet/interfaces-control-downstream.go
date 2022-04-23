@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 // TaskReceiver task receiver
@@ -43,11 +44,27 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			}
 		}
 		if len(validTasks) > 0 {
-			go j.evaluateTasks(validTasks)
+			j.ClassifyTasks(validTasks)
 		}
 
 		res.ValidTasksCount = len(validTasks)
 		j.DoneRequest(w, r, res)
 	}
 
+}
+
+
+func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
+	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
+	for taskKey, taskItem := range tasklist {
+		task := taskItem.Task
+		if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
+			if _, workerExists := task.Application.Modules[kernel.AppModuleWorker]; workerExists {
+				aggregativeTasks[taskKey] = taskItem
+			}
+		}
+	}
+	if len(aggregativeTasks) > 0 {
+		go j.evaluateAggregativeTasks(aggregativeTasks)
+	}
 }
