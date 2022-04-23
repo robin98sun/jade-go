@@ -4,7 +4,7 @@ package kernel
 import (
 	// "uta.edu/aces/jade-go/kernel"
 	// "sync"
-	// "log"
+	"log"
 )
 
 type EligibleNeighborCacheItem struct {

@@ -69,6 +69,6 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		tn.GetSDKNode(), payload, 0, -1,
 	)
 
-	j.log.Printf("going to redo the registration to %v in 60 seconds", nodeType)
-	j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), 60, int64(0))
+	// j.log.Printf("going to redo the registration to %v in 60 seconds", nodeType)
+	// j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), 60, int64(0))
 }
