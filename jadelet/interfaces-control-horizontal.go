@@ -55,6 +55,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 		for i, nodeKey := range nodekeys {
 			nodes[i] = j.Neighbors[nodeKey]	
+			j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[i])
 		}
 	}
 	
