@@ -55,16 +55,24 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 
 
 func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
+	collaborativeTasks := map[string]*scheduler.TaskDispatchingItem{}
 	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
-	for taskKey, taskItem := range tasklist {
-		task := taskItem.Task
+	for taskKey, dispatchItem := range tasklist {
+		if j.HasRegistry() && dispatchItem.TTL > 0 {
+			collaborativeTasks[taskKey] = dispatchItem
+		} 
+
+		task := dispatchItem.Task
 		if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
 			if _, workerExists := task.Application.Modules[kernel.AppModuleWorker]; workerExists {
-				aggregativeTasks[taskKey] = taskItem
+				aggregativeTasks[taskKey] = dispatchItem
 			}
 		}
 	}
 	if len(aggregativeTasks) > 0 {
 		go j.evaluateAggregativeTasks(aggregativeTasks)
+	}
+	if len(collaborativeTasks) > 0 {
+		go j.evaluateCollaborativeTasks(collaborativeTasks)
 	}
 }

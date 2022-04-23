@@ -37,6 +37,7 @@ type JADE struct {
 	subnodeCapacityCache   *kernel.CapacityCache
 	neighborCapabilityCache *kernel.CapabilityCache
 	neighborCapacityCache   *kernel.CapacityCache
+	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
 	PodCache        *scheduler.PodCache  `json:"podCache"`
@@ -86,6 +87,10 @@ func (j *JADE) PrintCapabilities() {
 	for _, c := range j.Config.Capabilities {
 		j.log.Println(c)
 	}
+}
+
+func (j *JADE) HasRegistry() bool {
+	return j.Config != nil && j.Config.RegistryNode != nil && !j.Config.RegistryNode.IsAddrEmpty()
 }
 
 func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {

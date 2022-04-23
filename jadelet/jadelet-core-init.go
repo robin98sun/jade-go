@@ -22,6 +22,7 @@ func (j *JADE) Init() {
 	j.subnodeCapacityCache = kernel.NewCapacityCache()
 	j.neighborCapabilityCache = kernel.NewCapabilityCache()
 	j.neighborCapacityCache = kernel.NewCapacityCache()
+	j.eligibleNeighborCache = kernel.NewEligibleNeighborCache()
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
