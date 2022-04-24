@@ -2,9 +2,9 @@ package jadelet
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"errors"
 	"github.com/ant0ine/go-json-rest/rest"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"uta.edu/aces/jade-go/kernel"
@@ -180,7 +180,7 @@ type ResponsePayload struct {
 	Payload interface{} `json:"payload,omitempty"`
 }
 
-func decodeRequestWithoutClosing(r *rest.Request, v interface{}) ([]byte, error) {
+func DecodeRequestWithoutClosing(r *rest.Request, v interface{}) ([]byte, error) {
 	content, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
@@ -199,7 +199,7 @@ func decodeRequestWithoutClosing(r *rest.Request, v interface{}) ([]byte, error)
 // ValidateRequest receive and process node registration
 func (j *JADE) ValidateRequest(w rest.ResponseWriter, r *rest.Request) ([]byte, *RequestPayload, error) {
 	req := &RequestPayload{}
-	content, err := decodeRequestWithoutClosing(r, req)
+	content, err := DecodeRequestWithoutClosing(r, req)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return content, req, err
