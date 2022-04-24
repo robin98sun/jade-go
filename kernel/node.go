@@ -30,6 +30,38 @@ func NewNode() *Node {
 	}
 }
 
+func NodeFromMap(nodeMap map[string]interface{}) *Node {
+	if len(nodeMap) == 0 {
+		return nil
+	}
+	node := NewNode()
+	if v, e := nodeMap["address"]; e {
+		node.Address = v.(string)
+	}
+	if v, e := nodeMap["port"]; e {
+		node.Port= v.(int)
+	}
+	if v, e := nodeMap["protocol"]; e {
+		node.Protocol = v.(string)
+	}
+	if v, e := nodeMap["token"]; e {
+		node.Token = v.(string)
+	}
+	if v, e := nodeMap["namespace"]; e {
+		node.Namespace = v.(string)
+	}
+	if v, e := nodeMap["podName"]; e {
+		node.PodName = v.(string)
+	}
+	if v, e := nodeMap["hostname"]; e {
+		node.Hostname = v.(string)
+	}
+	if v, e := nodeMap["serviceExternal"]; e {
+		node.ServiceExternal = v.(string)
+	}
+	return node
+}
+
 func (n *Node) GetSDKNode() *jadesdk.Node {
 	sdkNode := &jadesdk.Node{
 		Addr:     n.Address,

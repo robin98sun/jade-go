@@ -15,6 +15,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			continue
 		}
 		eligibleNeighbors := j.fetchEligibleAutonomyServiceDomains(dispatchItem)
+		j.log.Printf("got eligible neighbors: %v", eligibleNeighbors)
 		j.eligibleNeighborCache.StoreEligibleNeighbors(dispatchItem.Task.GetKey(), eligibleNeighbors)
 	}
 }
@@ -46,10 +47,15 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(dispatchItem *scheduler.TaskD
 		// }
 		j.log.Println("response of fetching eligible neighbors:", res)
 
-		if node_list, ok := res.([]*kernel.Node); ok {
-			return node_list
+		
+		if node_list, ok := res.([]map[string]interface{}); ok {
+			var result []*kernel.Node
+			for _, nodeMap := range node_list {
+				result = append(result, kernel.NodeFromMap(nodeMap))
+			}
+			return result
 		} else {
-			j.log.Printf("ERROR: can not decode response while fetching eligible neighbors: %v", res)
+			j.log.Printf("ERROR: can not decode response while fetching eligible neighbors:%v, %v", ok, res)
 		}
 	}
 	return nil
