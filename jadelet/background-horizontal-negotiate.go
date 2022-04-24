@@ -7,6 +7,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	// "uta.edu/aces/jade-go/histogram"
+	// "uta.edu/aces/jadesdk"
 )
 
 func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
@@ -33,13 +34,15 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(dispatchItem *scheduler.TaskD
 	if err != nil {
 		j.log.Println("ERROR when fetching eligible neighbors:", err.Error())
 	} else {
-		resInst := []*kernel.Node{}
+		resInst :=  &struct{
+			Payload []*kernel.Node `json:"payload,omitempty"`
+		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
 			j.log.Println("ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
 			j.log.Println("response of fetching eligible neighbors:", resInst)
-			return resInst
+			return resInst.Payload
 		}
 	}
 	return nil
