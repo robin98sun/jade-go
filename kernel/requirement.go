@@ -193,6 +193,24 @@ type Requirements struct {
 	Allocations map[string]*AllocationUnit `json:"allocations,omitempty"`
 }
 
+func (r *Requirements) GetQueryKey() string {
+	query_key := ""
+	if len(r.Collective) > 0 {
+		query_key += "#collective:"
+		for _, c := range r.Collective {
+			query_key += "&"+c.GetKey()
+		}
+	}
+	if len(r.Exclusive) > 0 {
+		query_key += "#exclusive:"
+		for _, c := range r.Exclusive {
+			query_key += "&"+c.GetKey()
+		}
+	}
+	return query_key
+}
+
+
 func (r *Requirements) GetModule(moduleName string) *AllocationUnit {
 	if r == nil || moduleName == "" {
 		return nil

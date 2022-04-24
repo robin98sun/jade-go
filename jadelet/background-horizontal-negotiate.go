@@ -15,18 +15,31 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		if dispatchItem.Task == nil || dispatchItem.Task.Requirements == nil {
 			continue
 		}
-		eligibleNeighbors := j.fetchEligibleAutonomyServiceDomains(dispatchItem)
-		j.log.Printf("got eligible neighbors: %v", eligibleNeighbors)
-		j.eligibleNeighborCache.StoreEligibleNeighbors(dispatchItem.Task.GetKey(), eligibleNeighbors)
+		query := dispatchItem.Task.Requirements
+		query_key := query.GetQueryKey()
+		if query_key == "" {
+			continue
+		}
+
+		eligibleNeighbors := j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
+
+		if eligibleNeighbors == nil {
+			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
+			j.log.Printf("got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
+			if eligibleNeighbors == nil {
+				eligibleNeighbors = []*kernel.Node{}
+			}
+			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
+		}
+		if len(eligibleNeighbors) > 0 {
+			j.log.Printf("retreved %v eligible neighbors from cache", len(eligibleNeighbors))
+		}
+
 	}
 }
 
-func (j *JADE) fetchEligibleAutonomyServiceDomains(dispatchItem *scheduler.TaskDispatchingItem) []*kernel.Node {
-	task := dispatchItem.Task
-	if task == nil || task.Requirements == nil {
-		return nil
-	}
-	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, task.Requirements, nil, nil)
+func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
+	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 	j.log.Printf("fetching eligible neighbors from registry node [%v], which is %v empty", j.Config.RegistryNode, j.Config.RegistryNode.IsAddrEmpty())
 	apiPath := "/$jade$/eligibleNeighbors"

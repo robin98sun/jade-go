@@ -3,7 +3,7 @@ package kernel
 
 import (
 	// "uta.edu/aces/jade-go/kernel"
-	// "sync"
+	"sync"
 	// "log"
 )
 
@@ -38,29 +38,33 @@ func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*Node {
 
 
 type EligibleNeighborCache struct {
-	cache map[string]*EligibleNeighborCacheItem // taskKey: nodes
+	cache map[string]*EligibleNeighborCacheItem // query-key: nodes
+	mutex *sync.Mutex
 }
 
 func NewEligibleNeighborCache() *EligibleNeighborCache {
 	return &EligibleNeighborCache{
 		cache: make(map[string]*EligibleNeighborCacheItem),
+		mutex: &sync.Mutex{},
 	}
 }
 
-func (c *EligibleNeighborCache) StoreEligibleNeighbors(taskKey string, neighborNodes []*Node) {
-	if c.cache == nil {
-		c.cache = make(map[string]*EligibleNeighborCacheItem)
-	}
+func (c *EligibleNeighborCache) StoreEligibleNeighbors(requirementKey string, neighborNodes []*Node) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	c.cache[taskKey] = NewEligibleNeighborCacheItem(neighborNodes)
+	c.cache[requirementKey] = NewEligibleNeighborCacheItem(neighborNodes)
 }
 
-func (c *EligibleNeighborCache) GetEligibleNeighbors(taskKey string) []*Node {
-	if c.cache == nil || len(c.cache) == 0 {
+func (c *EligibleNeighborCache) GetEligibleNeighbors(requirementKey string) []*Node {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if len(c.cache) == 0 {
 		return nil
 	}
 
-	if item, e := c.cache[taskKey]; !e {
+	if item, e := c.cache[requirementKey]; !e {
 		return nil
 	} else {
 		return item.GetNeighborNodes()
