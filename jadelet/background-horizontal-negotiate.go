@@ -54,10 +54,33 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) [
 		if err != nil {
 			j.log.Println("ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Println("response of fetching eligible neighbors:", resInst)
+			j.log.Println("response of fetching eligible neighbors:", resInst.Payload)
 			return resInst.Payload
 		}
 	}
 	return nil
 }
 
+
+func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, budgetChoices []interface{}) interface{} {
+	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
+
+	j.log.Printf("inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
+	apiPath := "/$jade$/inquiryBudget"
+	_, _, content, err := j.HTTPCommunicate("inquirying eligible neighbor", "POST", apiPath, neighbor, payload, 0, 10)
+	if err != nil {
+		j.log.Println("ERROR when inquirying eligible neighbor:", err.Error())
+	} else {
+		resInst :=  &struct{
+			Payload interface{} `json:"payload,omitempty"`
+		}{}
+		err = json.Unmarshal(content, resInst)
+		if err != nil {
+			j.log.Println("ERROR of inquirying eligible neighbor: can not decode response, ", err)
+		} else {
+			j.log.Println("response of inquirying eligible neighbor:", resInst.Payload)
+			return resInst.Payload
+		}
+	}
+	return nil
+}

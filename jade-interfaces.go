@@ -47,7 +47,7 @@ func main() {
 		// Control path horizontal
 		rest.Put("/registerNeighbor", j.RegisterNeighbor),
 		rest.Post("/eligibleNeighbors", j.ListNeighbors),
-		rest.Post("/inquiry", j.NeighborInquiry),
+		rest.Post("/inquiryBudget", j.NeighborInquiry),
 		rest.Post("/gossip", j.NeighborGossip),
 		// Control path upstream
 		rest.Put("/registerSubnode", j.RegisterSubnode),

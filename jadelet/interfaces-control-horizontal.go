@@ -67,12 +67,12 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
-	// _, payload, err := j.ValidateRequest(w, r)
-	// if err != nil {
-	// 	// the request has been rejected by validator
-	// 	j.PeacefulFatalRequest(w, r, err.Error())
-	// 	return
-	// }
+	_, payload, err := j.ValidateRequest(w, r)
+	if err != nil {
+		// the request has been rejected by validator
+		j.PeacefulFatalRequest(w, r, err.Error())
+		return
+	}
 	
 	// finish the request
 	j.DoneRequest(w, r, nil)
