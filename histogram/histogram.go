@@ -122,7 +122,7 @@ func (h *Histogram) GetPercentile(p float64) *PercentileItem {
 // the most important three interfaces decide the overall performance
 
 // the complexity of Enqueue shall be no larger than O(log n)
-func (h *Histogram) Enqueue(incomingValue float64) *HistogramItem{
+func (h *Histogram) Enqueue(incomingValue float64, count int) *HistogramItem{
 
 	v := h.UnifiedValue(incomingValue)
 
@@ -131,7 +131,7 @@ func (h *Histogram) Enqueue(incomingValue float64) *HistogramItem{
 	var item *HistogramItem = nil
 	var newRoot *HistogramItem = nil
 	if h.RootItem != nil {
-		item, newRoot = h.RootItem.Insert(v)
+		item, newRoot = h.RootItem.Insert(v, int64(count))
 		if newRoot != nil {
 			h.RootItem = newRoot
 		}
@@ -194,29 +194,33 @@ func (h *Histogram) Enqueue(incomingValue float64) *HistogramItem{
 		h.RootItem = item
 		h.MinItem = item
 		h.MaxItem = item
+		item.Duplications = int64(count)
 		for _, p := range h.Percentiles {
 			p.Item = item
-			p.Count = 1
+			p.Count = int64(count)
 			p.RealPercentage = float64(1)
 		}
 	}
-	if item != nil && item.Duplications == 1{
+	if item != nil && item.Duplications == int64(count) {
 		h.BucketHistogram.Insert(item)
 	}
-	h.Queue = append(h.Queue, item)
+	for i := 0; i<count; i++{
+		h.Queue = append(h.Queue, item)
+	}
 
 	// mean and variance and count
-	h.Count += 1
+	countPre := h.Count
+	h.Count += int64(count)
 	meanPre := h.Mean
-	h.Mean = (h.Mean * float64(h.Count-1) + v) / float64(h.Count)
+	h.Mean = (h.Mean * float64(countPre) + v*float64(count)) / float64(h.Count)
 
-	a := float64(h.Count-1)/float64(h.Count)*h.Variance
-	b := float64(h.Count-1)/float64(h.Count)*math.Pow(h.Mean - meanPre, 2)
-	c := float64(1)/float64(h.Count)*math.Pow(v - h.Mean, 2)
+	a := float64(countPre)/float64(h.Count)*h.Variance
+	b := float64(countPre)/float64(h.Count)*math.Pow(h.Mean - meanPre, 2)
+	c := float64(int64(count))/float64(h.Count)*math.Pow(v - h.Mean, 2)
 
 	h.Variance = a + b + c
 
-	if h.QueueSize > 0 && h.Count > h.QueueSize {
+	for h.QueueSize > 0 && h.Count > h.QueueSize {
 		result = h.Dequeue()
 	}
 	return result

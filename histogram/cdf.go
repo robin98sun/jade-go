@@ -42,13 +42,11 @@ func (c *CDF) Histogram() *Histogram {
 
 	hist := NewHistogram(int64(total_count+1), float64(0.1), 1)
 	hist.AddPercentilePoint(float64(0.99))
-	for i := 0; i < count_zero; i++ {
-		hist.Enqueue(0)
-	}
+	hist.Enqueue(0, count_zero)
 
 	// assume points are sorted
 	for _, p := range c.Points {
-		hist.Enqueue(p.Value)
+		hist.Enqueue(p.Value, 1)
 	}
 	c.histogram = hist
 

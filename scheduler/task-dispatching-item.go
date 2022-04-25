@@ -32,7 +32,9 @@ type TaskDispatchingItem struct {
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
-	arriveTimestamp time.Time
+
+	// timestamps
+	ArriveTimestamp time.Time
 	InquiryStartTimestamp time.Time
 	InquiryDoneTimestamp time.Time
 	BudgetEstimationDoneTimestamp time.Time
@@ -58,7 +60,7 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 	if t.Options != nil {
 		inst.Options = t.Options
 	}
-	inst.arriveTimestamp = t.arriveTimestamp
+	inst.ArriveTimestamp = t.ArriveTimestamp
 	if withReport {
 		if t.ReportTo != nil && len(t.ReportTo) > 0 {
 			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
@@ -70,8 +72,8 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 	if t.Priority != 0 {
 		inst.Priority = t.Priority
 	}
-	if !t.arriveTimestamp.IsZero() {
-		inst.arriveTimestamp = t.arriveTimestamp
+	if !t.ArriveTimestamp.IsZero() {
+		inst.ArriveTimestamp = t.ArriveTimestamp
 	}
 	if t.SLO != nil {
 		inst.SLO = t.SLO
@@ -93,12 +95,12 @@ func (t *TaskDispatchingItem) CopyForSubtask(withReport bool) *TaskDispatchingIt
 
 func (t *TaskDispatchingItem) Arrived() {
 	if t != nil {
-		t.arriveTimestamp = time.Now()
+		t.ArriveTimestamp = time.Now()
 	}
 }
 
 func (t *TaskDispatchingItem) GetArriveTime() time.Time {
-	return t.arriveTimestamp
+	return t.ArriveTimestamp
 }
 
 

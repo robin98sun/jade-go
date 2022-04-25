@@ -155,16 +155,17 @@ func (t *HistogramItem) CumulativeCount() int64 {
 // return the inserted node,
 // and if the root could be changed, then return the new root
 //     but if the root is not changed, then return nil
-func (t *HistogramItem) Insert(v float64) (*HistogramItem, *HistogramItem) {
+func (t *HistogramItem) Insert(v float64, count int64) (*HistogramItem, *HistogramItem) {
     if v == t.Value {
-        t.Duplications += 1
-        t.Count += 1
+        t.Duplications += count
+        t.Count += count
         for c := t.Parent; c!= nil; c = c.Parent {
-            c.Count += 1
+            c.Count += count
         }
         return t, nil
     } else if (t.Left == nil && v < t.Value) || ( t.Right == nil && v > t.Value ) {
         newItem := NewHistogramItem(v)
+        newItem.Duplications = count
         newItem.Parent = t
         var root *HistogramItem = nil
         if v > t.Value {
@@ -186,7 +187,7 @@ func (t *HistogramItem) Insert(v float64) (*HistogramItem, *HistogramItem) {
         }
         // update count before rotation
         for p := t; p != nil; p = p.Parent {
-            p.Count += 1
+            p.Count += count
         }
         // update height
         if (t.Left == nil && v > t.Value) || (t.Right == nil && v < t.Value) {
@@ -195,9 +196,9 @@ func (t *HistogramItem) Insert(v float64) (*HistogramItem, *HistogramItem) {
         }
         return newItem, root
     } else if v < t.Value {
-        return t.Left.Insert(v)
+        return t.Left.Insert(v, count)
     } else {
-        return t.Right.Insert(v)
+        return t.Right.Insert(v, count)
     }
 }
 

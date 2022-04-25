@@ -128,7 +128,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 		}
 		if len(histogram_list) > 0 {
 			response.AvailableNodes = int64(len(histogram_list))
-			count := 10
+			count := 100
 			response.CDF = histogram.NewCDF(count+1)
 			response.CDF.StartPoint = float64(0.99) 
 			response.CDF.Increment = (1-response.CDF.StartPoint)/float64(count)

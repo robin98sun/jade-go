@@ -49,7 +49,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
 	if inQueueTime >= 0 {
 		podCacheItem.Queue.Lock()
-		podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime)
+		podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime, 1)
 		podCacheItem.Queue.Unlock()
 	}
 	

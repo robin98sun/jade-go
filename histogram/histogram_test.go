@@ -40,7 +40,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 		for i:=0; i<len(list); i++ {
 			v := list[i]
 			// log.Printf("original %v value: %v", i, v)
-			histogram.Enqueue(v)
+			histogram.Enqueue(v, 1)
 		}
 		assert.Equal(t, int64(window_size), histogram.Count, "histogram size should equal window size")
 
@@ -188,7 +188,7 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 			for i:=0; i<len(list); i++ {
 				v := list[i]
 				// log.Printf("original %v value: %v", i, v)
-				histogram.Enqueue(v)
+				histogram.Enqueue(v, 1)
 			}
 			histogram_list = append(histogram_list, histogram)
 		}
