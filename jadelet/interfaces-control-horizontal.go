@@ -104,10 +104,26 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	var histogram_list []*histogram.Histogram
 	if len(availableNodes) > 0 {
 		for _, nodekey := range availableNodes {
+			j.log.Printf("[inquiry] [jade version: %v] searching pod for application %v on node %v",
+				j.Config.Version,
+				dispatchItem.Task.Application.Key(),
+				nodekey,
+			)
 			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
 			if workerPod == nil {continue}
+			j.log.Printf("[inquiry] selected one pod [%v] for application %v on node %v",
+				workerPod.GetKey(),
+				dispatchItem.Task.Application.Key(),
+				nodekey,
+			)
 
 			podQueue := j.PodCache.GetPodQueue(workerPod)
+			if podQueue == nil {continue}
+			j.log.Printf("[inquiry] got the queue of pod [%v] for application %v on node %v",
+				podQueue.GetKey(),
+				dispatchItem.Task.Application.Key(),
+				nodekey,
+			)
 			histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
 		}
 		if len(histogram_list) > 0 {

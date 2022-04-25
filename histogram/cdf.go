@@ -56,10 +56,14 @@ func (c *CDF) Histogram() *Histogram {
 
 
 func SearchCDFProduct(cdf_list []*CDF, percentile float64) float64 {
-	
+	if len(cdf_list) == 0 {
+		return 0
+	}
+
 	hist_list := make([]*Histogram, len(cdf_list))
 
 	for i, cdf := range cdf_list {
+		if cdf == nil {continue}
 		hist_list[i] = cdf.Histogram()
 	}
 

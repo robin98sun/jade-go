@@ -57,7 +57,7 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 }
 
 func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.Requirements) []string {
-	j.log.Printf("Search %v nodes", nodeType)
+	j.log.Printf("Searching %v nodes", nodeType)
 	var capableNodes []string
 	capabilityCache := j.subnodeCapabilityCache
 	capacityCache := j.subnodeCapabilityCache
@@ -71,5 +71,6 @@ func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.R
 	if len(requirements.Exclusive) > 0 && len(capableNodes) > 0 || len(requirements.Exclusive) == 0 {
 		capableNodes = capacityCache.SelectNodesCollectively(requirements.Collective, capableNodes)
 	}
+	j.log.Printf("%v %v nodes are selected", len(capableNodes), nodeType)
 	return capableNodes
 }
