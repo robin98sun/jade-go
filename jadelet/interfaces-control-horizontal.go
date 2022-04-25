@@ -120,7 +120,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 			podQueue := j.PodCache.GetPodQueue(workerPod)
 			if podQueue == nil {continue}
 			j.log.Printf("[inquiry] got the queue of pod [%v] for application %v on node %v",
-				podQueue.GetKey(),
+				workerPod.GetKey(),
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
