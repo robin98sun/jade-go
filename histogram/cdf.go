@@ -1,0 +1,64 @@
+package histogram
+
+import (
+	"math"
+	// "sync"
+	// "time"
+	// "uta.edu/aces/jade-go/kernel"
+	// "strconv"
+	// "fmt"
+	// "log"
+)
+
+type CDFPoint struct {
+	Percentile float64
+	Value      float64
+}
+
+type CDF struct {
+	Points 	[]*CDFPoint `json:"points,omitempty"`
+	StartPoint float64 `json:"startPoint,omitempty"`
+	Increment  float64 `json:"increment,omitempty"`
+	Amount int `json:"amount,omitempty"`
+	histogram *Histogram
+}
+
+func NewCDF(amountOfPoint int) *CDF {
+	return &CDF{
+		Points: make([]*CDFPoint, amountOfPoint),
+		Amount: amountOfPoint,
+	}
+}
+
+func (c *CDF) Histogram() *Histogram {
+	if c.histogram != nil {
+		return c.histogram
+	}
+	count_zero := int(math.Round((1/(1-c.StartPoint)-1)))*(c.Amount-1)
+	total_count := count_zero + c.Amount - 1
+
+	hist := NewHistogram(int64(total_count+1), float64(0.1), 1)
+	for i := 0; i < count_zero; i++ {
+		hist.Enqueue(0)
+	}
+
+	// assume points are sorted
+	for _, p := range c.Points {
+		hist.Enqueue(p.Value)
+	}
+
+	return hist
+}
+
+
+func SearchCDFProduct(cdf_list []*CDF, percentile float64) float64 {
+	
+	hist_list := make([]*Histogram, len(cdf_list))
+
+	for i, cdf := range cdf_list {
+		hist_list[i] = cdf.Histogram()
+	}
+
+	return CalcPercentileOfProduct(percentile, hist_list, false)
+
+}

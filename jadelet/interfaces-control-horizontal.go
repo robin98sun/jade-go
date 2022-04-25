@@ -4,6 +4,8 @@ import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/histogram"
 	"encoding/json"
 )
 
@@ -75,18 +77,61 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *kernel.Requirements
+		Payload *scheduler.TaskDispatchingItem
 	}{}
 	err = json.Unmarshal(content, reqInst)
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode requirements of listing eligible neighbors: "+err.Error())
-		j.log.Println("[registry] ERROR of decoding content of requirements:", err.Error())
+		j.log.Println("[inquiry] ERROR of decoding content of requirements:", err.Error())
 		return
 	}
-	
+
+	dispatchItem := reqInst.Payload
+
+	if dispatchItem == nil || dispatchItem.Task == nil || dispatchItem.Task.Requirements == nil || dispatchItem.Task.Application == nil {
+		j.PeacefulFatalRequest(w, r, "invalid task")
+		j.log.Println("[inquiry] invalid incoming task")
+		return
+	}
+
+	availableNodes := j.selectAvaiableNodes(JadeNodeTypeSubnode, dispatchItem.Task.Requirements)
+
+	response := &BudgetNegotiationResponse{
+		AvailableNodes: int64(0),
+	}
+
+	if len(availableNodes) > 0 {
+		var histogram_list []*histogram.Histogram
+		for _, nodekey := range availableNodes {
+			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
+			if workerPod == nil {continue}
+
+			podQueue := j.PodCache.GetPodQueue(workerPod)
+			histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+		}
+		if len(histogram_list) > 0 {
+			response.AvailableNodes = int64(len(histogram_list))
+			count := 100
+			response.CDF = histogram.NewCDF(count+1)
+			response.CDF.StartPoint = float64(0.99) 
+			response.CDF.Increment = (1-response.CDF.StartPoint)/float64(count)
+			for i:=0; i<=count; i++ {
+				percentile := response.CDF.StartPoint + float64(i) * response.CDF.Increment
+				if i == count {
+					percentile = float64(1)
+				}
+				latency := histogram.CalcPercentileOfProduct(percentile, histogram_list, false)
+				response.CDF.Points[i] = &histogram.CDFPoint{
+					Percentile: percentile,
+					Value: latency,
+				}
+			}
+		}
+	}
+
 	// finish the request
-	j.DoneRequest(w, r, nil)
+	j.DoneRequest(w, r, response)
 }
 
 func (j *JADE) NeighborGossip(w rest.ResponseWriter, r *rest.Request) {

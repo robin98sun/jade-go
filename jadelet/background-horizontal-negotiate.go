@@ -5,6 +5,7 @@ import (
 	// "sort"
 	"encoding/json"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jade-go/scheduler"
 	// "uta.edu/aces/jade-go/histogram"
 	// "uta.edu/aces/jadesdk"
@@ -62,14 +63,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			for _, neighbor := range eligibleNeighbors {
 				go j.inquiryBudget(neighbor, newDispatchItem, cache)
 			}
-			go j.CallbackOfNegotiation(cache)
+			go j.CallbackOfNegotiation(cache, dispatchItem)
 
 		}
 
 	}
 }
 
-func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache) {
+func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, dispatchItem *scheduler.TaskDispatchingItem) {
 	for {
 		time.Sleep(1 * time.Millisecond)
 
@@ -89,14 +90,38 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache) {
 	}
 
 	// 
-	j.log.Printf("negotiation is done")
+	j.log.Printf("all inquiries are done")
+
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+
+	// multiply CDFs
+	var cdf_list []*histogram.CDF
+	for _, res := range cache.Responses {
+		if res.Response == nil {
+			continue
+		}
+
+		cdf_list = append(cdf_list, res.Response.CDF)
+	}
+
+	tail_latency := histogram.SearchCDFProduct(cdf_list, float64(0.99))
+
+	j.log.Printf("99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
+
+}
+
+
+type BudgetNegotiationResponse struct {
+	AvailableNodes int64 `json:"availableNodes,omitempty"`
+	CDF *histogram.CDF 	 `json:"cdf,omitempty"`
 }
 
 type BudgetNegotiationResponseCacheItem struct {
 	Neighbor 			*kernel.Node
 	requestSentAt 		time.Time
 	responseArriveAt 	time.Time
-	Response 			interface{}
+	Response 			*BudgetNegotiationResponse
 	IsDone              bool
 }
 
@@ -112,7 +137,7 @@ func NewBudgetNegotiationResponseCache() *BudgetNegotiationResponseCache {
 	}
 }
 
-func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, response interface{}) {
+func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, response *BudgetNegotiationResponse) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -131,7 +156,7 @@ func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, resp
 }
 
 
-func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, cache *BudgetNegotiationResponseCache) interface{} {
+func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, cache *BudgetNegotiationResponseCache) *BudgetNegotiationResponse {
 	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
 
 	j.log.Printf("inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
@@ -141,7 +166,7 @@ func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDi
 		j.log.Println("ERROR when inquirying eligible neighbor:", err.Error())
 	} else {
 		resInst :=  &struct{
-			Payload interface{} `json:"payload,omitempty"`
+			Payload *BudgetNegotiationResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {

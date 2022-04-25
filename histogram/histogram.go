@@ -10,6 +10,7 @@ import (
 	"log"
 )
 
+
 type Histogram struct {
 	Queue 		[]*HistogramItem
 	RootItem	*HistogramItem
