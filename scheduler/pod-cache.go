@@ -174,7 +174,7 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 		key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			for _, podItem := range appModuleItem.List {
-				if podItem.Allocation.MinimumCapacity.GE(alloc.MinimumCapacity) {
+				if alloc == nil || alloc.MinimumCapacity == nil || podItem.Allocation.MinimumCapacity.GE(alloc.MinimumCapacity) {
 					return podItem.Pod
 				}
 			}
