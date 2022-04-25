@@ -33,6 +33,9 @@ type TaskDispatchingItem struct {
 	Options         *TaskDispatchingOptions                 `json:"options,omitempty"`
 	Priority	    int                                     `json:"priority,omitempty"`
 	arriveTimestamp time.Time
+	InquiryStartTimestamp time.Time
+	InquiryDoneTimestamp time.Time
+	BudgetEstimationDoneTimestamp time.Time
 
 	// TTL is the maximum broadcast domains it can out reach
 	// if set 0, it means only within the autonomy service domain

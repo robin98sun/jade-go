@@ -146,8 +146,9 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 		}
 	}
 
-	j.log.Printf("[inquiry] selected %v histograms on %v nodes, response: %v",
+	j.log.Printf("[inquiry] selected %v histograms for application %v on %v nodes, response: %v",
 		len(histogram_list), 
+		dispatchItem.Task.Application.Key(),
 		len(availableNodes),
 		response,
 	)

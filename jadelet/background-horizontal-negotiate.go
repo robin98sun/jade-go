@@ -60,6 +60,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					requestSentAt: time.Now(),
 				}
 			}
+			dispatchItem.InquiryStartTimestamp = time.Now()
 			for _, neighbor := range eligibleNeighbors {
 				go j.inquiryBudget(neighbor, newDispatchItem, cache)
 			}
@@ -91,6 +92,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 	// 
 	j.log.Printf("all inquiries are done")
+	dispatchItem.InquiryDoneTimestamp = time.Now()
 
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
@@ -98,17 +100,25 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 	// multiply CDFs
 	var cdf_list []*histogram.CDF
 	for _, res := range cache.Responses {
-		if res.Response == nil {
+		if res.Response == nil || res.Response.CDF == nil {
 			continue
 		}
 
 		cdf_list = append(cdf_list, res.Response.CDF)
 	}
 
-	tail_latency := histogram.SearchCDFProduct(cdf_list, float64(0.99))
+	if len(cdf_list) > 0 {
+		tail_latency := histogram.SearchCDFProduct(cdf_list, float64(0.99))
 
-	j.log.Printf("99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
+		j.log.Printf("99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
+	}
 
+	dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+
+	j.log.Printf("budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
+		dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
+		dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
+	)
 }
 
 
