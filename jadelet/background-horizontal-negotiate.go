@@ -1,13 +1,14 @@
 package jadelet
 
 import (
-	// "time"
+	"time"
 	// "sort"
 	"encoding/json"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	// "uta.edu/aces/jade-go/histogram"
 	// "uta.edu/aces/jadesdk"
+	"sync"
 )
 
 func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
@@ -33,9 +34,127 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		}
 		if len(eligibleNeighbors) > 0 {
 			j.log.Printf("retreved %v eligible neighbors from cache", len(eligibleNeighbors))
+
+			budgetNegotiation := scheduler.BudgetNegotiationTypeHistogram
+			if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+				budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+			}
+
+			newDispatchItem := dispatchItem.MinimumCopy()
+			newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode, nil)
+			newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
+				BudgetNegotiation: budgetNegotiation,
+			}
+			newDispatchItem.TTL = dispatchItem.TTL - 1
+
+			if budgetNegotiation != scheduler.BudgetNegotiationTypeHistogram {
+
+			}
+
+			cache := NewBudgetNegotiationResponseCache()
+			for _, neighbor := range eligibleNeighbors {
+				cache.Responses[neighbor.Key()] = &BudgetNegotiationResponseCacheItem{
+					Neighbor: neighbor,
+					IsDone: false,
+					requestSentAt: time.Now(),
+				}
+			}
+			for _, neighbor := range eligibleNeighbors {
+				go j.inquiryBudget(neighbor, newDispatchItem, cache)
+			}
+			go j.CallbackOfNegotiation(cache)
+
 		}
 
 	}
+}
+
+func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache) {
+	for {
+		time.Sleep(1 * time.Millisecond)
+
+		isDone := true
+		cache.mutex.Lock()
+		for _, cacheItem := range cache.Responses {
+			if !cacheItem.IsDone {
+				isDone = false
+				break
+			}
+		}
+		cache.mutex.Unlock()
+
+		if isDone {
+			break
+		}
+	}
+
+	// 
+	j.log.Printf("negotiation is done")
+}
+
+type BudgetNegotiationResponseCacheItem struct {
+	Neighbor 			*kernel.Node
+	requestSentAt 		time.Time
+	responseArriveAt 	time.Time
+	Response 			interface{}
+	IsDone              bool
+}
+
+type BudgetNegotiationResponseCache struct {
+	Responses map[string]*BudgetNegotiationResponseCacheItem
+	mutex *sync.Mutex
+}
+
+func NewBudgetNegotiationResponseCache() *BudgetNegotiationResponseCache {
+	return &BudgetNegotiationResponseCache{
+		Responses: make(map[string]*BudgetNegotiationResponseCacheItem),
+		mutex: &sync.Mutex{},
+	}
+}
+
+func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, response interface{}) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if cacheItem, e := c.Responses[neighbor.Key()]; !e {
+		c.Responses[neighbor.Key()] = &BudgetNegotiationResponseCacheItem{
+			Neighbor: 	neighbor,
+			Response: 	response,
+			IsDone: 	true,
+			responseArriveAt: time.Now(),
+		}
+	} else {
+		cacheItem.Response = response
+		cacheItem.IsDone = true
+		cacheItem.responseArriveAt = time.Now()
+	}
+}
+
+
+func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, cache *BudgetNegotiationResponseCache) interface{} {
+	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
+
+	j.log.Printf("inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
+	apiPath := "/$jade$/inquiryBudget"
+	_, _, content, err := j.HTTPCommunicate("inquirying eligible neighbor", "POST", apiPath, neighbor, payload, 0, 10)
+	if err != nil {
+		j.log.Println("ERROR when inquirying eligible neighbor:", err.Error())
+	} else {
+		resInst :=  &struct{
+			Payload interface{} `json:"payload,omitempty"`
+		}{}
+		err = json.Unmarshal(content, resInst)
+		if err != nil {
+			j.log.Println("ERROR of inquirying eligible neighbor: can not decode response, ", err)
+		} else {
+			j.log.Println("response of inquirying eligible neighbor:", resInst.Payload)
+
+			cache.SetResponse(neighbor, resInst.Payload)
+			return resInst.Payload
+		}
+	}
+	cache.SetResponse(neighbor, nil)
+	return nil
 }
 
 func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
@@ -55,30 +174,6 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) [
 			j.log.Println("ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
 			j.log.Println("response of fetching eligible neighbors:", resInst.Payload)
-			return resInst.Payload
-		}
-	}
-	return nil
-}
-
-
-func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, budgetChoices []interface{}) interface{} {
-	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
-
-	j.log.Printf("inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
-	apiPath := "/$jade$/inquiryBudget"
-	_, _, content, err := j.HTTPCommunicate("inquirying eligible neighbor", "POST", apiPath, neighbor, payload, 0, 10)
-	if err != nil {
-		j.log.Println("ERROR when inquirying eligible neighbor:", err.Error())
-	} else {
-		resInst :=  &struct{
-			Payload interface{} `json:"payload,omitempty"`
-		}{}
-		err = json.Unmarshal(content, resInst)
-		if err != nil {
-			j.log.Println("ERROR of inquirying eligible neighbor: can not decode response, ", err)
-		} else {
-			j.log.Println("response of inquirying eligible neighbor:", resInst.Payload)
 			return resInst.Payload
 		}
 	}

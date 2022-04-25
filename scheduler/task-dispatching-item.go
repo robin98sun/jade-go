@@ -6,6 +6,14 @@ import (
 )
 
 
+type BudgetNegotiationType string
+const (
+	BudgetNegotiationTypeHistogram BudgetNegotiationType = "histogram"
+	BudgetNegotiationTypeChoicesOfMeanAndVariance = "choices_mean_and_variance"
+	BudgetNegotiationTypeGivenMeanAndVariance = "given_mean_and_variance"
+	BudgetNegotiationTypeGivenBudgetTime = "given_budget_time"
+)
+
 type TaskDispatchingOptions struct {
 	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
 	PersistCache              	bool   `json:"persistCache,omitempty"`
@@ -13,7 +21,7 @@ type TaskDispatchingOptions struct {
 	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
-
+	BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
 }
 
 const TaskDefaultPriority = 1000
@@ -32,11 +40,15 @@ type TaskDispatchingItem struct {
 	TTL             int64 	`json:"ttl,omitempty"` 
 }
 
-func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
+func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchingItem {
 	inst := &TaskDispatchingItem{}
 	if t.Task != nil {
 		inst.Task = t.Task
 	}
+	if minimum {
+		return inst
+	}
+
 	if t.Budgets != nil {
 		inst.Budgets = t.Budgets
 	}
@@ -64,8 +76,12 @@ func (t *TaskDispatchingItem) Copy(withReport bool) *TaskDispatchingItem {
 	return inst
 }
 
+func (t *TaskDispatchingItem) MinimumCopy() *TaskDispatchingItem {
+	return t.copy(false, true)
+}
+
 func (t *TaskDispatchingItem) CopyForSubtask(withReport bool) *TaskDispatchingItem {
-	inst := t.Copy(withReport)
+	inst := t.copy(withReport, false)
 	if inst.Task != nil {
 		inst.Task = inst.Task.CopyForSubtask()
 	}

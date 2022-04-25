@@ -67,12 +67,23 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	// Validation
-	// _, payload, err := j.ValidateRequest(w, r)
-	// if err != nil {
-	// 	// the request has been rejected by validator
-	// 	j.PeacefulFatalRequest(w, r, err.Error())
-	// 	return
-	// }
+	content, _, err := j.ValidateRequest(w, r)
+	if err != nil {
+		// the request has been rejected by validator
+		j.PeacefulFatalRequest(w, r, err.Error())
+		return
+	}
+
+	reqInst := &struct {
+		Payload *kernel.Requirements
+	}{}
+	err = json.Unmarshal(content, reqInst)
+
+	if err != nil {
+		j.PeacefulFatalRequest(w, r, "Can not decode requirements of listing eligible neighbors: "+err.Error())
+		j.log.Println("[registry] ERROR of decoding content of requirements:", err.Error())
+		return
+	}
 	
 	// finish the request
 	j.DoneRequest(w, r, nil)
