@@ -129,8 +129,14 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 		if len(histogram_list) > 0 {
 			response.AvailableNodes = int64(len(histogram_list))
 			count := 100
+			if dispatchItem.Options != nil && dispatchItem.Options.CDFPoints > 0 {
+				count = dispatchItem.Options.CDFPoints
+			}
 			response.CDF = histogram.NewCDF(count+1)
 			response.CDF.StartPoint = float64(0.99) 
+			if dispatchItem.Options != nil && dispatchItem.Options.CDFStartPoint > 0 && dispatchItem.Options.CDFStartPoint <= 1 {
+				response.CDF.StartPoint = dispatchItem.Options.CDFStartPoint
+			}
 			response.CDF.Increment = (1-response.CDF.StartPoint)/float64(count)
 			for i:=0; i<=count; i++ {
 				percentile := response.CDF.StartPoint + float64(i) * response.CDF.Increment

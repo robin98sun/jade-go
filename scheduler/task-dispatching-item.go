@@ -22,6 +22,8 @@ type TaskDispatchingOptions struct {
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 	BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
+	CDFPoints                   int 	`json:"cdfPoints,omitempty"`
+	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
 }
 
 const TaskDefaultPriority = 1000

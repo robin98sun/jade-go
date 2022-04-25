@@ -38,9 +38,9 @@ func (c *CDF) Histogram() *Histogram {
 		return c.histogram
 	}
 	count_zero := int(math.Round((1/(1-c.StartPoint)-1)))*(c.Amount-1)
-	total_count := count_zero + c.Amount - 1
+	total_count := count_zero + c.Amount
 
-	hist := NewHistogram(int64(total_count+1), float64(0.1), 1)
+	hist := NewHistogram(int64(total_count), float64(0.1), 1)
 	hist.AddPercentilePoint(float64(0.99))
 	hist.Enqueue(0, count_zero)
 

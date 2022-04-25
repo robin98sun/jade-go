@@ -46,8 +46,15 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
 				BudgetNegotiation: budgetNegotiation,
 			}
+			if dispatchItem.Options != nil && dispatchItem.Options.CDFPoints > 0 {
+				newDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
+			}
+			if dispatchItem.Options != nil && dispatchItem.Options.CDFStartPoint > 0 && dispatchItem.Options.CDFStartPoint <= 1 {
+				newDispatchItem.Options.CDFStartPoint = dispatchItem.Options.CDFStartPoint
+			}
 			newDispatchItem.TTL = dispatchItem.TTL - 1
 
+			//  for other types of estimations
 			if budgetNegotiation != scheduler.BudgetNegotiationTypeHistogram {
 
 			}
@@ -119,6 +126,8 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 		dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
 		dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
 	)
+
+	// 
 }
 
 
