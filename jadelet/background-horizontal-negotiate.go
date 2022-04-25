@@ -115,7 +115,11 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 	}
 
 	if len(cdf_list) > 0 {
-		tail_latency := histogram.SearchCDFProduct(cdf_list, float64(0.99))
+		budgetEstimationPercentilePoint := float64(0.99)
+		if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
+			budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
+		}
+		tail_latency := histogram.SearchCDFProduct(cdf_list, budgetEstimationPercentilePoint)
 
 		j.log.Printf("99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
 	}

@@ -24,6 +24,7 @@ type TaskDispatchingOptions struct {
 	BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
 	CDFPoints                   int 	`json:"cdfPoints,omitempty"`
 	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
+	BudgetEstimationPercentilePoint float64 `json:"budgetEstimationPercentilePoint,omitempty"`
 }
 
 const TaskDefaultPriority = 1000
@@ -135,7 +136,7 @@ type TaskDispatchingItemBudget struct {
 }
 
 type TaskDispatchingItemSLO struct {
-	TailLatency99InMilliseconds float64 `json:"tailLatency99InMilliseconds,omitempty"`
+	TailLatencyInMilliseconds float64 `json:"tailLatencyInMilliseconds,omitempty"`
 }
 
 func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {
@@ -156,6 +157,16 @@ func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispa
 		return reportTo
 	}
 	return nil
+}
+
+func (t *TaskDispatchingItem) GetBudgetForModule(moduleName string) float64 {
+	if t.Budgets == nil || len(t.Budgets) == 0 {
+		return 0
+	}
+	if budgetItem, e := t.Budgets[moduleName]; e {
+		return budgetItem.MaximumMillisecondsInQueue
+	}
+	return 0
 }
 
 func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) float64 {
