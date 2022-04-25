@@ -101,8 +101,8 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 		AvailableNodes: int64(0),
 	}
 
+	var histogram_list []*histogram.Histogram
 	if len(availableNodes) > 0 {
-		var histogram_list []*histogram.Histogram
 		for _, nodekey := range availableNodes {
 			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
 			if workerPod == nil {continue}
@@ -129,6 +129,12 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 			}
 		}
 	}
+
+	j.log.Printf("[inquiry] selected %v histograms on %v nodes, response: %v",
+		len(histogram_list), 
+		len(availableNodes),
+		response,
+	)
 
 	// finish the request
 	j.DoneRequest(w, r, response)

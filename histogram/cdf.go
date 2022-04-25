@@ -31,6 +31,9 @@ func NewCDF(amountOfPoint int) *CDF {
 }
 
 func (c *CDF) Histogram() *Histogram {
+	if c == nil {
+		return nil
+	}
 	if c.histogram != nil {
 		return c.histogram
 	}
@@ -46,6 +49,7 @@ func (c *CDF) Histogram() *Histogram {
 	for _, p := range c.Points {
 		hist.Enqueue(p.Value)
 	}
+	c.histogram = hist
 
 	return hist
 }
