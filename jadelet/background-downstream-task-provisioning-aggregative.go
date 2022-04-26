@@ -101,6 +101,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				}
 				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, nil, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
 
+				j.log.Println("there are %v neighbors in collaboration", len(task.NeighborNodes))
 				if len(task.NeighborNodes) > 0 {
 					for _, neighborNode := range task.NeighborNodes {
 						j.TaskCache.CacheTaskForSubnode(

@@ -134,18 +134,20 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 		j.log.Printf("[budget negotiation] 99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
 
-		negotiationOverhead := dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond
+		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
-		if tail_latency < tailLatencySLO - float64(negotiationOverhead) {
-			budget = tailLatencySLO - tail_latency - float64(negotiationOverhead)
+		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
+
+		if tail_latency < tailLatencySLO - negotiationOverhead {
+			budget = tailLatencySLO - tail_latency - negotiationOverhead
 		} else {
 			budget = 0
 		}
 
 		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
+	} else {
+		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 	}
-
-	dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
 	j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
 		dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
