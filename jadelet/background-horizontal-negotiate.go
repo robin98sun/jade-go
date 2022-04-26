@@ -156,6 +156,8 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 	j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
 	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
+
+	dispatchItem.TTL--
 	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})

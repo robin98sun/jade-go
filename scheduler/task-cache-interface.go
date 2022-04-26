@@ -21,7 +21,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, neighborNode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -124,6 +124,11 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, ne
 		printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey, string(dispatchItem.status))
 	}
 
+
+	return subtask
+}
+
+func (c *TaskCache) SaveNeighborNode(subnode *kernel.Node, taskKey string, moduleName string, neighborNode *kernel.Node, printf func(string, ...interface{})) {
 	if neighborNode != nil {
 		printf("[task cache] saving neighbor %v", neighborNode)
 		if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors == nil {
@@ -131,7 +136,6 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, ne
 		}
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors[neighborNode.GetKey()] = neighborNode
 	}
-	return subtask
 }
 
 func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
