@@ -51,7 +51,7 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 		},
 	}
 	if masterNode != nil {
-		envVars = append(envVars, map[string]string{
+		envVars = append(envVars, []map[string]string{
 			{
 				"name":  "JADE_MASTERNODE_ADDR",
 				"value": masterNode.Address,
@@ -63,8 +63,8 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 			{
 				"name":  "JADE_MASTERNODE_PROTOCOL",
 				"value": masterNode.Protocol,
-			}
-		})
+			},
+		}...)
 	}
 	// add capabilities into environments
 	for _, c := range j.Config.Capabilities {
