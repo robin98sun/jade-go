@@ -31,6 +31,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	goodTaskCache := make(map[string]*DispatchItemWithAggregator) // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
+		j.log.Printf("there are %v neighbors in collaboration", task.NeighborNodes)
 		if j.IsCoordinator() {
 			// allocate an aggregator pod if needed
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
@@ -101,7 +102,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				}
 				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, nil, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
 
-				j.log.Println("there are %v neighbors in collaboration", len(task.NeighborNodes))
+				j.log.Println("saving %v neighbors in task cache", len(task.NeighborNodes))
 				if len(task.NeighborNodes) > 0 {
 					for _, neighborNode := range task.NeighborNodes {
 						j.TaskCache.CacheTaskForSubnode(
