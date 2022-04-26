@@ -19,6 +19,8 @@ type SubtasksForAggregator struct {
 	SubtaskList []string
 }
 
+
+
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
 func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
@@ -264,7 +266,11 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					rejectTaskCache[task.GetKey()] = taskItem
 				}
 			}
-			if workerPod != nil && (!task.ForceUpdateNetworkStructure || j.IsSelfNode(nodekey)) {
+			toUpdateNetwork := false
+			if taskItem.Options != nil {
+				toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
+			}
+			if workerPod != nil && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
 				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
 				// 		 	 	and there should be a switch in the task data structure
 				//				to indicate whether wait for updates of existing pods:
@@ -341,7 +347,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 
 	j.log.Printf("Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
 	for nodekey, dispatchingList := range nodesToDispatch {
-		j.dispatchTasks(nodekey, dispatchingList)
+		go j.dispatchTasks(nodekey, dispatchingList)
 	}	
 	// reject bad tasks
 	if len(rejectTaskCache) > 0 {

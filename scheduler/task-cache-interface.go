@@ -96,11 +96,12 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 		}
 
 		if subtask == nil {
-			subtask = c.Cache[taskKey].task.Task.NewSubtask(
+			subtask = c.Cache[taskKey].task.Task.CreateSubtask(
 				moduleName,
 				subnode.Key(),
 				pod.GetKey(),
 				subtaskKey,
+				true,
 			)
 			subtask.Pod = pod
 			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
@@ -460,6 +461,7 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 	defer c.mutex.Unlock()
 	subtasks := []*SubtaskOnNode{}
 	if taskItem, e := c.Cache[taskKey]; e {
+
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			if exclusiveNodeKey != "" && exclusiveNodeKey != nodeItem.node.Key() {
 				continue

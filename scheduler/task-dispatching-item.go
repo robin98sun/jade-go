@@ -15,6 +15,7 @@ const (
 )
 
 type TaskDispatchingOptions struct {
+	ForceUpdateNetworkStructure bool                 `json:"forceUpdateNetworkStructure,omitempty"`
 	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
 	PersistCache              	bool   `json:"persistCache,omitempty"`
 	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"
@@ -81,6 +82,8 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 	if t.SLO != nil {
 		inst.SLO = t.SLO
 	}
+	inst.TTL = t.TTL
+
 	return inst
 }
 
@@ -124,10 +127,16 @@ func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
 }
 
 func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
-	return &TaskDispatchingItemReportTo{
-		Node: node,
-		Pod:  pod,
+	if pod != nil {
+		return &TaskDispatchingItemReportTo{
+			Pod: pod.CopyForReportTo(),
+		}
+	} else if node != nil {
+		return &TaskDispatchingItemReportTo{
+			Node: node,
+		}
 	}
+	return nil
 }
 
 type TaskDispatchingItemBudget struct {
@@ -167,6 +176,15 @@ func (t *TaskDispatchingItem) GetBudgetForModule(moduleName string) float64 {
 		return budgetItem.MaximumMillisecondsInQueue
 	}
 	return 0
+}
+
+func (t *TaskDispatchingItem) SetBudgetForModule(moduleName string, budget float64) {
+	if t.Budgets == nil {
+		t.Budgets = make(map[string]*TaskDispatchingItemBudget)
+	}
+	t.Budgets[moduleName] = &TaskDispatchingItemBudget{
+		MaximumMillisecondsInQueue: budget,
+	}
 }
 
 func (t *TaskDispatchingItem) GetBudgetForModuleAtFanoutDegree(moduleName string, fanoutDegree int) float64 {

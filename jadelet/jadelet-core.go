@@ -94,6 +94,7 @@ func (j *JADE) HasRegistry() bool {
 }
 
 func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {
+
 	if nodeID == "" || j == nil || len(j.Subnodes) == 0 {
 		return nil
 	}

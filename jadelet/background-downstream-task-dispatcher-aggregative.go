@@ -84,10 +84,32 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
 		if len(aggregatorSubtasks) > 0 {
 			// only for valid aggregative tasks
-			workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
-			j.log.Printf("[task dispatcher] found %v subtasks: [%v]", len(workerSubtasks), workerSubtasks)
+			// workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
+			workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key(), "")
+			var neighborSubtasks []*scheduler.SubtaskOnNode
+			dispatchItem := j.TaskCache.GetTask(taskKey, true)
+			if len(dispatchItem.Task.NeighborSubtasks) > 0 {
+				for _, neighborSubtask := range dispatchItem.Task.NeighborSubtasks {
+					if neighborSubtask == nil || neighborSubtask.NodeKey == "" {continue}
+					j.registryMutex.Lock()
+					if neighborNode, e := j.Neighbors[neighborSubtask.NodeKey]; e {
+						neighborSubtasks = append(neighborSubtasks, &scheduler.SubtaskOnNode{
+							Node: neighborNode,
+							Subtask: neighborSubtask,
+						})
+					}
+					j.registryMutex.Unlock()
+				}
+			}
+			allSubtasks := workerSubtasks
+			if len(neighborSubtasks) > 0 {
+				allSubtasks = append([]*scheduler.SubtaskOnNode{}, workerSubtasks...)
+				allSubtasks = append(allSubtasks, neighborSubtasks...)
+			}
+
+			j.log.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks", len(workerSubtasks), len(neighborSubtasks))
 			for _, aggregator := range aggregatorSubtasks {
-				msg := NewAggregatorEnqueuingMessage(taskItem, workerSubtasks, j.Config.SelfNode.Protocol)
+				msg := NewAggregatorEnqueuingMessage(taskItem, allSubtasks, j.Config.SelfNode.Protocol)
 				msg.SubtaskKey = aggregator.Subtask.GetKey()
 				j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 				// Save the dispatching timestamp and fanout degree
@@ -106,6 +128,17 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				)
 				if aggregatorSubtaskCacheItem != nil {
 					aggregatorSubtaskCacheItem.SendPackageSize = reqlen
+				}
+
+				// dispatch the neighbor subtasks
+				if len(neighborSubtasks) > 0 {
+					for _, neighborItem := range neighborSubtasks {
+						newDispatchItem := dispatchItem.CopyForSubtask(false)
+						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
+						newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), nil, aggregator.Subtask.Pod)
+						newDispatchItem.TTL--
+						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
+					}
 				}
 			}
 			// 2. dispatch the subtask to each worker,
@@ -253,6 +286,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		}
 	}
 }
+
 
 type AggregatorEnqueuingMessage struct {
 	TaskKey    string           `json:"taskId,omitempty"`

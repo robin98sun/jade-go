@@ -27,14 +27,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 
 		if eligibleNeighbors == nil {
 			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
-			j.log.Printf("got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
+			j.log.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
 			if eligibleNeighbors == nil {
 				eligibleNeighbors = []*kernel.Node{}
 			}
 			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
 		}
 		if len(eligibleNeighbors) > 0 {
-			j.log.Printf("retreved %v eligible neighbors from cache", len(eligibleNeighbors))
+			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
 
 			budgetNegotiation := scheduler.BudgetNegotiationTypeHistogram
 			if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
@@ -98,7 +98,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 	}
 
 	// 
-	j.log.Printf("all inquiries are done")
+	j.log.Printf("[budget negotiation] all inquiries are done")
 	dispatchItem.InquiryDoneTimestamp = time.Now()
 
 	cache.mutex.Lock()
@@ -106,13 +106,26 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 	// multiply CDFs
 	var cdf_list []*histogram.CDF
-	for _, res := range cache.Responses {
-		if res.Response == nil || res.Response.CDF == nil {
+	for _, cacheItem := range cache.Responses {
+		if cacheItem.Response == nil || cacheItem.Response.CDF == nil {
 			continue
 		}
 
-		cdf_list = append(cdf_list, res.Response.CDF)
+		cdf_list = append(cdf_list, cacheItem.Response.CDF)
+		dispatchItem.Task.CreateSubtask(
+			string(kernel.AppModuleAggregator), 
+			cacheItem.Neighbor.Key(),
+			"", "", false,
+		)
 	}
+
+
+	tailLatencySLO := float64(1000)
+	if dispatchItem.SLO != nil {
+		tailLatencySLO = dispatchItem.SLO.TailLatencyInMilliseconds
+	}
+	budget := tailLatencySLO
+	negotiationOverhead := float64(0)
 
 	if len(cdf_list) > 0 {
 		budgetEstimationPercentilePoint := float64(0.99)
@@ -121,17 +134,34 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 		}
 		tail_latency := histogram.SearchCDFProduct(cdf_list, budgetEstimationPercentilePoint)
 
-		j.log.Printf("99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
+		j.log.Printf("[budget negotiation] 99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
+
+		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) * 10 / time.Millisecond) /10
+
+		if tail_latency < tailLatencySLO {
+			budget = tailLatencySLO - tail_latency - negotiationOverhead
+		} else {
+			budget = 0
+		}
+
+		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
 	}
 
 	dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
-	j.log.Printf("budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
+	j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
 		dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
 		dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
 	)
 
+	j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
+
+	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
+		dispatchItem.Task.GetKey(): dispatchItem,
+	})
+
 	// 
+
 }
 
 
@@ -182,20 +212,20 @@ func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, resp
 func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, cache *BudgetNegotiationResponseCache) *BudgetNegotiationResponse {
 	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
 
-	j.log.Printf("inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
+	j.log.Printf("[budget negotiation] inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
 	apiPath := "/$jade$/inquiryBudget"
 	_, _, content, err := j.HTTPCommunicate("inquirying eligible neighbor", "POST", apiPath, neighbor, payload, 0, 10)
 	if err != nil {
-		j.log.Println("ERROR when inquirying eligible neighbor:", err.Error())
+		j.log.Println("[budget negotiation] ERROR when inquirying eligible neighbor:", err.Error())
 	} else {
 		resInst :=  &struct{
 			Payload *BudgetNegotiationResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Println("ERROR of inquirying eligible neighbor: can not decode response, ", err)
+			j.log.Println("[budget negotiation] ERROR of inquirying eligible neighbor: can not decode response, ", err)
 		} else {
-			j.log.Println("response of inquirying eligible neighbor:", resInst.Payload)
+			j.log.Println("[budget negotiation] response of inquirying eligible neighbor:", resInst.Payload)
 
 			cache.SetResponse(neighbor, resInst.Payload)
 			return resInst.Payload
@@ -208,20 +238,20 @@ func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDi
 func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
-	j.log.Printf("fetching eligible neighbors from registry node [%v], which is %v empty", j.Config.RegistryNode, j.Config.RegistryNode.IsAddrEmpty())
+	j.log.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v], which is %v empty", j.Config.RegistryNode, j.Config.RegistryNode.IsAddrEmpty())
 	apiPath := "/$jade$/eligibleNeighbors"
 	_, _, content, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {
-		j.log.Println("ERROR when fetching eligible neighbors:", err.Error())
+		j.log.Println("[budget negotiation] ERROR when fetching eligible neighbors:", err.Error())
 	} else {
 		resInst :=  &struct{
 			Payload []*kernel.Node `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Println("ERROR of fetching eligible neighbors: can not decode response, ", err)
+			j.log.Println("[budget negotiation] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Println("response of fetching eligible neighbors:", resInst.Payload)
+			j.log.Println("[budget negotiation] response of fetching eligible neighbors:", resInst.Payload)
 			return resInst.Payload
 		}
 	}

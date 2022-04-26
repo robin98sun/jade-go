@@ -52,3 +52,10 @@ func (p *Pod) GetNodeRepresentation(protocol string) *Node {
 	node.Protocol = protocol
 	return node
 }
+
+func (p *Pod) CopyForReportTo() *Pod {
+	return &Pod{
+		Addr: p.Addr,
+		Port: p.Port,
+	}
+}

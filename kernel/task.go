@@ -16,8 +16,8 @@ type Task struct {
 	SubtaskKey                  string               `json:"subtaskId,omitempty"`
 	PodKey                      string               `json:"podId,omitempty"`
 	Subtasks                    map[string]*SubTask  `json:"subtasks,omitempty"`
+	NeighborSubtasks            map[string]*SubTask  `json:"externalSubtasks,omitempty"`
 	MasterNode                  *Node                `json:"masterNode,omitempty"`
-	ForceUpdateNetworkStructure bool                 `json:"forceUpdateNetworkStructure,omitempty"`
 	QueuingMechanism            TaskQueuingMechanism `json:"queuingMechanism,omitempty"`
 	JobKey                      string               `json:"jobId,omitempty"`
 }
@@ -27,7 +27,6 @@ func (t *Task) CopyForSubtask() *Task {
 		Application:  t.Application,
 		Requirements: t.Requirements,
 		Key:          t.Key,
-		ForceUpdateNetworkStructure: t.ForceUpdateNetworkStructure,
 		QueuingMechanism: t.QueuingMechanism,
 		JobKey: t.JobKey,
 	}
@@ -41,15 +40,23 @@ func (t *Task) GetKey() string {
 	return t.Key
 }
 
-func (t *Task) NewSubtask(module string, nodeKey string, podKey string, subtaskKey string) *SubTask {
+func (t *Task) CreateSubtask(module string, nodeKey string, podKey string, subtaskKey string, internal bool) *SubTask {
 	if t == nil {
 		return nil
 	}
-	if t.Subtasks == nil {
-		t.Subtasks = make(map[string]*SubTask)
-	}
 	nst := NewSubtask(t.GetKey(), t.Application.Name, module, nodeKey, podKey, subtaskKey)
-	t.Subtasks[nst.GetKey()] = nst
+	if internal {
+		if t.Subtasks == nil {
+			t.Subtasks = make(map[string]*SubTask)
+		}
+		t.Subtasks[nst.GetKey()] = nst
+	} else {
+		if t.NeighborSubtasks == nil {
+			t.NeighborSubtasks = make(map[string]*SubTask)
+		}
+		t.NeighborSubtasks[nst.GetKey()] = nst
+	}
+	
 	return nst
 }
 

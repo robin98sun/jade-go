@@ -8,11 +8,27 @@ import (
 
 
 func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDispatchingItem) {
+	j.registryMutex.Lock()
 	node := j.GetNodeInControl(nodeID)
+	j.registryMutex.Unlock()
+
 	payload := j.GeneratePayloadOfRequest(node, tasksToDispatch, nil, nil)
 	j.log.Println("dispatching tasks to node", nodeID)
-	go j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", node, payload, 0, 10)
+	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", node, payload, 0, 10)
 }
+
+
+func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *scheduler.TaskDispatchingItem) {
+
+	payload := j.GeneratePayloadOfRequest(
+		neighborNode, 
+		[]*scheduler.TaskDispatchingItem{dispatchItem},
+		nil, nil,
+	)
+	j.log.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())
+	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 10)
+}
+
 
 func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
 	envVars := []map[string]string{
