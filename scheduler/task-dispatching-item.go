@@ -94,8 +94,8 @@ func (t *TaskDispatchingItem) MinimumCopy() *TaskDispatchingItem {
 
 func (t *TaskDispatchingItem) CopyForSubtask(withReport bool) *TaskDispatchingItem {
 	inst := t.copy(withReport, false)
-	if inst.Task != nil {
-		inst.Task = inst.Task.CopyForSubtask()
+	if t.Task != nil {
+		inst.Task = t.Task.CopyForSubtask()
 	}
 	return inst
 }
