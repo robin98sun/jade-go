@@ -156,10 +156,13 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// calc 99 percentile for prod of histograms 
 			budget := taskItem.GetBudgetForModule(string(kernel.AppModuleWorker))
 			j.log.Printf("[task dispatcher] task budget: %v", budget)
+			j.log.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
+			if taskItem.SLO != nil {
+				j.log.Printf("[task dispatcher] SLO: %v", taskItem.SLO.TailLatencyInMilliseconds)
+			}
 			if budget == 0 {
 				if task.QueuingMechanism == kernel.TaskQueuingDDL {
 					if taskItem.SLO != nil && taskItem.SLO.TailLatencyInMilliseconds > 0 {
-						j.log.Printf("[task dispatcher] task SLO: %v", taskItem.SLO)
 						j.log.Printf("[task dispatcher] going to calculate tail latency")
 						
 						histogram_list := []*histogram.Histogram{}
@@ -186,7 +189,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						}
 					} 
 				}
-				if budget == float64(0) && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
+				if budget == 0 && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
 					j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
 					budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 					if budget > 0 {
