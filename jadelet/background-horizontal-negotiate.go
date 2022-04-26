@@ -112,7 +112,9 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 		}
 
 		cdf_list = append(cdf_list, cacheItem.Response.CDF)
-		dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
+		if cacheItem.Neighbor.GetKey () != j.Config.SelfNode.GetKey() {
+			dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
+		}
 	}
 
 
@@ -132,10 +134,10 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 		j.log.Printf("[budget negotiation] 99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
 
-		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond)
+		negotiationOverhead := dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond
 
-		if tail_latency < tailLatencySLO - negotiationOverhead {
-			budget = tailLatencySLO - tail_latency - negotiationOverhead
+		if tail_latency < tailLatencySLO - float64(negotiationOverhead) {
+			budget = tailLatencySLO - tail_latency - float64(negotiationOverhead)
 		} else {
 			budget = 0
 		}

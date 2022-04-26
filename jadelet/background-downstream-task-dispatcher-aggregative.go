@@ -88,20 +88,18 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key(), "")
 			var neighborSubtasks []*scheduler.SubtaskOnNode
 			dispatchItem := j.TaskCache.GetTask(taskKey, true)
-			if len(dispatchItem.Task.NeighborNodes) > 0 {
-				neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
-				for _, neighborNode := range neighborNodes {
-					neighborSubtasks = append(neighborSubtasks, &scheduler.SubtaskOnNode{
-						Node: neighborNode,
-						Subtask: kernel.NewSubtask(
-							task.GetKey(),
-							task.Application.Name,
-							string(kernel.AppModuleAggregator),
-							neighborNode.GetKey(),
-							"", "",
-						),
-					})
-				}
+			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
+			for _, neighborNode := range neighborNodes {
+				neighborSubtasks = append(neighborSubtasks, &scheduler.SubtaskOnNode{
+					Node: neighborNode,
+					Subtask: kernel.NewSubtask(
+						task.GetKey(),
+						task.Application.Name,
+						string(kernel.AppModuleAggregator),
+						neighborNode.GetKey(),
+						"", "",
+					),
+				})
 			}
 			allSubtasks := workerSubtasks
 			if len(neighborSubtasks) > 0 {
@@ -139,7 +137,6 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
 						newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), nil, aggregator.Subtask.Pod)
-						newDispatchItem.TTL--
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
 						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey())
 					}
