@@ -45,22 +45,26 @@ func (j *JADE) newEnv(masterNode *kernel.Node, appName string, appVersion string
 			"value": moduleName,
 		},
 		{
-			"name":  "JADE_MASTERNODE_ADDR",
-			"value": masterNode.Address,
-		},
-		{
-			"name":  "JADE_MASTERNODE_PORT",
-			"value": strconv.Itoa(masterNode.Port),
-		},
-		{
-			"name":  "JADE_MASTERNODE_PROTOCOL",
-			"value": masterNode.Protocol,
-		},
-		{
 			// to force the k3s to truely re-provision a container
 			"name":  "JADE_PROVISIONING_TASK",
 			"value": taskKey,
 		},
+	}
+	if masterNode != nil {
+		envVars = append(envVars, map[string]string{
+			{
+				"name":  "JADE_MASTERNODE_ADDR",
+				"value": masterNode.Address,
+			},
+			{
+				"name":  "JADE_MASTERNODE_PORT",
+				"value": strconv.Itoa(masterNode.Port),
+			},
+			{
+				"name":  "JADE_MASTERNODE_PROTOCOL",
+				"value": masterNode.Protocol,
+			}
+		})
 	}
 	// add capabilities into environments
 	for _, c := range j.Config.Capabilities {
