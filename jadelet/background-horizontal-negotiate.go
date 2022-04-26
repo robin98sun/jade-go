@@ -42,7 +42,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			}
 
 			newDispatchItem := dispatchItem.MinimumCopy()
-			newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode, nil)
+			newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
 			newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
 				BudgetNegotiation: budgetNegotiation,
 			}

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jadesdk"
 )
 
 
@@ -111,7 +112,7 @@ func (t *TaskDispatchingItem) GetArriveTime() time.Time {
 
 
 type TaskDispatchingItemReportTo struct {
-	Node *kernel.Node `json:"node,omitempty"`
+	Node *jadesdk.Node `json:"node,omitempty"`
 	Pod  *kernel.Pod  `json:"pod,omitempty"`
 }
 
@@ -126,17 +127,12 @@ func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
 	return inst
 }
 
-func NewTaskDispatchingItemReportTo(node *kernel.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
-	if pod != nil {
-		return &TaskDispatchingItemReportTo{
-			Pod: pod.CopyForReportTo(),
-		}
-	} else if node != nil {
-		return &TaskDispatchingItemReportTo{
-			Node: node,
-		}
+func NewTaskDispatchingItemReportTo(node *jadesdk.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
+	reportTo := &TaskDispatchingItemReportTo{
+		Pod: pod.CopyForReportTo(),
+		Node: node,
 	}
-	return nil
+	return reportTo
 }
 
 type TaskDispatchingItemBudget struct {
@@ -148,7 +144,7 @@ type TaskDispatchingItemSLO struct {
 	TailLatencyInMilliseconds float64 `json:"tailLatencyInMilliseconds,omitempty"`
 }
 
-func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *kernel.Node, pod *kernel.Pod) {
+func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *jadesdk.Node, pod *kernel.Pod) {
 	if t == nil || node == nil || pod == nil || len(moduleName) == 0 {
 		return
 	}

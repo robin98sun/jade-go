@@ -43,7 +43,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				podName, nodePort, err := j.Provisioner.ProvisionTask(
 					j.Kube, j.Config.SelfNode,
 					j.newEnv(
-						j.Config.SelfNode,
+						j.Config.SelfNode.GetSDKNode(),
 						task.Application.Name,
 						task.Application.Version,
 						string(kernel.AppModuleAggregator),
@@ -100,7 +100,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
 				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
-				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode, aggregatorPod)
+				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode.GetSDKNode(), aggregatorPod)
 				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 					DispatchingItem: newTaskItem,
 					AggregatorPod: aggregatorPod,
