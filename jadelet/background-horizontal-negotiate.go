@@ -136,9 +136,9 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 		j.log.Printf("[budget negotiation] 99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
 
-		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) * 10 / time.Millisecond) /10
+		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond)
 
-		if tail_latency < tailLatencySLO {
+		if tail_latency < tailLatencySLO - negotiationOverhead {
 			budget = tailLatencySLO - tail_latency - negotiationOverhead
 		} else {
 			budget = 0
@@ -155,7 +155,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 	)
 
 	j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
-	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters")
+	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborSubtasks))
 	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})

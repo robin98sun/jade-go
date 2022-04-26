@@ -107,7 +107,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				allSubtasks = append(allSubtasks, neighborSubtasks...)
 			}
 
-			j.log.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks", len(workerSubtasks), len(neighborSubtasks))
+			j.log.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks, the aggregator will be waiting for %v subtasks", len(workerSubtasks), len(neighborSubtasks), len(allSubtasks))
 			for _, aggregator := range aggregatorSubtasks {
 				msg := NewAggregatorEnqueuingMessage(taskItem, allSubtasks, j.Config.SelfNode.Protocol)
 				msg.SubtaskKey = aggregator.Subtask.GetKey()
@@ -132,12 +132,14 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 
 				// dispatch the neighbor subtasks
 				if len(neighborSubtasks) > 0 {
+					j.log.Printf("[task dispatcher] dispatching neighbor subtasks")
 					for _, neighborItem := range neighborSubtasks {
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
 						newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), nil, aggregator.Subtask.Pod)
 						newDispatchItem.TTL--
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
+						j.log.Printf("[task dispatcher] subtask for neighbor %v has been dispatched", neighborItem.Node.GetKey())
 					}
 				}
 			}

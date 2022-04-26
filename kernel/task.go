@@ -29,6 +29,8 @@ func (t *Task) CopyForSubtask() *Task {
 		Key:          t.Key,
 		QueuingMechanism: t.QueuingMechanism,
 		JobKey: t.JobKey,
+		// Subtasks: t.Subtasks,
+		// NeighborSubtasks: t.NeighborSubtasks,
 	}
 	return newTask
 }
