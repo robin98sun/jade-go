@@ -7,7 +7,6 @@ import (
 	// "uta.edu/aces/jade-go/kernel"
 	// "strconv"
 	// "fmt"
-	"log"
 )
 
 type CDFPoint struct {
@@ -46,7 +45,6 @@ func (c *CDF) Histogram() *Histogram {
 
 	// assume points are sorted
 	for _, p := range c.Points {
-		log.Printf("inserting CDF point: value: %v, percentile: %v", p.Value, p.Percentile)
 		hist.Enqueue(p.Value, 1)
 	}
 	c.histogram = hist

@@ -347,7 +347,7 @@ func SearchPercentileByMultiply(
 	) (float64){
 	
 	if lower_search_index > upper_search_index {
-		return float64(-1)
+		return last_criteria
 	}
 
 	mid := (lower_search_index+upper_search_index)/2
@@ -566,7 +566,7 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 		percentile, start_point, histogram_list, opt_out_mask, 
 		start_index, max_subhistogram_length-1, 
 		true, -1, 
-		float64(-1), float64(-1),
+		0, 0,
 		1, verbose,
 	)
 
