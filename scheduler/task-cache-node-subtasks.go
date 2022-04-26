@@ -8,6 +8,7 @@ import (
 
 type TaskCacheModuleItem struct {
 	subtasks map[string]*TaskCacheSubtaskItem
+	neighbors map[string]*kernel.Node
 	status   TaskStatus
 }
 

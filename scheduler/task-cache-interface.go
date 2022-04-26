@@ -21,7 +21,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, neighborNode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -81,6 +81,13 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 			}
 		}
 
+		if neighborNode != nil {
+			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors == nil {
+				c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors = make(map[string]*kernel.Node)
+			}
+			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors[neighborNode.GetKey()] = neighborNode
+		}
+
 		if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
 			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
 				if tmpst.subtask.PodKey == pod.GetKey() {
@@ -101,7 +108,6 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 				subnode.Key(),
 				pod.GetKey(),
 				subtaskKey,
-				true,
 			)
 			subtask.Pod = pod
 			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
@@ -486,6 +492,31 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 		return nil
 	}
 	return subtasks
+}
+
+func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) map[string]*kernel.Node {
+	if c == nil || c.Cache == nil {
+		return nil
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if taskItem, e := c.Cache[taskKey]; e {
+		for _, nodeItem := range taskItem.dispatchedNodes {
+			if exclusiveNodeKey != "" && exclusiveNodeKey != nodeItem.node.Key() {
+				continue
+			}
+			if exceptNodeKey != "" && exceptNodeKey != "none" && exceptNodeKey == nodeItem.node.Key() {
+				continue
+			}
+			for moduleNameInCache, moduleItem := range nodeItem.modules {
+				if moduleName != "" && moduleName != "all" && moduleName != moduleNameInCache {
+					continue
+				}
+				return moduleItem.neighbors
+			}
+		}
+	}
+	return nil
 }
 
 func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, timestampSending time.Time) float64 {

@@ -112,11 +112,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 		}
 
 		cdf_list = append(cdf_list, cacheItem.Response.CDF)
-		dispatchItem.Task.CreateSubtask(
-			string(kernel.AppModuleAggregator), 
-			cacheItem.Neighbor.Key(),
-			"", "", false,
-		)
+		dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
 	}
 
 
@@ -155,7 +151,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 	)
 
 	j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
-	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborSubtasks))
+	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})
