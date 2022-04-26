@@ -125,6 +125,8 @@ func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
 func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
 	p.LockData()
 	defer p.UnlockData()
+	p.LockMeta()
+	defer p.UnlockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return nil
 	}
