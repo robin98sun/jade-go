@@ -151,9 +151,10 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 	return nil
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
-	p.LockData()
-	defer p.UnlockData()
+	p.LockMeta()
+	defer p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
+		p.UnlockMeta()
 		return false
 	}
 
@@ -161,10 +162,14 @@ func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
+				p.UnlockMeta()
+				p.LockData()
+				defer p.UnlockData()
 				return podItem.IsIdle
 			}
 		}
 	}
+	p.UnlockMeta()
 	return false
 }
 
