@@ -96,10 +96,10 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// that's critical of testing whether your understanding of dataflow is correct
 				j.log.Printf("the reportTo of the dispatching message is %v", taskItem.ReportTo)
 				reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
-				j.log.Printf("the 'reportTo' for aggregator is %v", reportTo)
+				j.log.Printf("the 'reportTo' for aggregator is %v", reportTo.Desc())
 
 				newTaskItem := taskItem.CopyForSubtask(false)
-				
+
 				if reportTo != nil  {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
@@ -204,7 +204,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		taskItem := disptachItem.DispatchingItem
 		task := taskItem.Task
 		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
-		j.log.Printf("evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo, taskItem.SLO)
+		j.log.Printf("evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo.Desc(), taskItem.SLO)
 		if reportTo == nil {
 			j.log.Printf("ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
 			continue

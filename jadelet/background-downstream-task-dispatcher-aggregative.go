@@ -144,7 +144,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
 
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
-						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.ReportTo)
+						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
 					}
 				}
 			}
@@ -233,7 +233,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 				j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
 					worker.Subtask.Pod.GetKey(), worker.Node.Key(),
-					taskItem.GetReportToForModule(string(kernel.AppModuleWorker)),
+					taskItem.GetReportToForModule(string(kernel.AppModuleWorker)).Desc(),
 				)
 				// backdoor for fake service time
 				estimatedServiceTime := float64(-1)

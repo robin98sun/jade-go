@@ -4,6 +4,7 @@ import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
+	"fmt"
 )
 
 
@@ -127,6 +128,20 @@ func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
 	return inst
 }
 
+func (r *TaskDispatchingItemReportTo) Desc() string {
+	if r == nil {
+		return "nil"
+	}
+	desc := "[report to]:"
+	if r.Node != nil {
+		desc = fmt.Sprintf("%v [node addr: %v, port: %v]", r.Node.Addr, r.Node.Port)
+	}
+	if r.Pod != nil {
+		desc = fmt.Sprintf("%v [pod addr: %v, port: %v]", r.Pod.Addr, r.Pod.Port)
+	}
+	return desc
+}
+
 func NewTaskDispatchingItemReportTo(node *jadesdk.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
 	minimumPod := pod 
 	if pod != nil {
@@ -166,6 +181,18 @@ func (t *TaskDispatchingItem) GetReportToForModule(moduleName string) *TaskDispa
 		return reportTo
 	}
 	return nil
+}
+
+func (t *TaskDispatchingItem) DescribeReportTo() string {
+	if t == nil {return "nil"}
+
+	if t.ReportTo == nil {return "nil"}
+
+	desc := "[dispatching item]"
+	for key, r := range t.ReportTo {
+		desc = fmt.Sprintf("%v [module %v]: %v", desc, key, r.Desc())
+	}
+	return desc
 }
 
 func (t *TaskDispatchingItem) GetBudgetForModule(moduleName string) float64 {

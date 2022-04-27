@@ -163,8 +163,6 @@ func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
 				p.UnlockMeta()
-				p.LockData()
-				defer p.UnlockData()
 				return podItem.IsIdle
 			}
 		}
