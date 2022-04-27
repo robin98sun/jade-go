@@ -89,17 +89,23 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				rejectTaskCache[task.GetKey()] = taskItem
 				j.log.Println("there should be an aggregator pod on this node but doesn't, the task is going to be rejected")
 			} else {
-				j.log.Println("got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
-				newTaskItem := taskItem.CopyForSubtask(false)
+				
 				// the reportTo is very tricky here
 				// it's different for aggregator and worker module
 				// please think carefully why they are different
 				// that's critical of testing whether your understanding of dataflow is correct
-				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
+				j.log.Printf("the reportTo of the dispatching message is %v", taskItem.ReportTo)
+				reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
 				j.log.Printf("the 'reportTo' for aggregator is %v", reportTo)
+
+				newTaskItem := taskItem.CopyForSubtask(false)
+				
 				if reportTo != nil  {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
+
+				j.log.Println("got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
+
 				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
 
 				j.log.Printf("saving %v neighbors in task cache", len(task.NeighborNodes))

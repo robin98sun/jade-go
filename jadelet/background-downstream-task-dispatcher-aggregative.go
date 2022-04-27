@@ -144,7 +144,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
 
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
-						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey())
+						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.ReportTo)
 					}
 				}
 			}
