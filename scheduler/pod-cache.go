@@ -123,17 +123,18 @@ func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
 	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1))
 }
 func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
-	p.LockData()
-	defer p.UnlockData()
 	p.LockMeta()
 	defer p.UnlockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return nil
 	}
+	
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
+				p.UnlockMeta()
+				p.LockData()
 				podItem.IsIdle = idle
 				if serviceRequestTime >= 0 {
 					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
@@ -141,6 +142,7 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 				if communicationTime >= 0 {
 					podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
 				}
+				p.UnlockData()
 				return podItem
 			}
 		}
