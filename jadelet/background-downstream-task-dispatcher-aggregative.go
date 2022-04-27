@@ -140,8 +140,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					for _, neighborItem := range neighborSubtasks {
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
-						
-						newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), nil, aggregator.Subtask.Pod)
+
+						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
 
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
 						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey())
