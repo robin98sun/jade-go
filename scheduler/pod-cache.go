@@ -13,6 +13,7 @@ type PodCache struct {
 	Pods                       map[string]*kernel.Pod
 	QueuingPods                map[string]*kernel.Pod
 	IsBackgroundRoutineStarted bool
+	mutex                      *sync.Mutex
 }
 
 func (p *PodCache) LockData() {
@@ -32,10 +33,13 @@ func (p *PodCache) UnlockMeta() {
 }
 
 func (p *PodCache) Clear() {
-	p.LockData()
-	defer p.UnlockData()
-	p.LockMeta()
-	defer p.UnlockMeta()
+	// p.LockData()
+	// defer p.UnlockData()
+	// p.LockMeta()
+	// defer p.UnlockMeta()
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	for key := range p.Nodes {
 		delete(p.Nodes, key)
@@ -55,6 +59,7 @@ func NewPodCache() *PodCache {
 		Nodes: make(map[string]*PodCacheNodeItem),
 		dataMutex: &sync.Mutex{},
 		metaMutex: &sync.Mutex{},
+		mutex:     &sync.Mutex{},
 	}
 	return inst
 }
@@ -94,8 +99,11 @@ type PodCacheItem struct {
 
 
 func (p *PodCache) GetAllPods() []*kernel.Pod {
-	p.LockMeta()
-	defer p.UnlockMeta()
+	// p.LockMeta()
+	// defer p.UnlockMeta()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	pod_list := []*kernel.Pod {}
 	for _, pod := range p.Pods {
 		pod_list = append(pod_list, pod)
@@ -123,9 +131,12 @@ func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
 	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1))
 }
 func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
-	p.LockMeta()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	// p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
-		p.UnlockMeta()
+		// p.UnlockMeta()
 		return nil
 	}
 	
@@ -133,8 +144,8 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-				p.UnlockMeta()
-				p.LockData()
+				// p.UnlockMeta()
+				// p.LockData()
 				podItem.IsIdle = idle
 				if serviceRequestTime >= 0 {
 					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
@@ -142,18 +153,21 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 				if communicationTime >= 0 {
 					podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
 				}
-				p.UnlockData()
+				// p.UnlockData()
 				return podItem
 			}
 		}
 	}
-	p.UnlockMeta()
+	// p.UnlockMeta()
 	return nil
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
-	p.LockMeta()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	// p.LockData()
+	// defer p.UnlockData()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
-		p.UnlockMeta()
 		return false
 	}
 
@@ -161,12 +175,10 @@ func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-				p.UnlockMeta()
 				return podItem.IsIdle
 			}
 		}
 	}
-	p.UnlockMeta()
 	return false
 }
 
@@ -174,8 +186,11 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 	if p == nil {
 		return nil
 	}
-	p.LockMeta()
-	defer p.UnlockMeta()
+	// p.LockMeta()
+	// defer p.UnlockMeta()
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	if nodeItem, e := p.Nodes[nodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
@@ -194,8 +209,12 @@ func (p *PodCache) GetPodQueue(pod *kernel.Pod) *PodQueue {
 	if pod == nil {
 		return nil
 	}
-	p.LockData()
-	defer p.UnlockData()
+
+	// p.LockData()
+	// defer p.UnlockData()
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
@@ -213,8 +232,11 @@ func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName stri
 }
 
 func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod, enqueue bool) {
-	p.LockMeta()
-	defer p.UnlockMeta()
+	// p.LockMeta()
+	// defer p.UnlockMeta()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if _, e := p.Pods[pod.GetKey()]; e {
 		return
 	}
