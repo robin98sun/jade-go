@@ -140,11 +140,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					for _, neighborItem := range neighborSubtasks {
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
-						// pay attention that it shall use worker module to specify the report point
-						// since the system orchestrates data path in the recursive way
-						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
-						// by omitting the node in reportTo, we don't let the subtask report to any master node
-						// since we didn't cache the subtask in task cache to monitor completion of the task
+						
+						newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), nil, aggregator.Subtask.Pod)
 
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
 						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey())

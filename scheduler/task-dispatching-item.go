@@ -128,8 +128,12 @@ func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
 }
 
 func NewTaskDispatchingItemReportTo(node *jadesdk.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
+	minimumPod := pod 
+	if pod != nil {
+		minimumPod = pod.CopyForReportTo()
+	}
 	reportTo := &TaskDispatchingItemReportTo{
-		Pod: pod.CopyForReportTo(),
+		Pod: minimumPod,
 		Node: node,
 	}
 	return reportTo

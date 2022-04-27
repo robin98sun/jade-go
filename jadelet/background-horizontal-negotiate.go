@@ -136,7 +136,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
-		negotiationOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
+		negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
 
 		if tail_latency < tailLatencySLO - negotiationOverhead {
 			budget = tailLatencySLO - tail_latency - negotiationOverhead

@@ -97,7 +97,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// that's critical of testing whether your understanding of dataflow is correct
 				reportTo := taskItem.GetReportToForModule(kernel.AppModuleWorker)
 				j.log.Printf("the 'reportTo' for aggregator is %v", reportTo)
-				if reportTo != nil && reportTo.Node != nil && reportTo.Pod != nil {
+				if reportTo != nil  {
 					newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 				}
 				subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
