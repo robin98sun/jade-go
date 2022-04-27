@@ -134,10 +134,10 @@ func (r *TaskDispatchingItemReportTo) Desc() string {
 	}
 	desc := "[report to]:"
 	if r.Node != nil {
-		desc = fmt.Sprintf("%v [node addr: %v, port: %v]", r.Node.Addr, r.Node.Port)
+		desc = fmt.Sprintf("%v [node addr: %v, port: %v]", desc, r.Node.Addr, r.Node.Port)
 	}
 	if r.Pod != nil {
-		desc = fmt.Sprintf("%v [pod addr: %v, port: %v]", r.Pod.Addr, r.Pod.Port)
+		desc = fmt.Sprintf("%v [pod addr: %v, port: %v]", desc, r.Pod.Addr, r.Pod.Port)
 	}
 	return desc
 }
