@@ -59,8 +59,10 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem)
 	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
 	for taskKey, dispatchItem := range tasklist {
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
+			j.log.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem
 		} else {
+			j.log.Printf("received a autonomy task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			task := dispatchItem.Task
 			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[kernel.AppModuleWorker]; workerExists {
