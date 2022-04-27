@@ -149,7 +149,7 @@ type TaskDispatchingItemSLO struct {
 }
 
 func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *jadesdk.Node, pod *kernel.Pod) {
-	if t == nil || node == nil || pod == nil || len(moduleName) == 0 {
+	if t == nil || len(moduleName) == 0 {
 		return
 	}
 	if t.ReportTo == nil {
