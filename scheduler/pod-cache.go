@@ -152,7 +152,6 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 	p.LockMeta()
-	defer p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		p.UnlockMeta()
 		return false
