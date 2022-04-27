@@ -179,10 +179,10 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 	}
 	if jobKey, e := query["jobId"]; e {
 		j.log.Printf("fetch traces for job[%v]", jobKey)
-		w.WriteJson(j.TaskCache.CollectTraces(traceType, jobKey))
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, jobKey, j.log.Printf))
 	} else {
 		j.log.Printf("fetch traces for all jobs")
-		w.WriteJson(j.TaskCache.CollectTraces(traceType, ""))
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, "", j.log.Printf))
 	}
 }
 
