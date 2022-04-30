@@ -341,7 +341,7 @@ func NewAggregativeWorkerTask(
 	}
 	req := &Request{
 		Task: &TaskSpec{
-			ModuleName: kernel.AppModuleWorker,
+			ModuleName: string(kernel.AppModuleWorker),
 			TaskID:     task.GetKey(),
 			SubtaskID:  worker.Subtask.GetKey(),
 		},

@@ -190,7 +190,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime
 	subtaskItem.CommunicationTime -= subtaskItem.ReportProcessingTime
 	subtaskItem.CommunicationTime -= subtaskItem.PostServiceTime
-	if subtask.ModuleName == kernel.AppModuleWorker {
+	if subtask.ModuleName == string(kernel.AppModuleWorker) {
 		subtaskItem.CommunicationTime -= subtaskItem.PreServiceTime
 	}
 	subtaskItem.MetricsEnv = metricsEnv
@@ -299,7 +299,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 					}
 					if checkModule == desiredStatus {
 						moduleItem.status = desiredStatus
-						if moduleName == kernel.AppModuleWorker {
+						if moduleName == string(kernel.AppModuleWorker) {
 							allWorkersDone = true
 						}
 						if printf != nil {

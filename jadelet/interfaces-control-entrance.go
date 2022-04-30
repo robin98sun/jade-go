@@ -65,7 +65,7 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem)
 			j.log.Printf("received an autonomous task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			task := dispatchItem.Task
 			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
-				if _, workerExists := task.Application.Modules[kernel.AppModuleWorker]; workerExists {
+				if _, workerExists := task.Application.Modules[string(kernel.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
 				}
 			}

@@ -118,6 +118,15 @@ func (h *Histogram) GetPercentile(p float64) *PercentileItem {
 	return nil
 }
 
+func (h *Histogram) GetPercentileForValue(v float64) float64 {
+	item := h.RootItem.FindNoLargerThan(v)
+	if item.Count == 0 {
+		return 0
+	}
+	count := item.CumulativeCount()
+	return float64(count)/float64(h.RootItem.Count)
+}
+
 // No matter how the histogram structure is implemented
 // the most important three interfaces decide the overall performance
 

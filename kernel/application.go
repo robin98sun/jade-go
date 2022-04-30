@@ -88,5 +88,5 @@ func (c *Container) SetISAInImage(isa string) {
 type AppModule string
 const (
 	AppModuleAggregator AppModule = "aggregator"
-	AppModuleWorker               = "worker"
+	AppModuleWorker     AppModule = "worker"
 )

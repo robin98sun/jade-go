@@ -8,7 +8,7 @@ type SubTask struct {
 	TaskKey           string    `json:"taskId,omitempty"`
 	Key               string    `json:"key,omitempty"`
 	AppName           string    `json:"appName,omitempty"`
-	ModuleName        string    `json:"moduleName,omitempty"`
+	ModuleName        string `json:"moduleName,omitempty"`
 	Fanout            int       `json:"fanout,omitempty"`
 	NodeKey           string    `json:"nodeId,omitempty"`
 	PodKey            string    `json:"podId,omitempty"`
@@ -17,7 +17,7 @@ type SubTask struct {
 
 func (t *SubTask) GetKey() string {
 	if t.Key == "" {
-		t.Key = t.TaskKey + ":" + t.ModuleName + ":" + t.PodKey + ":" + RandomString()
+		t.Key = t.TaskKey + ":" + string(t.ModuleName) + ":" + t.PodKey + ":" + RandomString()
 	}
 	return t.Key
 }

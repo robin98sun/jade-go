@@ -120,7 +120,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 					}
 				}
 
-				newTaskItem.SetReportToForModule(kernel.AppModuleWorker, j.Config.SelfNode.GetSDKNode(), aggregatorPod)
+				newTaskItem.SetReportToForModule(string(kernel.AppModuleWorker), j.Config.SelfNode.GetSDKNode(), aggregatorPod)
 				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 					DispatchingItem: newTaskItem,
 					AggregatorPod: aggregatorPod,

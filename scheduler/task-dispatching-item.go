@@ -11,9 +11,7 @@ import (
 type BudgetNegotiationType string
 const (
 	BudgetNegotiationTypeHistogram BudgetNegotiationType = "histogram"
-	BudgetNegotiationTypeChoicesOfMeanAndVariance = "choices_mean_and_variance"
-	BudgetNegotiationTypeGivenMeanAndVariance = "given_mean_and_variance"
-	BudgetNegotiationTypeGivenBudgetTime = "given_budget_time"
+	BudgetNegotiationTypeNone BudgetNegotiationType = "none"
 )
 
 type TaskDispatchingOptions struct {

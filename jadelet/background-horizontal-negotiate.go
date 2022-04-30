@@ -9,6 +9,7 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	// "uta.edu/aces/jade-go/histogram"
 	// "uta.edu/aces/jadesdk"
+	"math"
 	"sync"
 )
 
@@ -35,43 +36,65 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		}
 		if len(eligibleNeighbors) > 0 {
 			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
+			// for some options, no need to negotiate budget
 
-			budgetNegotiation := scheduler.BudgetNegotiationTypeHistogram
-			if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
-				budgetNegotiation = dispatchItem.Options.BudgetNegotiation
-			}
+			var budgetnegotationCache *BudgetNegotiationResponseCache
 
-			newDispatchItem := dispatchItem.MinimumCopy()
-			newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
-			newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
-				BudgetNegotiation: budgetNegotiation,
-			}
-			if dispatchItem.Options != nil && dispatchItem.Options.CDFPoints > 0 {
-				newDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
-			}
-			if dispatchItem.Options != nil && dispatchItem.Options.CDFStartPoint > 0 && dispatchItem.Options.CDFStartPoint <= 1 {
-				newDispatchItem.Options.CDFStartPoint = dispatchItem.Options.CDFStartPoint
-			}
-			newDispatchItem.TTL = dispatchItem.TTL - 1
+			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
 
-			//  for other types of estimations
-			if budgetNegotiation != scheduler.BudgetNegotiationTypeHistogram {
+				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+					budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+				}
 
-			}
+				budgetEstimationPercentilePoint := float64(0.99)
+				if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
+					budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
+				}
 
-			cache := NewBudgetNegotiationResponseCache()
-			for _, neighbor := range eligibleNeighbors {
-				cache.Responses[neighbor.Key()] = &BudgetNegotiationResponseCacheItem{
-					Neighbor: neighbor,
-					IsDone: false,
-					requestSentAt: time.Now(),
+				newDispatchItem := dispatchItem.MinimumCopy()
+				newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
+				
+				newDispatchItem.TTL = dispatchItem.TTL - 1
+
+				newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
+					BudgetNegotiation: budgetNegotiation,
+					BudgetEstimationPercentilePoint: budgetEstimationPercentilePoint,
+				}
+
+				if budgetNegotiation == scheduler.BudgetNegotiationTypeHistogram {
+					dispatchItem.InquiryStartTimestamp = time.Now()
+
+					if dispatchItem.Options.CDFPoints > 0 {
+						newDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
+					}
+					if dispatchItem.Options.CDFStartPoint > 0 && dispatchItem.Options.CDFStartPoint <= 1 {
+						newDispatchItem.Options.CDFStartPoint = dispatchItem.Options.CDFStartPoint
+					}
+
+					budgetnegotationCache = NewBudgetNegotiationResponseCache()
+					for _, neighbor := range eligibleNeighbors {
+						budgetnegotationCache.Responses[neighbor.Key()] = &BudgetNegotiationResponseCacheItem{
+							Neighbor: neighbor,
+							IsDone: false,
+							requestSentAt: time.Now(),
+						}
+					}
+					for _, neighbor := range eligibleNeighbors {
+						go j.inquiryBudget(neighbor, newDispatchItem, budgetnegotationCache)
+					}
+					
+				} else {
+					targetPercentile := math.Pow(budgetEstimationPercentilePoint, 1.0/float64(len(eligibleNeighbors)))
+					if dispatchItem.Options == nil {
+						dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
+					}
+					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
+					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors", targetPercentile, len(eligibleNeighbors))
 				}
 			}
-			dispatchItem.InquiryStartTimestamp = time.Now()
-			for _, neighbor := range eligibleNeighbors {
-				go j.inquiryBudget(neighbor, newDispatchItem, cache)
-			}
-			go j.CallbackOfNegotiation(cache, dispatchItem)
+
+			go j.CallbackOfNegotiation(budgetnegotationCache, dispatchItem)
 
 		}
 
@@ -80,89 +103,92 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 
 func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, dispatchItem *scheduler.TaskDispatchingItem) {
 	for {
-		time.Sleep(1 * time.Millisecond)
 
 		isDone := true
-		cache.mutex.Lock()
-		for _, cacheItem := range cache.Responses {
-			if !cacheItem.IsDone {
-				isDone = false
-				break
+		if cache != nil {
+			cache.mutex.Lock()
+			for _, cacheItem := range cache.Responses {
+				if !cacheItem.IsDone {
+					isDone = false
+					break
+				}
 			}
+			cache.mutex.Unlock()
 		}
-		cache.mutex.Unlock()
 
 		if isDone {
 			break
 		}
+
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	// 
 	j.log.Printf("[budget negotiation] all inquiries are done")
 	dispatchItem.InquiryDoneTimestamp = time.Now()
 
-	cache.mutex.Lock()
-	defer cache.mutex.Unlock()
+	if cache != nil {
+		cache.mutex.Lock()
 
-	// multiply CDFs
-	var cdf_list []*histogram.CDF
-	for _, cacheItem := range cache.Responses {
-		if cacheItem.Response == nil || cacheItem.Response.CDF == nil {
-			continue
+		// multiply CDFs
+		var cdf_list []*histogram.CDF
+		for _, cacheItem := range cache.Responses {
+			if cacheItem.Response == nil || cacheItem.Response.CDF == nil {
+				continue
+			}
+
+			cdf_list = append(cdf_list, cacheItem.Response.CDF)
+			if cacheItem.Neighbor.GetKey () != j.Config.SelfNode.GetKey() {
+				dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
+			}
 		}
 
-		cdf_list = append(cdf_list, cacheItem.Response.CDF)
-		if cacheItem.Neighbor.GetKey () != j.Config.SelfNode.GetKey() {
-			dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
+
+		tailLatencySLO := float64(1000)
+		if dispatchItem.SLO != nil {
+			tailLatencySLO = dispatchItem.SLO.TailLatencyInMilliseconds
 		}
+		budget := tailLatencySLO
+		negotiationOverhead := float64(0)
+
+		if len(cdf_list) > 0 {
+			budgetEstimationPercentilePoint := float64(0.99)
+			if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
+				budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
+			}
+			tail_latency := histogram.SearchCDFProduct(cdf_list, budgetEstimationPercentilePoint)
+
+			j.log.Printf("[budget negotiation] %v percentile tail latency of %v CDFs is %v",  budgetEstimationPercentilePoint*100, len(cdf_list), tail_latency)
+
+			negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
+
+			if tail_latency < tailLatencySLO - negotiationOverhead {
+				budget = tailLatencySLO - tail_latency - negotiationOverhead
+			} else {
+				budget = 0
+			}
+
+			dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
+			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+
+			j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
+				dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
+				dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
+			)
+
+			j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
+
+		}
+		cache.mutex.Unlock()
+		
 	}
 
-
-	tailLatencySLO := float64(1000)
-	if dispatchItem.SLO != nil {
-		tailLatencySLO = dispatchItem.SLO.TailLatencyInMilliseconds
-	}
-	budget := tailLatencySLO
-	negotiationOverhead := float64(0)
-
-	if len(cdf_list) > 0 {
-		budgetEstimationPercentilePoint := float64(0.99)
-		if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
-			budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
-		}
-		tail_latency := histogram.SearchCDFProduct(cdf_list, budgetEstimationPercentilePoint)
-
-		j.log.Printf("[budget negotiation] 99 percentile tail latency of %v CDFs is %v", len(cdf_list), tail_latency)
-
-		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
-
-		negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
-
-		if tail_latency < tailLatencySLO - negotiationOverhead {
-			budget = tailLatencySLO - tail_latency - negotiationOverhead
-		} else {
-			budget = 0
-		}
-
-		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
-	} else {
-		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
-	}
-
-	j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
-		dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
-		dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
-	)
-
-	j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
 	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 
 	dispatchItem.TTL--
 	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})
-
-	// 
 
 }
 

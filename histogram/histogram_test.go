@@ -12,7 +12,7 @@ import (
 	// "sort"
 )
 
-var verbose bool = false
+var verbose bool = true
 
 func TestScheduler_CreateHistogram(t *testing.T) {
 
@@ -204,7 +204,17 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 		for pi := 0; pi < len(percentile_list); pi++ {
 			p := percentile_list[pi]
 
-			CalcPercentileOfProduct(p, histogram_list, verbose)
+			tail := CalcPercentileOfProduct(p, histogram_list, verbose)
+
+
+			if verbose && p == float64(0.99) {
+				log.Printf("searching the percentile for the tail: %v", tail)
+				for i, hist := range histogram_list {
+					hp := hist.GetPercentileForValue(tail)
+					log.Printf("%v: %v", i, hp)
+				}	
+			}
+			
 		}
 
 	})
