@@ -11,7 +11,7 @@ type Conf struct {
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`
 	RegistryNode *Node                 `json:"registryNode"`
-	Capabilities []*jadesdk.Capability `json:"capabilities"`
+	Capabilities map[string][]*jadesdk.Capability `json:"capabilities"`
 	Capacity     *Capacity             `json:"capacity"`
 }
 
@@ -21,49 +21,65 @@ func NewConfiguration() *Conf {
 	c.UpperNode = NewNode()
 	c.SelfNode = NewNode()
 	c.RegistryNode = NewNode()
-	c.Capabilities = []*jadesdk.Capability{}
+	c.Capabilities = make(map[string][]*jadesdk.Capability)
 	c.Capacity = NewCapacity()
 	return c
 }
 
-// FindCapability search a capability by name
-func (c *Conf) FindCapability(name string) (int, *jadesdk.Capability) {
-	if c.Capabilities == nil || len(c.Capabilities) == 0 || name == "" {
-		return -1, nil
+func (c *Conf) GetAllCapabilities() []*jadesdk.Capability {
+	all_capabilities := []*jadesdk.Capability{}
+	for _, list := range c.Capabilities {
+		all_capabilities = append(all_capabilities, list...)
 	}
-	for i, cap := range c.Capabilities {
-		if cap.Name == name {
-			return i, cap
+	return all_capabilities
+}
+
+// FindCapability search a capability by name
+func (c *Conf) FindCapability(capability_type string, name string) (string, int, *jadesdk.Capability) {
+	if c.Capabilities == nil || len(c.Capabilities) == 0 || name == "" {
+		return "", -1, nil
+	}
+	for t, list := range c.Capabilities {
+		if t != capability_type {continue}
+
+		for i, cap := range list {
+			if cap.Name == name {
+				return t, i, cap
+			}
 		}
 	}
-	return -1, nil
+	
+	return "", -1, nil
 }
 
 // AddOrUpdateCapability add or update a capability
-func (c *Conf) AddOrUpdateCapability(nc *jadesdk.Capability) *jadesdk.Capability {
+func (c *Conf) AddOrUpdateCapability(capability_type string, nc *jadesdk.Capability) *jadesdk.Capability {
 	if nc == nil || nc.Name == "" {
 		return nil
 	}
-	i, found := c.FindCapability(nc.Name)
+	cap_type, i, found := c.FindCapability(capability_type, nc.Name)
 	nc.ParseAPI()
 	if found != nil {
-		c.Capabilities[i] = nc
+		c.Capabilities[cap_type][i] = nc
 	} else {
-		c.Capabilities = append(c.Capabilities, nc)
+		if _, e := c.Capabilities[capability_type]; !e {
+			c.Capabilities[capability_type] = []*jadesdk.Capability{}
+		}
+		c.Capabilities[capability_type] = append(c.Capabilities[capability_type], nc)
 	}
 	return nc
 }
 
 // DeleteCapability delete a capability
-func (c *Conf) DeleteCapability(name string) *jadesdk.Capability {
+func (c *Conf) DeleteCapability(capability_type string, name string) *jadesdk.Capability {
 	if name == "" {
 		return nil
 	}
-	i, found := c.FindCapability(name)
+	t, i, found := c.FindCapability(capability_type, name)
 	if found == nil {
 		return nil
 	}
-	c.Capabilities[len(c.Capabilities)-1], c.Capabilities[i] = c.Capabilities[i], c.Capabilities[len(c.Capabilities)-1]
-	c.Capabilities = c.Capabilities[:len(c.Capabilities)-1]
+	c.Capabilities[t][len(c.Capabilities)-1], c.Capabilities[t][i] = c.Capabilities[t][i], c.Capabilities[t][len(c.Capabilities)-1]
+	c.Capabilities[t] = c.Capabilities[t][:len(c.Capabilities)-1]
 	return found
 }

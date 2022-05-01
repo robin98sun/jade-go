@@ -35,8 +35,10 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 
 	if newNodeKey != "" {
 		j.log.Printf("setting new capabilities for new nodekey[%v] while updating configuration", newNodeKey)
-		j.subnodeCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
-		j.neighborCapabilityCache.Set(newNodeKey, j.Config.Capabilities)
+		if list, e := j.Config.Capabilities["public"]; e {
+			j.subnodeCapabilityCache.Set(newNodeKey, list)
+			j.neighborCapabilityCache.Set(newNodeKey, list)
+		}
 	}
 	w.WriteJson(c)
 	// renew itself in upper node
@@ -45,13 +47,16 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 
 // AddCapability add a capability to self-node
 func (j *JADE) AddCapability(w rest.ResponseWriter, r *rest.Request) {
-	nc := jadesdk.Capability{}
+	nc := &struct{
+		Capability *jadesdk.Capability
+		Type string
+	}{}
 	err := r.DecodeJsonPayload(nc)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	j.Config.AddOrUpdateCapability(&nc)
+	j.Config.AddOrUpdateCapability(nc.Type, nc.Capability)
 	w.WriteJson(nc)
 	// renew itself in upper node
 	// go j.RegisterToUpperNode(0)
@@ -59,13 +64,19 @@ func (j *JADE) AddCapability(w rest.ResponseWriter, r *rest.Request) {
 
 // DeleteCapability delete a capability of self-node
 func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
-	nc := jadesdk.Capability{}
+	nc := &struct{
+		Capability *jadesdk.Capability
+		Type string
+	}{}
 	err := r.DecodeJsonPayload(nc)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	deleted := j.Config.DeleteCapability(nc.Name)
+	var deleted *jadesdk.Capability
+	if nc.Capability != nil {
+		deleted = j.Config.DeleteCapability(nc.Type, nc.Capability.Name)
+	}
 	w.WriteJson(deleted)
 	// renew itself in upper node
 	// go j.RegisterToUpperNode(0)

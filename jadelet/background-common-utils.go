@@ -68,12 +68,15 @@ func (j *JADE) newEnv(masterNode *jadesdk.Node, appName string, appVersion strin
 		}...)
 	}
 	// add capabilities into environments
-	for _, c := range j.Config.Capabilities {
-		envVars = append(envVars, map[string]string{
-			"name":  c.Name,
-			"value": c.API,
-		})
+	for _, list := range j.Config.Capabilities {
+		for _, c := range list {
+			envVars = append(envVars, map[string]string{
+				"name":  c.Name,
+				"value": c.API,
+			})
+		}
 	}
+	
 	return envVars
 }
 

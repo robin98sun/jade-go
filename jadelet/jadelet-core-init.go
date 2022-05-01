@@ -46,8 +46,10 @@ func (j *JADE) Init() {
 	j.log.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
 	if !j.Config.SelfNode.IsAddrEmpty() {
 		j.log.Printf("[init] setting capabilities during initializing")
-		j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
-		j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), j.Config.Capabilities)
+		if list, e := j.Config.Capabilities["public"]; e {
+			j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), list)
+			j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), list)
+		}
 	}
 	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
 	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))

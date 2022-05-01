@@ -135,9 +135,14 @@ func ReadConfFromJSON(jsonstr string, isFile bool) *Conf {
 	} else {
 		_ = json.Unmarshal([]byte(jsonstr), c)
 	}
-	if len(c.Capabilities) > 0 {
-		for _, cap := range c.Capabilities {
-			cap.ParseAPI()
+	if c.Capabilities == nil {
+		c.Capabilities = make(map[string][]*jadesdk.Capability)
+	}
+	for _, list := range c.Capabilities {
+		if len(list) > 0 {
+			for _, cap := range list {
+				cap.ParseAPI()
+			}
 		}
 	}
 	return c
@@ -175,9 +180,11 @@ func ConfToString(c *Conf) string {
 	}
 	if c.Capabilities != nil {
 		// Print capabilities
-		for i, v := range c.Capabilities {
-			content += fmt.Sprintf("JADE_CAPABILITY_%v_NAME=%v\n", i, v.Name)
-			content += fmt.Sprintf("JADE_CAPABILITY_%v_API=%v\n", i, v.API)
+		for t, list := range c.Capabilities {
+			for i, v := range list {
+				content += fmt.Sprintf("JADE_CAPABILITY_%v_%v_NAME=%v\n", strings.ToUpper(t), i, v.Name)
+				content += fmt.Sprintf("JADE_CAPABILITY_%v_%v_API=%v\n", strings.ToUpper(t), i, v.API)
+			}
 		}
 	}
 	return content
