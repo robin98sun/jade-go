@@ -534,7 +534,10 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 
 	if len(histogram_list) == 1 {
 		if _, e := histogram_list[0].Percentiles[percentile_key]; !e {
-			return histogram_list[0].GetPercentile(percentile).Item.Value
+			histItem := histogram_list[0].GetPercentile(percentile)
+			if histItem != nil {
+				return histItem.Item.Value
+			}
 		}
 	}
 
