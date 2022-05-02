@@ -8,28 +8,30 @@ import (
 
 type PodCache struct {
 	Nodes                      map[string]*PodCacheNodeItem // nodekey: cacheItem
-	dataMutex                  *sync.Mutex
-	metaMutex				   *sync.Mutex
 	Pods                       map[string]*kernel.Pod
 	QueuingPods                map[string]*kernel.Pod
 	IsBackgroundRoutineStarted bool
 	mutex                      *sync.Mutex
 }
 
-func (p *PodCache) LockData() {
-	p.dataMutex.Lock()
+func (p *PodCache) Lock() {
+	p.mutex.Lock()
 }
 
-func (p *PodCache) UnlockData() {
-	p.dataMutex.Unlock()
+func (p *PodCache) Unlock() {
+	p.mutex.Unlock()
 }
 
-func (p *PodCache) LockMeta() {
-	p.metaMutex.Lock()
-}
+func (p *PodCache) GetPods() []*kernel.Pod {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
-func (p *PodCache) UnlockMeta() {
-	p.metaMutex.Unlock()
+	var result []*kernel.Pod
+
+	for _, pod := range p.Pods {
+		result = append(result, pod)
+	}
+	return result
 }
 
 func (p *PodCache) Clear() {
@@ -57,8 +59,6 @@ func (p *PodCache) Clear() {
 func NewPodCache() *PodCache {
 	inst := &PodCache{
 		Nodes: make(map[string]*PodCacheNodeItem),
-		dataMutex: &sync.Mutex{},
-		metaMutex: &sync.Mutex{},
 		mutex:     &sync.Mutex{},
 	}
 	return inst

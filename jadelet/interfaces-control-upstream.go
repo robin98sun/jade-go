@@ -26,7 +26,7 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 		// defer j.PodCache.Unlock()
 		if !j.PodCache.IsBackgroundRoutineStarted {
 			j.PodCache.IsBackgroundRoutineStarted = true
-			go j.routineForPodQueues(1)
+			go j.routineForPodQueues(50)
 		}
 	}
 }

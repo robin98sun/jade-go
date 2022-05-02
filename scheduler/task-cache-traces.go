@@ -67,15 +67,25 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					// keys
 					line := []string{}
 					
+					// [0]
 					line = append(line, taskItem.task.Task.JobKey)
+
+					// [1]
 					line = append(line, strconv.Itoa(taskIndex))
+
+					// [2]
 					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
+
+					// [3]
 					line = append(line, subtaskItem.subtask.ModuleName)
 
 					// timestamps
 					timeArr := []time.Time{}
 					timeArr = append(timeArr,
+						// [4]
 						taskItem.task.GetArriveTime(),
+
+						// [5]
 						subtaskItem.ArriveTimestamp,
 					)
 					for _, ts := range timeArr {
@@ -180,7 +190,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					// [22]
 					dur = float64(float64(subtaskItem.EnqueuingOverhead) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
-					// Subtask_Amount_Preempted
+					// Subtask_Amount_Skipped_In_Queue
 					// [23]
 					line = append(line, strconv.Itoa(subtaskItem.AmountPreempted))
 					// Subtask_Execution_Time 
@@ -202,42 +212,70 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 
 					if traceType == "full" {
 						// Task_Budget
+						// [27]
 						line = append(line, strconv.FormatFloat(subtaskItem.Budget, 'f', -1, 64))
+						
 						// Task_Priority
+						// [28]
 						line = append(line, strconv.Itoa(subtaskItem.Priority))
+						
 						// Retry_Count_Sending
+						// [29]
 						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfSending, 10))
+						
 						// Retry_Count_Receiving
+						// [30]
 						line = append(line, strconv.FormatInt(subtaskItem.RetryCountOfReceiving, 10))
+						
 						// Subtask_Pre_Dispatching_Time(ms) 
+						// [31]
 						dur = float64(float64(subtaskItem.PreDispatchingTime) / float64(time.Millisecond))
 						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						
 						// Subtask_Report_Processing_Time(ms) 
+						// [32]
 						dur = float64(float64(subtaskItem.ReportProcessingTime) / float64(time.Millisecond))
 						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						
 						// Task_Notifying_Aggregator_Time(ms) 
+						// [33]
 						dur = float64(float64(taskItem.AggregatorReadyTimestamp.Sub(taskItem.DispatchTimestamp)) / float64(time.Millisecond))
 						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						
 						// Task_Enqueuing_Worker_Time(ms) 
+						// [34]
 						dur = float64(float64(taskItem.WorkerReadyTimestamp.Sub(taskItem.AggregatorReadyTimestamp)) / float64(time.Millisecond))
 						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						
 						// Task_Post_Execution_Time(ms) 
+						// [35]
 						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
 						line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+						
 						// Pod_ID
+						// [36]
 						line = append(line, subtaskItem.subtask.PodKey)
+						
 						// Task_ID
+						// [37]
 						line = append(line, taskItem.task.Task.GetKey())
+						
 						// Task_status
+						// [38]
 						line = append(line, string(taskItem.status))	
+						
 						// Subtask_ID
+						// [39]
 						line = append(line, subtaskItem.subtask.GetKey())
+						
 						// Subtask_status
+						// [40]
 						line = append(line, string(subtaskItem.status))
 
 						// metrics env
 						// Temperature
 						// Temperature CPU
+						// [41]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Temperature != nil {
 							floatValue = subtaskItem.MetricsEnv.Temperature.Cpu
@@ -245,6 +283,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 
 						// Temperature Device
+						// [42]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Temperature != nil {
 							floatValue = subtaskItem.MetricsEnv.Temperature.Device
@@ -252,6 +291,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 
 						// Temperature Disk
+						// [43]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Temperature != nil {
 							floatValue = subtaskItem.MetricsEnv.Temperature.Disk
@@ -259,6 +299,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 
 						// CPU User
+						// [44]
 						intValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							intValue = subtaskItem.MetricsEnv.CPU.User
@@ -266,6 +307,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.Itoa(intValue))
 
 						// CPU Sys
+						// [45]
 						intValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							intValue = subtaskItem.MetricsEnv.CPU.Sys
@@ -273,6 +315,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.Itoa(intValue))
 
 						// CPU Idle
+						// [46]
 						intValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							intValue = subtaskItem.MetricsEnv.CPU.Idle
@@ -280,6 +323,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.Itoa(intValue))
 
 						// CPU Wait
+						// [47]
 						intValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							intValue = subtaskItem.MetricsEnv.CPU.Wait
@@ -287,6 +331,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.Itoa(intValue))
 
 						// CPU Stolen
+						// [48]
 						intValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							intValue = subtaskItem.MetricsEnv.CPU.Stolen
@@ -294,6 +339,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.Itoa(intValue))
 
 						// CPU Frequency
+						// [49]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.CPU != nil {
 							floatValue = subtaskItem.MetricsEnv.CPU.Frequency
@@ -301,6 +347,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 
 						// RAM Swapped
+						// [50]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.RAM != nil {
 							int64Value = subtaskItem.MetricsEnv.RAM.Swapped
@@ -308,6 +355,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// RAM Free
+						// [51]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.RAM != nil {
 							int64Value = subtaskItem.MetricsEnv.RAM.Free
@@ -315,6 +363,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// RAM Buffer
+						// [52]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.RAM != nil {
 							int64Value = subtaskItem.MetricsEnv.RAM.Buffer
@@ -322,6 +371,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// RAM Cache
+						// [53]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.RAM != nil {
 							int64Value = subtaskItem.MetricsEnv.RAM.Cache
@@ -329,6 +379,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// Swap SwappedIn
+						// [54]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Swap != nil {
 							int64Value = subtaskItem.MetricsEnv.Swap.SwappedIn
@@ -336,6 +387,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// Swap SwappedOut
+						// [55]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Swap != nil {
 							int64Value = subtaskItem.MetricsEnv.Swap.SwappedOut
@@ -343,6 +395,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// IO BlocksReceived
+						// [56]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.IO != nil {
 							int64Value = subtaskItem.MetricsEnv.IO.BlocksReceived
@@ -350,6 +403,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// IO BlocksSent
+						// [57]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.IO != nil {
 							int64Value = subtaskItem.MetricsEnv.IO.BlocksSent
@@ -357,6 +411,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// System interrupts
+						// [58]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.System != nil {
 							int64Value = subtaskItem.MetricsEnv.System.Interrupts
@@ -364,6 +419,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// System ContextSwitches
+						// [59]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.System != nil {
 							int64Value = subtaskItem.MetricsEnv.System.ContextSwitches
@@ -371,6 +427,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// Processes Runnable
+						// [60]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Processes != nil {
 							int64Value = subtaskItem.MetricsEnv.Processes.Runnable
@@ -378,6 +435,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// Processes Sleeping
+						// [61]
 						int64Value = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Processes != nil {
 							int64Value = subtaskItem.MetricsEnv.Processes.Sleeping
@@ -385,6 +443,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatInt(int64Value, 10))
 
 						// Voltage Core
+						// [62]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Voltage != nil {
 							floatValue = subtaskItem.MetricsEnv.Voltage.Core
@@ -392,6 +451,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						line = append(line, strconv.FormatFloat(floatValue, 'f', -1, 64))
 
 						// Voltage Sdram
+						// [63]
 						floatValue = 0
 						if subtaskItem.MetricsEnv != nil && subtaskItem.MetricsEnv.Voltage != nil {
 							floatValue = subtaskItem.MetricsEnv.Voltage.Sdram

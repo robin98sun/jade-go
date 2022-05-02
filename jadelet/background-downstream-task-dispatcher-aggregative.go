@@ -8,27 +8,25 @@ import (
 	"uta.edu/aces/jade-go/histogram"
 )
 
-func (j *JADE) routineForPodQueues(intervalMicroseconds int) {
+func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 	for {
-		time.Sleep(time.Duration(intervalMicroseconds) * time.Millisecond)
-		j.PodCache.LockMeta()
-		if j.PodCache == nil || len(j.PodCache.QueuingPods) == 0 {
-			j.PodCache.UnlockMeta()
+		time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
+		podsInCache := j.PodCache.GetPods()
+		if len(podsInCache) == 0 {
 			continue
 		}
 		startTime := time.Now()
-		for _, pod := range j.PodCache.QueuingPods {
+		for _, pod := range podsInCache {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
-				time.Sleep(time.Duration(intervalMicroseconds) * time.Microsecond)
+				time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 			}
 		}
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
-		if duration/time.Millisecond > 10 {
+		if duration/time.Millisecond > 1 {
 			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", duration/time.Millisecond)
 		}
-		j.PodCache.UnlockMeta()
 	}
 }
 
@@ -178,14 +176,14 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 							histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
 						}
 						j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
-						j.PodCache.LockData()
+						j.PodCache.Lock()
 
 						budgetEstimationPercentilePoint := float64(0.99)
 						if taskItem.Options != nil && taskItem.Options.BudgetEstimationPercentilePoint > 0 && taskItem.Options.BudgetEstimationPercentilePoint <= 1 {
 							budgetEstimationPercentilePoint = taskItem.Options.BudgetEstimationPercentilePoint
 						}
 						tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
-						j.PodCache.UnlockData()
+						j.PodCache.Unlock()
 						j.log.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
 						
 
