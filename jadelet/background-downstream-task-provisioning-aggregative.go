@@ -222,6 +222,13 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		} else {
 			availableNodes = []string{j.SelfNodeKey()}
 		}
+
+		if len(availableNodes) == 0 && len(task.NeighborNodes) > 0 {
+			if _, e := readyTaskCache[task.GetKey()]; !e {
+				readyTaskCache[task.GetKey()] = nil
+			}
+		} 
+
 		// 2. for each available sub-nodes:
 		for _, nodekey := range availableNodes {
 			j.log.Printf("processing node[%v]", nodekey)
@@ -384,6 +391,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	}
 	// acknowledge good tasks as a worker node
 	for taskKey, pod := range readyTaskCache {
+		if pod == nil {continue}
+
 		if j.IsSelfNode(pod.NodeKey) {
 			j.log.Printf("Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 			j.feedbackProvisioning(NewTaskProvisioningResult(

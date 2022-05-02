@@ -3,6 +3,7 @@ package jadelet
 import (
 	"time"
 	"sort"
+	"math"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/histogram"
@@ -24,11 +25,12 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 			}
 		}
 		j.PodCache.Unlock()
-		
+
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
-		if duration/time.Millisecond > 1 {
-			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", duration/time.Millisecond)
+		podRoutineOverhead := math.Round(float64(duration*10/time.Millisecond))/10
+		if  podRoutineOverhead > 1 {
+			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", podRoutineOverhead)
 		}
 	}
 }
