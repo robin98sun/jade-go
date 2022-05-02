@@ -131,8 +131,6 @@ func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
 	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1))
 }
 func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
 	// p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
@@ -162,11 +160,7 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 	return nil
 }
 func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
-	// p.LockData()
-	// defer p.UnlockData()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return false
 	}
@@ -186,8 +180,6 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 	if p == nil {
 		return nil
 	}
-	// p.LockMeta()
-	// defer p.UnlockMeta()
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()

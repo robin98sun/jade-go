@@ -16,12 +16,15 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 			continue
 		}
 		startTime := time.Now()
+		j.PodCache.Lock()
 		for _, pod := range podsInCache {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
-				time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
+				// time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 			}
 		}
+		j.PodCache.Unlock()
+		
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
 		if duration/time.Millisecond > 1 {
@@ -31,7 +34,10 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 }
 
 func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
+	j.PodCache.Lock()
+
 	if !j.PodCache.IsPodIdle(pod) {
+		j.PodCache.Unlock()
 		j.log.Printf("ERROR when dispatching subtask to pod[%v]: the pod is busy", pod.GetKey())
 		return
 	}
@@ -39,8 +45,11 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	queueItem := podCacheItem.Queue.Dequeue(j.log.Printf)
 	if queueItem == nil {
 		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1))
+		j.PodCache.Unlock()
 		return
 	}
+	j.PodCache.Unlock()
+
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	
