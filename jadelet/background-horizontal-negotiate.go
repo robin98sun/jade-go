@@ -40,7 +40,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
-			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
+			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_Hist ||dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 
 				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
 				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
