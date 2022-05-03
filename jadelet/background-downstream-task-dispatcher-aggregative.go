@@ -40,7 +40,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 
 	if !j.PodCache.IsPodIdle(pod) {
 		j.PodCache.Unlock()
-		j.log.Printf("ERROR when dispatching subtask to pod[%v]: the pod is busy", pod.GetKey())
+		// j.log.Printf("ERROR when dispatching subtask to pod[%v]: the pod is busy", pod.GetKey())
 		return
 	}
 	podCacheItem := j.PodCache.SetPodBusy(pod)
