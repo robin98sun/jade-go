@@ -29,7 +29,7 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
 		podRoutineOverhead := math.Round(float64(duration*10/time.Millisecond))/10
-		if  podRoutineOverhead > 1 {
+		if  podRoutineOverhead > 10 {
 			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", podRoutineOverhead)
 		}
 	}

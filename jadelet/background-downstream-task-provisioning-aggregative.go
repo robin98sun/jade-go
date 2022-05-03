@@ -9,6 +9,7 @@ import (
 
 type DispatchItemWithAggregator struct {
 	DispatchingItem *scheduler.TaskDispatchingItem
+	OriginalDispatchItem *scheduler.TaskDispatchingItem
 	AggregatorPod *kernel.Pod
 	AggregatorSubtask *kernel.SubTask
 }
@@ -123,6 +124,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				newTaskItem.SetReportToForModule(string(kernel.AppModuleWorker), j.Config.SelfNode.GetSDKNode(), aggregatorPod)
 				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 					DispatchingItem: newTaskItem,
+					OriginalDispatchItem: taskItem,
 					AggregatorPod: aggregatorPod,
 					AggregatorSubtask: subtask,
 				}
@@ -133,6 +135,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			j.log.Println("This node is not an coordinator because it does not have any subnodes, so it's going to only deploy worker instead of aggregator")
 			goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 				DispatchingItem: taskItem,
+				OriginalDispatchItem: taskItem,
 				AggregatorPod: nil,
 				AggregatorSubtask: nil,
 			}
@@ -202,6 +205,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, disptachItem := range tasklist {
 		taskItem := disptachItem.DispatchingItem
+		originalDispatchItem := disptachItem.OriginalDispatchItem
 		task := taskItem.Task
 		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
 		j.log.Printf("evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo.Desc(), taskItem.SLO)
@@ -223,9 +227,10 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			availableNodes = []string{j.SelfNodeKey()}
 		}
 
-		if len(availableNodes) == 0 && len(task.NeighborNodes) > 0 {
+		if len(availableNodes) == 0 && originalDispatchItem != nil && len(originalDispatchItem.Task.NeighborNodes) > 0 {
 			if _, e := readyTaskCache[task.GetKey()]; !e {
 				readyTaskCache[task.GetKey()] = nil
+				j.log.Printf("accept the task even without available subnodes because of %v neighbor nodes", len(task.NeighborNodes))
 			}
 		} 
 
