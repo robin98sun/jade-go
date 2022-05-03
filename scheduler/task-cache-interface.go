@@ -130,6 +130,8 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 
 func (c *TaskCache) SaveNeighborNode(subnode *kernel.Node, taskKey string, moduleName string, neighborNode *kernel.Node, printf func(string, ...interface{})) {
 	if neighborNode != nil {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
 		printf("[task cache] saving neighbor %v", neighborNode)
 		if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors == nil {
 			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors = make(map[string]*kernel.Node)

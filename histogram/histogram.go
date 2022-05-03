@@ -502,7 +502,7 @@ func SearchPercentileByMultiply(
 
 	if got_the_result {
 		return criteria_value
-	} else if lower > upper {
+	} else if lower >= upper {
 		if last_criteria >= 0 && last_prod >= 0 {
 			if math.Abs(p-last_prod) < math.Abs(p-prod) {
 				if verbose {
