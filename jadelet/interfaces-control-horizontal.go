@@ -110,7 +110,13 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 				nodekey,
 			)
 			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
-			if workerPod == nil {continue}
+			if workerPod == nil {
+				j.log.Printf("[inquiry]ERROR: NO worker pod for application %v on node %v",
+					dispatchItem.Task.Application.Key(),
+					nodekey,
+				)
+				continue
+			}
 			j.log.Printf("[inquiry] selected one pod [%v] for application %v on node %v",
 				workerPod.GetKey(),
 				dispatchItem.Task.Application.Key(),

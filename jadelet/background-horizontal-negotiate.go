@@ -34,11 +34,11 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			}
 			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
 		}
+
+		var budgetnegotationCache *BudgetNegotiationResponseCache
 		if len(eligibleNeighbors) > 0 {
 			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
-
-			var budgetnegotationCache *BudgetNegotiationResponseCache
 
 			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL {
 
@@ -94,9 +94,9 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				}
 			}
 
-			go j.CallbackOfNegotiation(budgetnegotationCache, dispatchItem)
-
 		}
+
+		go j.CallbackOfNegotiation(budgetnegotationCache, dispatchItem)
 
 	}
 }
