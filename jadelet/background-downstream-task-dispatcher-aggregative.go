@@ -87,7 +87,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		// dispatching the task
 		taskItem := j.TaskCache.GetTask(taskKey, true)
 		task := taskItem.Task
-		if task.QueuingMechanism == "ddl:hist" || task.QueuingMechanism == "ddl:none" {
+		if task.QueuingMechanism == kernel.TaskQueuingDDL_Hist || task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 			task.QueuingMechanism = kernel.TaskQueuingDDL
 		}
 		// 1. dispatch the task to the aggregator,
