@@ -92,6 +92,10 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
 					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors", targetPercentile, len(eligibleNeighbors))
 				}
+			} else {
+				for _, neighbor := range eligibleNeighbors {
+					dispatchItem.Task.SaveNeighborNode(neighbor)
+				}
 			}
 
 		}
@@ -136,7 +140,8 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 			if cacheItem.Response == nil || cacheItem.Response.CDF == nil {
 				continue
 			}
-
+			// to be simpler in research, we do not reject neighbors regarding their CDFs
+			// but if in business, we should
 			cdf_list = append(cdf_list, cacheItem.Response.CDF)
 			if cacheItem.Neighbor.GetKey () != j.Config.SelfNode.GetKey() {
 				dispatchItem.Task.SaveNeighborNode(cacheItem.Neighbor)
