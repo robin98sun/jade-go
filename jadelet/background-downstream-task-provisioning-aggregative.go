@@ -302,6 +302,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			if taskItem.Options != nil {
 				toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
 			}
+			j.log.Printf("worker pod is nil? %v", workerPod==nil)
+			j.log.Printf("allocation requirements: %v", workerAllocation.Describe())
 			if workerPod != nil && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
 				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
 				// 		 	 	and there should be a switch in the task data structure
@@ -325,8 +327,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
 				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
-				j.log.Printf("Found an aggregator pod or unknown type pod on node[%v]", nodekey)
-				
+				j.log.Printf("Found an aggregator pod or unknown type pod on node[%v]", nodekey)	
 				var subtask *kernel.SubTask
 				if aggregatorPod == nil {
 					j.log.Printf("Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())

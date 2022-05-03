@@ -48,7 +48,10 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	}
 
 	// Save the sub node in its sub node array
-	nodeCache[nodekey] = payload.Node
+	if _, e := nodeCache[nodekey]; !e {
+		nodeCache[nodekey] = payload.Node
+
+	}
 
 	// En-cache capabilities
 	if len(payload.Capabilities) > 0 {

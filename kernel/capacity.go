@@ -1,5 +1,9 @@
 package kernel
 
+import (
+	"fmt"
+)
+
 type Capacity struct {
 	CPU       int64 `json:"cpu,omitempty"`
 	RAM       int64 `json:"ram,omitempty"`
@@ -24,6 +28,16 @@ func (c *Capacity) Copy() *Capacity {
 		Disk:      c.Disk,
 		Bandwidth: c.Bandwidth,
 	}
+}
+
+func (c *Capacity) Describe() string {
+	str := "nil"
+
+	if c != nil {
+		str = fmt.Sprintf("cpu: %v, ram: %v, disk: %v, bandwidth: %v", c.CPU, c.RAM, c.Disk, c.Bandwidth)
+	}	
+
+	return str
 }
 
 func (c *Capacity) GE(nc *Capacity) bool {

@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"strconv"
+	"fmt"
 )
 
 type Pod struct {
@@ -20,6 +21,14 @@ type Pod struct {
 type AllocationUnit struct {
 	MinimumCapacity *Capacity `json:"minimumCapacity,omitempty"`
 	MaximumCapacity *Capacity `json:"maximumCapacity,omitempty"`
+}
+
+func (a *AllocationUnit) Describe() string {
+	if a == nil {
+		return "nil"
+	}
+
+	return fmt.Sprintf("min: (%v), max: (%v)", a.MinimumCapacity.Describe(), a.MaximumCapacity.Describe())
 }
 
 func (a *AllocationUnit) Valid() bool {
