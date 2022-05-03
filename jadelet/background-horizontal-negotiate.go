@@ -266,7 +266,12 @@ func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDi
 func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
-	j.log.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v], which is %v empty", j.Config.RegistryNode, j.Config.RegistryNode.IsAddrEmpty())
+
+	j.log.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
+	if j.Config.RegistryNode.IsAddrEmpty() {
+		j.log.Printf("[budget negotiation] ERROR: registry node is empty")
+
+	}
 	apiPath := "/$jade$/eligibleNeighbors"
 	_, _, content, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {

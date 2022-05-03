@@ -76,28 +76,31 @@ func (c *TaskCache) GetTask(taskID string, lock bool) *TaskDispatchingItem {
 	return nil
 }
 
-func (c *TaskCache) Clear() {
+func (c *TaskCache) Clear(seconds int) int {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	if c.Cache == nil {
-		return
+		return 0
 	}
 
-	for k := range c.Cache {
+	tasksToClear := []string{}
+	for k, taskItem := range c.Cache {
+		if int64(time.Now().Sub(taskItem.task.ArriveTimestamp) / time.Second) > int64(seconds) {
+			tasksToClear = append(tasksToClear, k)
+		}
+	}
+
+	for _, k := range tasksToClear {
 		delete(c.Cache, k)
 	}
-	c.Cache = make(map[string]*TaskCacheTaskItem)
 
+	if seconds <= 0 {	
+		c.Cache = make(map[string]*TaskCacheTaskItem)
+	}
 
-	// if c.Stat == nil {
-	// 	return
-	// }
+	return len(tasksToClear)
 
-	// for k := range c.Stat {
-	// 	delete(c.Stat, k)
-	// }
-	// c.Stat = make(map[string]map[string]map[string]*jadesdk.Stat)
 }
 
 type TaskCacheTaskItem struct {

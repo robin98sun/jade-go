@@ -83,22 +83,43 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
+	tasksCleared := 0
 	if j.TaskCache != nil {
-		// perform GC on all app pods
-		for _, pod := range j.PodCache.GetAllPods() {
-			j.HTTPCommunicate(
-				"GC on pod "+pod.GetKey(), "DELETE", "/$jade$/GC",
-				pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
-				nil,
-				0, 10,
-			)
+
+		req := &struct{
+			Seconds int `json:"seconds,omitempty"`
+		}{}
+		
+		err := r.DecodeJsonPayload(req)
+
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		// Clear self cache and perform GC
-		j.TaskCache.Clear()
-		runtime.GC()
+		seconds := req.Seconds
+
+		if seconds <= 0 {
+			// perform GC on all app pods
+			for _, pod := range j.PodCache.GetAllPods() {
+				j.HTTPCommunicate(
+					"GC on pod "+pod.GetKey(), "DELETE", "/$jade$/GC",
+					pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
+					nil,
+					0, 10,
+				)
+			}
+		}
+		
+		// Clear self cache
+		tasksCleared = j.TaskCache.Clear(seconds)
+
+		if seconds <=0 {
+			// perform GC
+			runtime.GC()
+		}	
 	}
-	j.DoneRequest(w, r, "OK")
+	j.DoneRequest(w, r, tasksCleared)
 }
 
 func (j *JADE) ClearPodCache(w rest.ResponseWriter, r *rest.Request) {

@@ -236,7 +236,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 
 		// 2. for each available sub-nodes:
 		for _, nodekey := range availableNodes {
-			j.log.Printf("processing node[%v]", nodekey)
+			j.log.Printf("provision available node[%v]", nodekey)
 			//		search pod on that node for this task
 			workerAllocation := task.Requirements.Allocations[string(kernel.AppModuleWorker)]
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]

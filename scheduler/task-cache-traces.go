@@ -57,13 +57,15 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 	traces = append(traces, headline)
 	taskIndex := -1
 	for _, taskItem := range c.Cache {
+		if jobKey != "" && jobKey != "all" && jobKey != taskItem.task.Task.JobKey {
+			continue
+		}
+		
 		taskIndex++
 		for _, dispatchedNode := range taskItem.dispatchedNodes {
 			for _, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
-					if jobKey != "" && jobKey != "all" && jobKey != taskItem.task.Task.JobKey {
-						continue
-					}
+					
 					// keys
 					line := []string{}
 					
