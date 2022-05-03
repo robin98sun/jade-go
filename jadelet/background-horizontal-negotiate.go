@@ -94,7 +94,9 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				}
 			} else {
 				for _, neighbor := range eligibleNeighbors {
-					dispatchItem.Task.SaveNeighborNode(neighbor)
+					if neighbor.GetKey () != j.Config.SelfNode.GetKey() {
+						dispatchItem.Task.SaveNeighborNode(neighbor)
+					}
 				}
 			}
 
