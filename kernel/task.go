@@ -4,9 +4,11 @@ type TaskQueuingMechanism string
 
 const (
 	TaskQueuingFIFO TaskQueuingMechanism = "fifo"
-	TaskQueuingDDL                       = "ddl"
-	TaskQueuingPRQ						 = "prq"
-	TaskQueuingClass					 = "class"
+	TaskQueuingDDL  TaskQueuingMechanism = "ddl"
+	TaskQueuingPRQ	TaskQueuingMechanism = "prq"
+	TaskQueuingClass TaskQueuingMechanism = "class"
+	TaskQueuingDDL_Hist  TaskQueuingMechanism = "ddl:hist"
+	TaskQueuingDDL_None  TaskQueuingMechanism = "ddl:none"
 )
 
 type Task struct {

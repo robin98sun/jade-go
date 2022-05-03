@@ -87,6 +87,9 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 		// dispatching the task
 		taskItem := j.TaskCache.GetTask(taskKey, true)
 		task := taskItem.Task
+		if task.QueuingMechanism == "ddl:hist" || task.QueuingMechanism == "ddl:none" {
+			task.QueuingMechanism = kernel.TaskQueuingDDL
+		}
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
 		//   a. collect the workers
