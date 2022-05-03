@@ -26,7 +26,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 
 		eligibleNeighbors := j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
 
-		if eligibleNeighbors == nil {
+		if len(eligibleNeighbors) == 0 {
 			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
 			j.log.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
 			if eligibleNeighbors == nil {
