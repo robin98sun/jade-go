@@ -23,7 +23,7 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		retryCnt = int64(1)
 	}
 
-	retryInterval := 120  // seconds
+	retryInterval := 900  // seconds
 
 	// Find UpperNode IP in cluster
 	tn := j.Config.UpperNode
