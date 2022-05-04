@@ -55,12 +55,13 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	req := queueItem.Payload
 	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	
-	inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
-	if inQueueTime >= 0 {
-		podCacheItem.Queue.Lock()
-		podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime, 1)
-		podCacheItem.Queue.Unlock()
-	}
+	// inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	// if inQueueTime >= 0 {
+	// 	podCacheItem.Queue.Lock()
+	// 	podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime, 1)
+	// 	podCacheItem.Queue.Unlock()
+	// }
+	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
 	
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 

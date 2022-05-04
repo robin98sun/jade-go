@@ -146,9 +146,9 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 				if podItem.Queue.HistogramServiceTime != nil && serviceRequestTime >= 0 {
 					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
 				}
-				if podItem.Queue.HistogramCommunicationTime != nil && communicationTime >= 0 {
-					podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
-				}
+				// if podItem.Queue.HistogramCommunicationTime != nil && communicationTime >= 0 {
+				// 	podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
+				// }
 				// p.UnlockData()
 				return podItem
 			}

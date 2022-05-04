@@ -14,8 +14,8 @@ type PodQueue struct {
 	ItemsInQueue map[string]*PodQueueItem
 	mutex        *sync.Mutex
 	HistogramServiceTime *histogram.Histogram
-	HistogramInQueueTime *histogram.Histogram
-	HistogramCommunicationTime *histogram.Histogram
+	// HistogramInQueueTime *histogram.Histogram
+	// HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
 }
 
