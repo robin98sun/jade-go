@@ -142,13 +142,11 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-				// p.UnlockMeta()
-				// p.LockData()
 				podItem.IsIdle = idle
-				if serviceRequestTime >= 0 {
+				if podItem.Queue.HistogramServiceTime != nil && serviceRequestTime >= 0 {
 					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
 				}
-				if communicationTime >= 0 {
+				if podItem.Queue.HistogramCommunicationTime != nil && communicationTime >= 0 {
 					podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
 				}
 				// p.UnlockData()

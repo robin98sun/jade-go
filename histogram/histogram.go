@@ -355,7 +355,7 @@ func SearchPercentileByMultiply(
 		verbose bool,
 	) (float64){
 	
-	if lower_search_index > upper_search_index {
+	if lower_search_index > upper_search_index || iteration_count > 30 {
 		return last_criteria
 	}
 

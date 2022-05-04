@@ -22,17 +22,17 @@ type PodQueue struct {
 func NewPodQueue() *PodQueue {
 	h_st := histogram.NewHistogram(10000, float64(0.1), 1)
 	h_st.AddPercentilePoint(float64(0.99))
-	h_qt := histogram.NewHistogram(10000, float64(0.1), 1)
-	h_qt.AddPercentilePoint(float64(0.99))
-	h_ct := histogram.NewHistogram(10000, float64(0.1), 1)
-	h_ct.AddPercentilePoint(float64(0.99))
+	// h_qt := histogram.NewHistogram(10000, float64(0.1), 1)
+	// h_qt.AddPercentilePoint(float64(0.99))
+	// h_ct := histogram.NewHistogram(10000, float64(0.1), 1)
+	// h_ct.AddPercentilePoint(float64(0.99))
 	return &PodQueue{
 		Queue:        []*PodQueueItem{},
 		mutex:        &sync.Mutex{},
 		ItemsInQueue: make(map[string]*PodQueueItem),
 		HistogramServiceTime:  		h_st,
-		HistogramInQueueTime:  		h_qt,
-		HistogramCommunicationTime: h_ct,
+		// HistogramInQueueTime:  		h_qt,
+		// HistogramCommunicationTime: h_ct,
 		dequeueClock: 0,
 	}
 }
