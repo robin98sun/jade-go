@@ -36,6 +36,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		}
 
 		var budgetnegotationCache *BudgetNegotiationResponseCache
+		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
 			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
@@ -83,6 +84,8 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					for _, neighbor := range eligibleNeighbors {
 						go j.inquiryBudget(neighbor, newDispatchItem, budgetnegotationCache)
 					}
+
+					to_cache_neighbor_subtask = false
 					
 				} else {
 					targetPercentile := math.Pow(budgetEstimationPercentilePoint, 1.0/float64(len(eligibleNeighbors)))
@@ -92,7 +95,8 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
 					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors", targetPercentile, len(eligibleNeighbors))
 				}
-			} else {
+			} 
+			if to_cache_neighbor_subtask {
 				for _, neighbor := range eligibleNeighbors {
 					if neighbor.GetKey () != j.Config.SelfNode.GetKey() {
 						dispatchItem.Task.SaveNeighborNode(neighbor)
