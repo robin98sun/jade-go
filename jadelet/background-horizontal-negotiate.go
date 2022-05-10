@@ -34,7 +34,8 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			}
 			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
 		}
-
+		
+		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
@@ -64,7 +65,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				}
 
 				if budgetNegotiation == scheduler.BudgetNegotiationTypeHistogram || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_Hist {
-					dispatchItem.InquiryStartTimestamp = time.Now()
+					// dispatchItem.InquiryStartTimestamp = time.Now()
 
 					if dispatchItem.Options.CDFPoints > 0 {
 						tmpDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
@@ -173,7 +174,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
-			negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
+			negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp) *10 / time.Millisecond ) /10
 
 			if tail_latency < tailLatencySLO - negotiationOverhead {
 				budget = tailLatencySLO - tail_latency - negotiationOverhead
