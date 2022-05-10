@@ -65,6 +65,10 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 		inst.Options = t.Options
 	}
 	inst.ArriveTimestamp = t.ArriveTimestamp
+	inst.InquiryStartTimestamp = t.InquiryStartTimestamp
+	inst.InquiryDoneTimestamp = t.InquiryDoneTimestamp
+	inst.BudgetEstimationDoneTimestamp = t.BudgetEstimationDoneTimestamp
+
 	if withReport {
 		if t.ReportTo != nil && len(t.ReportTo) > 0 {
 			inst.ReportTo = make(map[string]*TaskDispatchingItemReportTo)
@@ -75,9 +79,6 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 	}
 	if t.Priority != 0 {
 		inst.Priority = t.Priority
-	}
-	if !t.ArriveTimestamp.IsZero() {
-		inst.ArriveTimestamp = t.ArriveTimestamp
 	}
 	if t.SLO != nil {
 		inst.SLO = t.SLO
