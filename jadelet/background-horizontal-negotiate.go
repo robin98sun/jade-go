@@ -53,12 +53,12 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
 				}
 
-				newDispatchItem := dispatchItem.MinimumCopy()
-				newDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
+				tmpDispatchItem := dispatchItem.MinimumCopy()
+				tmpDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
 				
-				newDispatchItem.TTL = dispatchItem.TTL - 1
+				tmpDispatchItem.TTL = dispatchItem.TTL - 1
 
-				newDispatchItem.Options = &scheduler.TaskDispatchingOptions{
+				tmpDispatchItem.Options = &scheduler.TaskDispatchingOptions{
 					BudgetNegotiation: budgetNegotiation,
 					BudgetEstimationPercentilePoint: budgetEstimationPercentilePoint,
 				}
@@ -67,10 +67,10 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					dispatchItem.InquiryStartTimestamp = time.Now()
 
 					if dispatchItem.Options.CDFPoints > 0 {
-						newDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
+						tmpDispatchItem.Options.CDFPoints = dispatchItem.Options.CDFPoints
 					}
 					if dispatchItem.Options.CDFStartPoint > 0 && dispatchItem.Options.CDFStartPoint <= 1 {
-						newDispatchItem.Options.CDFStartPoint = dispatchItem.Options.CDFStartPoint
+						tmpDispatchItem.Options.CDFStartPoint = dispatchItem.Options.CDFStartPoint
 					}
 
 					budgetnegotationCache = NewBudgetNegotiationResponseCache()
@@ -82,7 +82,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 						}
 					}
 					for _, neighbor := range eligibleNeighbors {
-						go j.inquiryBudget(neighbor, newDispatchItem, budgetnegotationCache)
+						go j.inquiryBudget(neighbor, tmpDispatchItem, budgetnegotationCache)
 					}
 
 					to_cache_neighbor_subtask = false
