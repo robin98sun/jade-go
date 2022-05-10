@@ -41,7 +41,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
-			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_Hist ||dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None {
+			if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_Hist || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 
 				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
 				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
@@ -63,7 +63,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					BudgetEstimationPercentilePoint: budgetEstimationPercentilePoint,
 				}
 
-				if budgetNegotiation == scheduler.BudgetNegotiationTypeHistogram {
+				if budgetNegotiation == scheduler.BudgetNegotiationTypeHistogram || dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_Hist {
 					dispatchItem.InquiryStartTimestamp = time.Now()
 
 					if dispatchItem.Options.CDFPoints > 0 {
@@ -171,6 +171,8 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 			j.log.Printf("[budget negotiation] %v percentile tail latency of %v CDFs is %v",  budgetEstimationPercentilePoint*100, len(cdf_list), tail_latency)
 
+			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+
 			negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) *10 / time.Millisecond ) /10
 
 			if tail_latency < tailLatencySLO - negotiationOverhead {
@@ -180,7 +182,7 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 			}
 
 			dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
-			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+
 
 			j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
 				dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
@@ -189,9 +191,13 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 
 			j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
 
+		} else {
+			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 		}
 		cache.mutex.Unlock()
 		
+	} else {
+		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 	}
 
 	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
