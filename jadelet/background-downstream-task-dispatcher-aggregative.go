@@ -181,7 +181,11 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				j.log.Printf("[task dispatcher] SLO: %v", taskItem.SLO.TailLatencyInMilliseconds)
 			}
 			if budget == 0 {
-				if task.QueuingMechanism == kernel.TaskQueuingDDL {
+				// calculate budget using online measurement
+				if 	task.QueuingMechanism == kernel.TaskQueuingDDL || 
+					task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
+					task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+					task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 					if taskItem.SLO != nil && taskItem.SLO.TailLatencyInMilliseconds > 0 {
 						j.log.Printf("[task dispatcher] going to calculate tail latency")
 						
@@ -209,6 +213,8 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 						}
 					} 
 				}
+				// for queueing by class,
+				//     and compatible with legacy using static budget
 				if budget == 0 && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
 					j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
 					budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)

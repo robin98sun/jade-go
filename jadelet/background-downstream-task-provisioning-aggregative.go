@@ -21,7 +21,6 @@ type SubtasksForAggregator struct {
 }
 
 
-
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
 func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem

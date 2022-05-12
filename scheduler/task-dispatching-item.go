@@ -10,12 +10,13 @@ import (
 
 type BudgetNegotiationType string
 const (
-	BudgetNegotiationTypeHistogram BudgetNegotiationType = "histogram"
+	BudgetNegotiationTypeCDFBlock BudgetNegotiationType = "cdf-block"
+	BudgetNegotiationTypeCDFNonBlock BudgetNegotiationType = "cdf-non-block"
 	BudgetNegotiationTypeNone BudgetNegotiationType = "none"
 )
 
 type TaskDispatchingOptions struct {
-	ForceUpdateNetworkStructure bool                 `json:"forceUpdateNetworkStructure,omitempty"`
+	ForceUpdateNetworkStructure bool   `json:"forceUpdateNetworkStructure,omitempty"`
 	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
 	PersistCache              	bool   `json:"persistCache,omitempty"`
 	EstimatedServiceTimeModel 	string `json:"estimatedServiceTimeModel,omitempty"` // "exponential"/"poission", "constant"

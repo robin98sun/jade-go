@@ -199,6 +199,10 @@ func (j *JADE) CallbackOfNegotiation(cache *BudgetNegotiationResponseCache, disp
 		
 	} else {
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+		if dispatchItem.SLO != nil {
+			provisionOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp)*10 / time.Millisecond)/10
+			dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
+		}
 	}
 
 	j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))

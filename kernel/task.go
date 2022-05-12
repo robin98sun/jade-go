@@ -4,10 +4,11 @@ type TaskQueuingMechanism string
 
 const (
 	TaskQueuingFIFO TaskQueuingMechanism = "fifo"
-	TaskQueuingDDL  TaskQueuingMechanism = "ddl"
 	TaskQueuingPRQ	TaskQueuingMechanism = "prq"
 	TaskQueuingClass TaskQueuingMechanism = "class"
-	TaskQueuingDDL_Hist  TaskQueuingMechanism = "ddl:hist"
+	TaskQueuingDDL  TaskQueuingMechanism = "ddl"
+	TaskQueuingDDL_CDF_Block  TaskQueuingMechanism = "ddl:cdf-block"
+	TaskQueuingDDL_CDF_NonBlock  TaskQueuingMechanism = "ddl:cdf-non-block"
 	TaskQueuingDDL_None  TaskQueuingMechanism = "ddl:none"
 )
 
