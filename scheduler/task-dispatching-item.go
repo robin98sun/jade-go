@@ -12,7 +12,7 @@ type BudgetNegotiationType string
 const (
 	BudgetNegotiationTypeCDFBlock BudgetNegotiationType = "cdf-block"
 	BudgetNegotiationTypeCDFNonBlock BudgetNegotiationType = "cdf-non-block"
-	BudgetNegotiationTypeNone BudgetNegotiationType = "none"
+	BudgetNegotiationTypeNone 	BudgetNegotiationType = "none"
 )
 
 type TaskDispatchingOptions struct {

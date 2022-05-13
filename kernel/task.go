@@ -3,13 +3,13 @@ package kernel
 type TaskQueuingMechanism string
 
 const (
-	TaskQueuingFIFO TaskQueuingMechanism = "fifo"
-	TaskQueuingPRQ	TaskQueuingMechanism = "prq"
-	TaskQueuingClass TaskQueuingMechanism = "class"
-	TaskQueuingDDL  TaskQueuingMechanism = "ddl"
+	TaskQueuingFIFO 	TaskQueuingMechanism = "fifo"
+	TaskQueuingPRQ		TaskQueuingMechanism = "prq"
+	TaskQueuingClass 	TaskQueuingMechanism = "class"
+	TaskQueuingDDL  	TaskQueuingMechanism = "ddl"
 	TaskQueuingDDL_CDF_Block  TaskQueuingMechanism = "ddl:cdf-block"
 	TaskQueuingDDL_CDF_NonBlock  TaskQueuingMechanism = "ddl:cdf-non-block"
-	TaskQueuingDDL_None  TaskQueuingMechanism = "ddl:none"
+	TaskQueuingDDL_None TaskQueuingMechanism = "ddl:none"
 )
 
 type Task struct {
