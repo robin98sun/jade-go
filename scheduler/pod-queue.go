@@ -148,7 +148,8 @@ func (q *PodQueue) Enqueue(
 	if podQueueType == PodQueueTypeShadow {
 		theQueue = q.ShadowQueue
 	}
-	
+	printf("[pod queue] enqueuing to [%v] queue", podQueueType)
+
 	if queueingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock &&
 	   podQueueType == PodQueueTypeMain {
 		if _, e := q.ItemsInQueue[key]; e {

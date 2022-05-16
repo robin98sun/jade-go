@@ -104,7 +104,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 						dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
 					}
 					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
-					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors", targetPercentile, len(eligibleNeighbors))
+					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors, where original percentile point is %v", targetPercentile, len(eligibleNeighbors), budgetEstimationPercentilePoint)
 				}
 			} 
 			if to_cache_neighbor_subtask {

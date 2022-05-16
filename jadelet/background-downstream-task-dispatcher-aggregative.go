@@ -460,6 +460,7 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 		// to be simpler in research, we do not reject neighbors regarding their CDFs
 		// but if in business, we should
 		cdf_list = append(cdf_list, cacheItem.Response.CDF)
+		dispatchItem.Task.SaveNeighborNode(cacheItem.Response.Node)
 	}
 
 	j.CalcGlobalBudget(cdf_list, dispatchItem)
