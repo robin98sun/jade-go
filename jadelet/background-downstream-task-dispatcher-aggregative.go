@@ -85,6 +85,9 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {
 			j.log.Printf("[task dispatcher] the task{%v} is confirming budget to neighbors", taskKey)
+			if dispatchItemToConfirm != nil && dispatchItemToConfirm.Options != nil {
+				j.log.Printf("[task dispatcher] the incoming task non-block budget negotiation phase: %v", dispatchItemToConfirm.Options.BudgetNegotiationPhase)
+			}
 
 		}
 		// set the task as running
@@ -95,14 +98,6 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 		// dispatching the task
 		dispatchItem := j.TaskCache.GetTask(taskKey, true)
 		task := dispatchItem.Task
-
-		if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
-		(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
-			budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
-			if dispatchItemToConfirm != nil && dispatchItemToConfirm.Options != nil {
-				j.log.Printf("[task dispatcher] the incoming task non-block budget negotiation phase: %v", dispatchItemToConfirm.Options.BudgetNegotiationPhase)
-			}
-		}
 		
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
