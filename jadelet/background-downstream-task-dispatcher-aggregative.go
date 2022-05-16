@@ -77,33 +77,56 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	}
 }
 
-func (j *JADE) checkTaskStatus(taskKey string) {
+func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *scheduler.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
-	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf) {
-		j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
+	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf) || isConfirmingBudget {
+		if ! isConfirmingBudget {
+			j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
+		} else {
+			j.log.Printf("[task dispatcher] the task{%v} is confirming budget to neighbors", taskKey)
+		}
 		// set the task as running
 		// at the meanwhile the task record the timestamp as the beginning of ddispatching
-		j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
-		// dispatching the task
-		taskItem := j.TaskCache.GetTask(taskKey, true)
-		task := taskItem.Task
-		if 	task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
-			task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block || 
-			task.QueuingMechanism == kernel.TaskQueuingDDL_None {
-			task.QueuingMechanism = kernel.TaskQueuingDDL
+		if ! isConfirmingBudget {
+			j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
 		}
+		// dispatching the task
+		dispatchItem := j.TaskCache.GetTask(taskKey, true)
+		task := dispatchItem.Task
+		
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
 		//   a. collect the workers
 		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
 		if len(aggregatorSubtasks) > 0 {
 			// only for valid aggregative tasks
-			// workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, "all", j.Config.SelfNode.Key(), "")
-			workerSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key(), "")
+			phase := scheduler.BudgetNegotiationPhaseNotStarted
+			budget := float64(0)
+			priority := 0
+			if isConfirmingBudget {
+				budget = dispatchItemToConfirm.GetBudgetForModule(string(kernel.AppModuleWorker))
+				priority = dispatchItemToConfirm.Priority
+			} else {
+				budget = dispatchItem.GetBudgetForModule(string(kernel.AppModuleWorker))
+				priority = dispatchItem.Priority
+			}
+			if priority == 0 {
+				priority = scheduler.TaskDefaultPriority
+			}
+
 			var neighborSubtasks []*scheduler.SubtaskOnNode
-			neighborSubtaskMap := map[string]*scheduler.SubtaskOnNode{}
-			dispatchItem := j.TaskCache.GetTask(taskKey, true)
+			var allSubtasks []*scheduler.SubtaskOnNode
+			var workerSubtasks []*scheduler.SubtaskOnNode
+
+			workerSubtasks = j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key(), "")
+
+			budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+			if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+				budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+			}
+			var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
+				
 			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
 			for _, neighborNode := range neighborNodes {
 				subtaskItem := &scheduler.SubtaskOnNode{
@@ -117,135 +140,177 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 					),
 				}
 				neighborSubtasks = append(neighborSubtasks, subtaskItem)
-				neighborSubtaskMap[neighborNode.GetKey()] = subtaskItem
 
 			}
-			allSubtasks := workerSubtasks
+			
+			allSubtasks = workerSubtasks
 			if len(neighborSubtasks) > 0 {
 				allSubtasks = append([]*scheduler.SubtaskOnNode{}, workerSubtasks...)
 				allSubtasks = append(allSubtasks, neighborSubtasks...)
 			}
 
 			j.log.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks, the aggregator will be waiting for %v subtasks", len(workerSubtasks), len(neighborSubtasks), len(allSubtasks))
+
 			for _, aggregator := range aggregatorSubtasks {
-				msg := NewAggregatorEnqueuingMessage(taskItem, allSubtasks, j.Config.SelfNode.Protocol)
-				msg.SubtaskKey = aggregator.Subtask.GetKey()
-				j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
-				// Save the dispatching timestamp and fanout degree
-				aggregator.Subtask.Fanout = len(workerSubtasks)
-				aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
-				if aggregatorSubtaskCacheItem != nil {
-					aggregatorSubtaskCacheItem.EnqueueTimestamp = time.Now()
-					aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
-				}
-				// dispatch the aggregator subtask
-				_, reqlen, _, _ := j.HTTPCommunicate(
-					"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
-					aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
-					msg,
-					0, 10,
-				)
-				if aggregatorSubtaskCacheItem != nil {
-					aggregatorSubtaskCacheItem.SendPackageSize = reqlen
+				if !isConfirmingBudget {
+					msg := NewAggregatorEnqueuingMessage(dispatchItem, allSubtasks, j.Config.SelfNode.Protocol)
+					msg.SubtaskKey = aggregator.Subtask.GetKey()
+					j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+					// Save the dispatching timestamp and fanout degree
+					aggregator.Subtask.Fanout = len(workerSubtasks)
+					aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
+					if aggregatorSubtaskCacheItem != nil {
+						aggregatorSubtaskCacheItem.EnqueueTimestamp = time.Now()
+						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
+					}
+					// dispatch the aggregator subtask
+					_, reqlen, _, _ := j.HTTPCommunicate(
+						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
+						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
+						msg,
+						0, 10,
+					)
+					if aggregatorSubtaskCacheItem != nil {
+						aggregatorSubtaskCacheItem.SendPackageSize = reqlen
+					}
 				}
 
 				// dispatch the neighbor subtasks
 				if len(neighborSubtasks) > 0 {
 					j.log.Printf("[task dispatcher] dispatching neighbor subtasks")
+					
+					if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+						(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
+							budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
+
+						if !isConfirmingBudget {
+							phase = scheduler.BudgetNegotiationPhaseInquiry
+						} else {
+							phase = scheduler.BudgetNegotiationPhaseConfirm
+						}
+						if !isConfirmingBudget {
+							budgetnegotationCache = scheduler.NewBudgetNegotiationResponseCache()
+						}
+					}
+
 					for _, neighborItem := range neighborSubtasks {
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
 
 						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
 
+						// for non-block budget negotiation, prepare for the cache
+						if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+							(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
+								budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
+
+							if newDispatchItem.Options == nil {
+								newDispatchItem.Options = &scheduler.TaskDispatchingOptions{}
+							}
+							newDispatchItem.Options.BudgetNegotiationPhase = phase
+							newDispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
+							newDispatchItem.Options.BudgetNegotiationInitiator = j.Config.SelfNode.MiniNode()
+
+							if !isConfirmingBudget {
+								budgetnegotationCache.Responses[neighborItem.Node.Key()] = &scheduler.BudgetNegotiationResponseCacheItem{
+									Neighbor: neighborItem.Node,
+									IsDone: false,
+									RequestSentAt: time.Now(),
+								}
+							}
+						}
+
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
-						j.log.Printf("[task dispatcher] subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+						if !isConfirmingBudget {
+							j.log.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+						} else {
+							j.log.Printf("[task dispatcher] confirming budget for subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+
+						}
+					}
+
+					// wait for the responses of budget negotiation
+					if budgetnegotationCache != nil {
+						j.TaskCache.SetBudgetNegotiationCache(task.GetKey(), budgetnegotationCache)
+						j.log.Printf("[task dispatcher] budget negotiation cache is setup")
 					}
 				}
 			}
-			// 2. dispatch the subtask to each worker,
-			//    together with the aggregator's address
-			fanoutDegree := len(workerSubtasks)
-			j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
-			j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
 
 			
-			priority := taskItem.Priority
-			if priority == 0 {
-				priority = scheduler.TaskDefaultPriority
-			}
+			if !isConfirmingBudget {
+				// 2. dispatch the subtask to each worker,
+				//    together with the aggregator's address
+				fanoutDegree := len(workerSubtasks)
+				j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
+				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
 
-			// calc 99 percentile for prod of histograms 
-			budget := taskItem.GetBudgetForModule(string(kernel.AppModuleWorker))
-			j.log.Printf("[task dispatcher] task budget: %v", budget)
-			j.log.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
-			if taskItem.SLO != nil {
-				j.log.Printf("[task dispatcher] SLO: %v", taskItem.SLO.TailLatencyInMilliseconds)
-			}
-			if budget == 0 {
-				// calculate budget using online measurement
-				if 	task.QueuingMechanism == kernel.TaskQueuingDDL || 
-					task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
-					task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
-					task.QueuingMechanism == kernel.TaskQueuingDDL_None {
-					if taskItem.SLO != nil && taskItem.SLO.TailLatencyInMilliseconds > 0 {
-						j.log.Printf("[task dispatcher] going to calculate tail latency")
-						
-						histogram_list := []*histogram.Histogram{}
-						for _, subtaskOnNode := range workerSubtasks {
-							podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
-							histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
-						}
-						j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
-						j.PodCache.Lock()
-
-						budgetEstimationPercentilePoint := float64(0.99)
-						if taskItem.Options != nil && taskItem.Options.BudgetEstimationPercentilePoint > 0 && taskItem.Options.BudgetEstimationPercentilePoint <= 1 {
-							budgetEstimationPercentilePoint = taskItem.Options.BudgetEstimationPercentilePoint
-						}
-						tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
-						j.PodCache.Unlock()
-						j.log.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
-						
-
-						if tail_latency > 0 {
-							budget = taskItem.SLO.TailLatencyInMilliseconds - tail_latency
-							j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
-								task.GetKey(), budget, fanoutDegree, tail_latency)
-						}
-					} 
+				// calc 99 percentile for prod of histograms 
+				j.log.Printf("[task dispatcher] task budget: %v", budget)
+				j.log.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
+				if dispatchItem.SLO != nil {
+					j.log.Printf("[task dispatcher] SLO: %v", dispatchItem.SLO.TailLatencyInMilliseconds)
 				}
-				// for queueing by class,
-				//     and compatible with legacy using static budget
-				if budget == 0 && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
-					j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
-					budget = taskItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
-					if budget > 0 {
-						j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
-					} else {
-						budget = taskItem.GetDeterministicBudget(string(kernel.AppModuleWorker))
-						j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
+				if budget == 0 {
+					// calculate budget using online measurement
+					if 	task.QueuingMechanism == kernel.TaskQueuingDDL || 
+						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
+						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+						task.QueuingMechanism == kernel.TaskQueuingDDL_None {
+						if dispatchItem.SLO != nil && dispatchItem.SLO.TailLatencyInMilliseconds > 0 {
+							j.log.Printf("[task dispatcher] going to calculate tail latency")
+							
+							histogram_list := []*histogram.Histogram{}
+							for _, subtaskOnNode := range workerSubtasks {
+								podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
+								histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+							}
+							j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
+							j.PodCache.Lock()
+
+							budgetEstimationPercentilePoint := float64(0.99)
+							if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
+								budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
+							}
+							tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
+							j.PodCache.Unlock()
+							j.log.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
+							
+
+							if tail_latency > 0 {
+								budget = dispatchItem.SLO.TailLatencyInMilliseconds - tail_latency
+								j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
+									task.GetKey(), budget, fanoutDegree, tail_latency)
+							}
+						} 
 					}
+					// for queueing by class,
+					//     and compatible with legacy using static budget
+					if budget == 0 && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
+						j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
+						budget = dispatchItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+						if budget > 0 {
+							j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
+						} else {
+							budget = dispatchItem.GetDeterministicBudget(string(kernel.AppModuleWorker))
+							j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
+						}
+					}
+					j.log.Printf("[task dispatcher] budget evaluation is done")
 				}
-				j.log.Printf("[task dispatcher] budget evaluation is done")
+				
+				// sort available subnodes if needed
+				if dispatchItem.Options != nil && dispatchItem.Options.SortSubnodes {
+					sort.Slice(workerSubtasks, func(i, j int) bool {
+						if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
+							return true
+						}
+						return i < j
+					})
+				}
+				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
+				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
 			}
-			
-			// sort available subnodes if needed
-			if taskItem.Options != nil && taskItem.Options.SortSubnodes {
-				sort.Slice(workerSubtasks, func(i, j int) bool {
-					if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
-						return true
-					}
-					return i < j
-				})
-			}
-			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
-			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
-
-			// 2022-02-19
-			// get online-statistics for the selected worker pods
-
-			// end of online-statistics
 
 			// enqueue each worker subtask
 			for i, worker := range workerSubtasks {
@@ -254,14 +319,14 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 				j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
 					worker.Subtask.Pod.GetKey(), worker.Node.Key(),
-					taskItem.GetReportToForModule(string(kernel.AppModuleWorker)).Desc(),
+					dispatchItem.GetReportToForModule(string(kernel.AppModuleWorker)).Desc(),
 				)
 				// backdoor for fake service time
 				estimatedServiceTime := float64(-1)
-				j.log.Printf("[task dispatcher][debugging] options: [%v], EstimatedServiceTimeModel: [%v]", taskItem.Options, taskItem.Options.EstimatedServiceTimeModel)
+				j.log.Printf("[task dispatcher][debugging] options: [%v], EstimatedServiceTimeModel: [%v]", dispatchItem.Options, dispatchItem.Options.EstimatedServiceTimeModel)
 
-				if taskItem.Options != nil && taskItem.Options.EstimatedServiceTimeModel != "" {
-					options := taskItem.Options
+				if dispatchItem.Options != nil && dispatchItem.Options.EstimatedServiceTimeModel != "" {
+					options := dispatchItem.Options
 					if options.EstimatedServiceTimeModel == "poission" {
 						if options.EstimatedMeanServiceTime > 0 {
 							estimatedServiceTime = float64(j.dist.PoissonRand(float64(options.EstimatedMeanServiceTime)))
@@ -279,7 +344,7 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				}
 				// generate request payload for the subtask
 				req := NewAggregativeWorkerTask(
-					taskItem, worker, j.Config.SelfNode.Protocol,
+					dispatchItem, worker, j.Config.SelfNode.Protocol,
 					task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
 					estimatedServiceTime,
 				)
@@ -291,17 +356,40 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 				// enqueue the subtask
 				if estimatedServiceTime > 0 {
 					j.log.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
-						estimatedServiceTime, taskItem.Options.EstimatedServiceTimeModel,
+						estimatedServiceTime, dispatchItem.Options.EstimatedServiceTimeModel,
 					)
 				}
+
+				// according to budget negotiation method, to enqueue the task
+				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+					budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+				}
+				phase := scheduler.BudgetNegotiationPhaseNotStarted
+				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationPhase != "" {
+					phase = dispatchItem.Options.BudgetNegotiationPhase
+				}
+
+				targetQueue := scheduler.PodQueueTypeMain
+				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
+					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
+					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) &&
+					phase != scheduler.BudgetNegotiationPhaseConfirm {
+					targetQueue = scheduler.PodQueueTypeShadow
+				}
 				done,_,_ := queue.Enqueue(
+					targetQueue,
 					worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 					task.QueuingMechanism, budget, priority,
 					estimatedServiceTime,
 					j.log.Printf,
 				)
-				if done {
-					j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+				if done || isConfirmingBudget{
+					if done {
+						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+					} else {
+						j.log.Printf("[task dispatcher] pod[%v] subtask[%v] for [%v] queueing has been served before budget negotiation is done", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+					}
 				} else {
 					j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 				}
@@ -314,8 +402,92 @@ func (j *JADE) checkTaskStatus(taskKey string) {
 			// even possible that the whole task is finished before the status was changed
 			// so that the tasks completed extremely fast would got overwritten status back to incomplete
 			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
+
+			// for non-block budget negotiation, prepare for the cache
+			if !isConfirmingBudget && (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+				(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
+					budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)){
+				// just to collect the local cdf and check the remote CDFs
+				pods := []*kernel.Pod{}
+				for _, worker := range workerSubtasks {
+					pods = append(pods, worker.Subtask.Pod)
+				}
+
+				if  budgetnegotationCache != nil {
+					// as an initiator
+					go j.CheckBudgetNegotiationCache(task.GetKey(), budgetnegotationCache, pods, dispatchItem)
+				} else if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationInitiator != nil {
+					// report to the initiator
+					go j.ReportCDFtoInitiator(pods, dispatchItem, dispatchItem.Options.BudgetNegotiationInitiator)
+				}
+
+			}
 		}
 	}
+}
+
+func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.BudgetNegotiationResponseCache, pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem) {
+	localResponse := j.MultiplyCDFs(pods, dispatchItem)
+
+	for {
+
+		isDone := true
+
+		cache.Lock()
+		for _, cacheItem := range cache.Responses {
+			if !cacheItem.IsDone {
+				isDone = false
+				break
+			}
+		}
+		cache.Unlock()
+
+		if isDone {
+			break
+		}
+
+		time.Sleep(50 * time.Nanosecond)
+	}
+
+	cache.Lock()
+
+	// multiply CDFs
+	cdf_list := []*histogram.CDF{ localResponse.CDF }
+	for _, cacheItem := range cache.Responses {
+		if cacheItem.Response == nil || cacheItem.Response.CDF == nil {
+			continue
+		}
+		// to be simpler in research, we do not reject neighbors regarding their CDFs
+		// but if in business, we should
+		cdf_list = append(cdf_list, cacheItem.Response.CDF)
+	}
+
+	j.CalcGlobalBudget(cdf_list, dispatchItem)
+
+	cache.Unlock()
+
+	j.log.Printf("[budget negotiation] non-block negotiation is done, going to re-dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
+
+	if dispatchItem.Options == nil {
+		dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
+	}
+	dispatchItem.Options.BudgetNegotiationPhase = scheduler.BudgetNegotiationPhaseConfirm
+
+	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
+		dispatchItem.Task.GetKey(): dispatchItem,
+	})
+
+}
+
+func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem, initiator *kernel.Node) {
+	localResponse := j.MultiplyCDFs(pods, dispatchItem)
+	j.log.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
+	payload := j.GeneratePayloadOfRequest(initiator, localResponse, nil, nil)
+	apiPath := "/$jade$/collectCDF"
+	_, _, _, err := j.HTTPCommunicate("reporting CDF to the initiator", "PUT", apiPath, initiator, payload, 0, 10)
+	if err != nil {
+		j.log.Println("[budget negotiation] ERROR when reporting CDF to the initiator:", err.Error())
+	} 
 }
 
 

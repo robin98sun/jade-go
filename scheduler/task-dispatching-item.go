@@ -15,6 +15,13 @@ const (
 	BudgetNegotiationTypeNone 	BudgetNegotiationType = "none"
 )
 
+type BudgetNegotiationPhase string
+const (
+	BudgetNegotiationPhaseNotStarted 	BudgetNegotiationPhase = "not-started"
+	BudgetNegotiationPhaseInquiry 		BudgetNegotiationPhase = "inquiry"
+	BudgetNegotiationPhaseConfirm 		BudgetNegotiationPhase = "confirm"
+)
+
 type TaskDispatchingOptions struct {
 	ForceUpdateNetworkStructure bool   `json:"forceUpdateNetworkStructure,omitempty"`
 	SaveResultInCache         	bool   `json:"saveResultInCache,omitempty"`
@@ -24,6 +31,8 @@ type TaskDispatchingOptions struct {
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 	BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
+	BudgetNegotiationPhase 		BudgetNegotiationPhase `json:"budgetNegotiationPhase,omitempty"`
+	BudgetNegotiationInitiator  *kernel.Node `json:"budgetNegotiationInitiator,omitempty"`
 	CDFPoints                   int 	`json:"cdfPoints,omitempty"`
 	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
 	BudgetEstimationPercentilePoint float64 `json:"budgetEstimationPercentilePoint,omitempty"`
@@ -52,19 +61,15 @@ type TaskDispatchingItem struct {
 
 func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchingItem {
 	inst := &TaskDispatchingItem{}
-	if t.Task != nil {
-		inst.Task = t.Task
-	}
+
+	inst.Task = t.Task
+
 	if minimum {
 		return inst
 	}
 
-	if t.Budgets != nil {
-		inst.Budgets = t.Budgets
-	}
-	if t.Options != nil {
-		inst.Options = t.Options
-	}
+	inst.Budgets = t.Budgets
+	inst.Options = t.Options
 	inst.ArriveTimestamp = t.ArriveTimestamp
 	inst.InquiryStartTimestamp = t.InquiryStartTimestamp
 	inst.InquiryDoneTimestamp = t.InquiryDoneTimestamp
@@ -78,12 +83,9 @@ func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchi
 			}
 		}
 	}
-	if t.Priority != 0 {
-		inst.Priority = t.Priority
-	}
-	if t.SLO != nil {
-		inst.SLO = t.SLO
-	}
+
+	inst.Priority = t.Priority
+	inst.SLO = t.SLO
 	inst.TTL = t.TTL
 
 	return inst

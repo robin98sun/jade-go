@@ -3,7 +3,8 @@ package scheduler
 import (
 	"sync"
 	"time"
-	// "uta.edu/aces/jadesdk"
+	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/kernel"
 )
 
 // the shape of task cache:
@@ -103,6 +104,29 @@ func (c *TaskCache) Clear(seconds int) int {
 
 }
 
+func (c *TaskCache) SetBudgetNegotiationCache(taskId string, cache *BudgetNegotiationResponseCache) {
+	if taskId == "" {return}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if item, exists := c.Cache[taskId]; exists {
+		item.BudgetNegotiationCache = cache
+	}
+}
+
+func (c *TaskCache) GetBudgetNegotiationCache(taskId string) *BudgetNegotiationResponseCache {
+	if taskId == "" {return nil}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if item, exists := c.Cache[taskId]; exists {
+		return item.BudgetNegotiationCache 
+	}
+	return nil
+
+}
+
 type TaskCacheTaskItem struct {
 	task                *TaskDispatchingItem
 	dispatchedNodes     map[string]*TaskCacheNodeItem // node-key : nodeItem
@@ -116,6 +140,7 @@ type TaskCacheTaskItem struct {
 	FinishTimestamp     time.Time `json:"finishTimestamp,omitempty"`
 	Fanout              int64     `json:"fanout,omitempty"`
 	AcceptTimestamp    time.Time     `json:"acceptTimestamp,omitempty"`
+	BudgetNegotiationCache *BudgetNegotiationResponseCache `json:"budgetNegotiationCache,omitempty"`
 }
 
 func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {
@@ -156,4 +181,61 @@ func (t *TaskCacheTaskItem) CheckStatus() TaskStatus {
 	}
 	t.status = checkStatus(t.status, items)
 	return t.status
+}
+
+
+// Budget Negotiation Response Cache
+
+type BudgetNegotiationResponse struct {
+	AvailableNodes 	int64 			`json:"availableNodes,omitempty"`
+	CDF 			*histogram.CDF 	`json:"cdf,omitempty"`
+	TaskKey 		string 			`json:"taskId,omitempty"`
+	Node            *kernel.Node    `json:"node,omitempty"`
+}
+
+type BudgetNegotiationResponseCacheItem struct {
+	Neighbor 			*kernel.Node
+	RequestSentAt 		time.Time
+	ResponseArriveAt 	time.Time
+	Response 			*BudgetNegotiationResponse
+	IsDone              bool
+}
+
+type BudgetNegotiationResponseCache struct {
+	Responses map[string]*BudgetNegotiationResponseCacheItem
+	mutex *sync.Mutex
+}
+
+func NewBudgetNegotiationResponseCache() *BudgetNegotiationResponseCache {
+	return &BudgetNegotiationResponseCache{
+		Responses: make(map[string]*BudgetNegotiationResponseCacheItem),
+		mutex: &sync.Mutex{},
+	}
+}
+
+func (c *BudgetNegotiationResponseCache) Lock() {
+	c.mutex.Lock()
+}
+
+func (c *BudgetNegotiationResponseCache) Unlock() {
+	c.mutex.Unlock()
+}
+
+
+func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, response *BudgetNegotiationResponse) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if cacheItem, e := c.Responses[neighbor.Key()]; !e {
+		c.Responses[neighbor.Key()] = &BudgetNegotiationResponseCacheItem{
+			Neighbor: 	neighbor,
+			Response: 	response,
+			IsDone: 	true,
+			ResponseArriveAt: time.Now(),
+		}
+	} else {
+		cacheItem.Response = response
+		cacheItem.IsDone = true
+		cacheItem.ResponseArriveAt = time.Now()
+	}
 }

@@ -45,12 +45,13 @@ func TestScheduler_Enqueuing_FIFO(t *testing.T) {
 			QueueType: kernel.TaskQueuingFIFO,
 		}
 		q.Enqueue(
+			PodQueueTypeMain,
 			p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
 			0, 0, 0,
 			nil,
 		)
 	}
-	assert.Equal(t, len(q.Queue), 100, "queue length should be exactly 100")
+	assert.Equal(t, len(q.MainQueue), 100, "queue length should be exactly 100")
 }
 
 func TestScheduler_Dequeuing_FIFO(t *testing.T) {
@@ -64,12 +65,13 @@ func TestScheduler_Dequeuing_FIFO(t *testing.T) {
 			QueueType: kernel.TaskQueuingFIFO,
 		}
 		q.Enqueue(
+			PodQueueTypeMain,
 			p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
 			0, 0, 0,
 			nil,
 		)
 	}
-	assert.Equal(t, len(q.Queue), 100, "queue length should be exactly 100")
+	assert.Equal(t, len(q.MainQueue), 100, "queue length should be exactly 100")
 
 	var previous_p *PodQueueItem = nil
 	for i := 0; i<19; i++ {
@@ -87,7 +89,7 @@ func TestScheduler_Dequeuing_FIFO(t *testing.T) {
 			)
 		}
 	}
-	assert.Equal(t, len(q.Queue), 81, "queue length should be exactly 81 after dequeuing 19 items")
+	assert.Equal(t, len(q.MainQueue), 81, "queue length should be exactly 81 after dequeuing 19 items")
 
 }
 
@@ -138,6 +140,7 @@ func TestScheduler_Queueing_DDL_AND_PRQ(t *testing.T) {
 				Priority: int(budget),
 			}
 			_, queue_item, idx := q.Enqueue(
+				PodQueueTypeMain,
 				p.Key, p.TaskKey, p.SubtaskKey, p, p.QueueType,
 				float64(p.MaximumQueueingTime), p.Priority, 0, 
 				// log.Printf,
@@ -165,7 +168,7 @@ func TestScheduler_Queueing_DDL_AND_PRQ(t *testing.T) {
 				"the index should be "+strconv.Itoa(idx_after_enqueuing_list[i])+", but actual is "+strconv.Itoa(idx)+", for item["+strconv.Itoa(i)+"], queue type: " + queueType,
 			)
 		}
-		assert.Equal(t, len(q.Queue), len(budgets_and_priorities_before_enqueuing), "queue length should be exactly 10")
+		assert.Equal(t, len(q.MainQueue), len(budgets_and_priorities_before_enqueuing), "queue length should be exactly 10")
 
 		queue_item := q.Dequeue(nil)
 		idx := 0

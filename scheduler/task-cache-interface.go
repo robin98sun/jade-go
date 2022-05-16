@@ -114,14 +114,14 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 				ArriveTimestamp: time.Now(),
 			}
 
-			subtaskKey = subtask.GetKey()
-			printf("[task cache] created subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
+			realSubtaskKey := subtask.GetKey()
+			printf("[task cache] created subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",realSubtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 		}
 	}
 	if subtask != nil {
-		subtaskKey = subtask.GetKey()
+		realSubtaskKey := subtask.GetKey()
 		dispatchItem := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()]
-		printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", subtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey, string(dispatchItem.status))
+		printf("[task cache] cached subtask [%v] for task [%v] on node [%v] as module [%v] which original module was [%v] in pod [%v], status: [%v]", realSubtaskKey, taskKey, subnodeKey, realModuleName, originalModuleName, podKey, string(dispatchItem.status))
 	}
 
 

@@ -123,7 +123,7 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 			feedback.Pod, whetherEnqueue,
 		)
 		// check if the task is ready for dispatching
-		j.checkTaskStatus(feedback.TaskKey)
+		j.checkTaskStatus(feedback.TaskKey, false, nil)
 		// if it is ready, then dispatch the task for it
 	}
 	j.DoneRequest(w, r, "OK")
