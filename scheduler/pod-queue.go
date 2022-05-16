@@ -330,12 +330,14 @@ func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 	if q.Pod != nil {
 		podKey = q.Pod.GetKey()
 	}
+	targetQueue := PodQueueTypeMain
 	if len(q.MainQueue) > 0 {
 		item = q.MainQueue[0]
 		q.MainQueue = q.MainQueue[1:]
 	} else if len(q.ShadowQueue) > 0 {
 		item = q.ShadowQueue[0]
 		q.ShadowQueue = q.ShadowQueue[1:]
+		targetQueue = PodQueueTypeShadow
 	}
 	if item != nil {
 		delete(q.ItemsInQueue, item.Key)
@@ -348,8 +350,8 @@ func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 			item.QueueLength = math.MaxInt64 - item.enqueueTime + item.dequeueTime
 		}
 		if printf != nil {
-			printf("[pod queue][%v] dequeued an item at queue clock %v, which waited %v previous items, and queueing time is %v",
-				podKey,
+			printf("[pod queue][%v] dequeued an item from [%v] at queue clock %v, which waited %v previous items, and queueing time is %v",
+				podKey, targetQueue,
 				q.dequeueClock,
 				item.QueueLength,
 				item.DispatchTime.Sub(item.ArrivalTime)/time.Millisecond,
@@ -362,8 +364,8 @@ func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
 			q.dequeueClock++
 		}
 		if printf != nil {
-			printf("[pod queue][%v] after dequeuing the item, the queue clock changed to %v, and there are %v items in queue right now",
-				podKey,
+			printf("[pod queue][%v] after dequeuing the item from [%v], the queue clock changed to %v, and there are %v items in queue right now",
+				podKey, targetQueue,
 				q.dequeueClock,
 				len(q.MainQueue) + len(q.ShadowQueue),
 			)

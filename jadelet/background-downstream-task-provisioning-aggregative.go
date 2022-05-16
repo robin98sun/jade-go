@@ -33,6 +33,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 		task := taskItem.Task
 		existingItemInCache := j.TaskCache.GetTask(task.GetKey(), true)
 		if existingItemInCache != nil {
+			j.log.Printf("[task provision] the incoming task already exists, typically is to confirm the negotiated budget, the task involves %v neighbors", len(task.NeighborNodes))
 			j.checkTaskStatus(task.GetKey(), true, taskItem)
 		} else {
 			j.log.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)

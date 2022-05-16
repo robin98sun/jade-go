@@ -220,6 +220,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							}
 						}
 
+						dispatchItem.InquiryStartTimestamp = time.Now()
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
 						if !isConfirmingBudget {
 							j.log.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
@@ -462,6 +463,7 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 		cdf_list = append(cdf_list, cacheItem.Response.CDF)
 		dispatchItem.Task.SaveNeighborNode(cacheItem.Response.Node)
 	}
+	dispatchItem.InquiryDoneTimestamp = time.Now()
 
 	j.CalcGlobalBudget(cdf_list, dispatchItem)
 
