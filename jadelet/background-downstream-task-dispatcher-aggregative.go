@@ -80,7 +80,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *scheduler.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
-	if j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf) || isConfirmingBudget {
+	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf)  {
 		if ! isConfirmingBudget {
 			j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {
@@ -114,6 +114,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			if priority == 0 {
 				priority = scheduler.TaskDefaultPriority
 			}
+			j.log.Printf("[task dispatcher] budget: %v, priority: %v", budget, priority)
 
 			var neighborSubtasks []*scheduler.SubtaskOnNode
 			var allSubtasks []*scheduler.SubtaskOnNode
@@ -370,14 +371,22 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationPhase != "" {
 					phase = dispatchItem.Options.BudgetNegotiationPhase
 				}
+				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
+					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
+					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) {
+					j.log.Printf("[task dispatcher] the non-block budget negotiation phase is [%v]", phase)
+				}
 
 				targetQueue := scheduler.PodQueueTypeMain
-				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
+				if isConfirmingBudget {
+					targetQueue = scheduler.PodQueueTypeMain
+				} else if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
 					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
 					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) &&
 					phase != scheduler.BudgetNegotiationPhaseConfirm {
 					targetQueue = scheduler.PodQueueTypeShadow
 				}
+
 				done,_,_ := queue.Enqueue(
 					targetQueue,
 					worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,

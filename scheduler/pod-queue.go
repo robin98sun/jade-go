@@ -167,10 +167,12 @@ func (q *PodQueue) Enqueue(
 		} else {
 			// otherwise, it means the item has been dispatched already
 			// quit directly
+			printf("[pod queue] the task has been dispatched in %v queue", PodQueueTypeShadow)
 			return result, nil, 0
 		}
 	} else {
 		if _, e := q.ItemsInQueue[key]; e {
+			printf("[pod queue] the task already in %v queue", podQueueType)
 			return result, nil, 0
 		}
 	}
