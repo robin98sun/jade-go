@@ -85,6 +85,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {
 			j.log.Printf("[task dispatcher] the task{%v} is confirming budget to neighbors", taskKey)
+
 		}
 		// set the task as running
 		// at the meanwhile the task record the timestamp as the beginning of ddispatching
@@ -94,6 +95,14 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 		// dispatching the task
 		dispatchItem := j.TaskCache.GetTask(taskKey, true)
 		task := dispatchItem.Task
+
+		if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+		(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
+			budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
+			if dispatchItemToConfirm != nil && dispatchItemToConfirm.Options != nil {
+				j.log.Printf("[task dispatcher] the incoming task non-block budget negotiation phase: %v", dispatchItemToConfirm.Options.BudgetNegotiationPhase)
+			}
+		}
 		
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
@@ -223,6 +232,11 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 						dispatchItem.InquiryStartTimestamp = time.Now()
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
+						if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
+							(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
+								budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
+							j.log.Printf("[task dispatcher] non-block budget negotiation phase: %v", phase)
+						}
 						if !isConfirmingBudget {
 							j.log.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
 						} else {
@@ -368,7 +382,9 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 				}
 				phase := scheduler.BudgetNegotiationPhaseNotStarted
-				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationPhase != "" {
+				if isConfirmingBudget {
+					phase = scheduler.BudgetNegotiationPhaseConfirm
+				} else if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationPhase != "" {
 					phase = dispatchItem.Options.BudgetNegotiationPhase
 				}
 				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
