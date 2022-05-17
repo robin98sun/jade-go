@@ -533,6 +533,7 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 	percentile_key := PercentileKey(percentile)
 
 	if len(histogram_list) == 1 {
+		if histogram_list[0] == nil {return float64(0)}
 		if _, e := histogram_list[0].Percentiles[percentile_key]; !e {
 			histItem := histogram_list[0].GetPercentile(percentile)
 			if histItem != nil {
@@ -543,7 +544,10 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 
 	max_subhistogram_length := 0
 	does_percentile_is_tracked_by_all_histograms := true
+	good_histogram_list := []*Histogram{}
 	for _, histogram := range histogram_list {
+		if histogram == nil {continue}
+		good_histogram_list = append(good_histogram_list, histogram)
 		if does_percentile_is_tracked_by_all_histograms {
 			if histogram.Percentiles == nil {
 				does_percentile_is_tracked_by_all_histograms = false
@@ -557,13 +561,13 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 		}
 	}
 
-	var opt_out_mask []bool = make([]bool, len(histogram_list))
+	var opt_out_mask []bool = make([]bool, len(good_histogram_list))
 
 	start_point := float64(-1)
 	start_index := 0
 	if does_percentile_is_tracked_by_all_histograms {
-		for i:=0; i<len(histogram_list); i++ {
-			h := histogram_list[i]
+		for i:=0; i<len(good_histogram_list); i++ {
+			h := good_histogram_list[i]
 			r := h.GetPercentile(percentile)
 			v := start_point
 			if r != nil && r.Item != nil {
@@ -577,7 +581,7 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 	}
 
 	criteria_value := SearchPercentileByMultiply(
-		percentile, start_point, histogram_list, opt_out_mask, 
+		percentile, start_point, good_histogram_list, opt_out_mask, 
 		start_index, max_subhistogram_length-1, 
 		true, -1, 
 		0, 0,
