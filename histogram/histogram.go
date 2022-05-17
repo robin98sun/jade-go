@@ -545,7 +545,9 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 	does_percentile_is_tracked_by_all_histograms := true
 	for _, histogram := range histogram_list {
 		if does_percentile_is_tracked_by_all_histograms {
-			if _, e := histogram.Percentiles[percentile_key]; !e {
+			if histogram.Percentiles == nil {
+				does_percentile_is_tracked_by_all_histograms = false
+			} else if _, e := histogram.Percentiles[percentile_key]; !e {
 				does_percentile_is_tracked_by_all_histograms = false
 			}
 		}
