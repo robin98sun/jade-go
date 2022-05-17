@@ -398,10 +398,20 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					targetQueue = scheduler.PodQueueTypeShadow
 				}
 
+				queuingMech := task.QueuingMechanism
+				if task.QueuingMechanism == kernel.TaskQueuingDDL {
+					if budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock {
+						queuingMech = kernel.TaskQueuingDDL_CDF_NonBlock
+					} else if budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock {
+						queuingMech = kernel.TaskQueuingDDL_CDF_Block
+					} else if budgetNegotiation == scheduler.BudgetNegotiationTypeNone {
+						queuingMech = kernel.TaskQueuingDDL_None
+					}
+				}
 				done,_,_ := queue.Enqueue(
 					targetQueue,
 					worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
-					task.QueuingMechanism, budget, priority,
+					queuingMech, budget, priority,
 					estimatedServiceTime,
 					j.log.Printf,
 				)
