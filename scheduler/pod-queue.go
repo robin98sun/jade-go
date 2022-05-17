@@ -222,10 +222,15 @@ func (q *PodQueue) Enqueue(
 			printf("[pod queue][%v] enqueuing the new item using queueingMechanism: %v, budget: %v, priority: %v", podKey, queueingMechanism, newItem.Budget, newItem.Priority)
 		}
 		qlen := len(theQueue)
-		if qlen == 0 {
+		if qlen == 0 || podQueueType == PodQueueTypeShadow{
 			theQueue = append(theQueue, newItem)
 			if printf != nil {
-				printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because the queue is empty, queueingMechanism: %v", podKey, queueingMechanism)
+				if podQueueType == PodQueueTypeShadow {
+					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
+				} else {
+					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO because the queue is empty, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
+
+				}
 			}
 		} else {
 			point := -1
