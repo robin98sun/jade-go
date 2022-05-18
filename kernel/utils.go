@@ -206,7 +206,7 @@ func RandomString() string {
 	r := rand.New(s)
 	ts = time.Now().UnixNano()
 	rn := r.Int63n(ts)
-	result := strconv.FormatInt(rn, 16)
+	result := strconv.FormatInt(rn, 16) + "." + strconv.FormatInt(ts, 16)
 
 	return result
 }
