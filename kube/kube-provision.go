@@ -25,8 +25,8 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 
 	// deploymentName can not longer than 63?
 	deploymentName := deploymentBaseName
-	if len(deploymentName) > 24 {
-		deploymentName = deploymentName[0:24]
+	if len(deploymentName) > 40 {
+		deploymentName = deploymentName[0:40]
 	}
 	deploymentName = "app-jade-" + deploymentName + "-" + kernel.RandomString()
 
