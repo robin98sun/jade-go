@@ -28,7 +28,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if len(deploymentName) > 40 {
 		deploymentName = deploymentName[0:40]
 	}
-	deploymentName = "app-jade-" + deploymentName + "-" + kernel.RandomString()
+	deploymentName =  deploymentName + "-" + kernel.RandomString()
 
 	labels := map[string]string{
 		"jade-env":         envName,
