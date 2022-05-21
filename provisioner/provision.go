@@ -22,7 +22,7 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	allocationLimits *kernel.AllocationUnit,
 	replicas int) (string, int, error) {
 	// deploymentName
-	deploymentName := purifyString(app.Name) +"-"+ purifyString(node.Hostname)
+	deploymentName := purifyString(node.Hostname) +"-"+ purifyString(app.Name) 
 	deploymentName += "-" + purifyString(app.Owner)
 	// registry
 	// Environment variables
