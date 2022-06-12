@@ -154,7 +154,7 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 				break
 			}
 
-			time.Sleep(50 * time.Nanosecond)
+			time.Sleep(50000 * time.Nanosecond)
 		}
 		if cache != nil {
 			j.log.Printf("[budget negotiation] all inquiries are done")
@@ -223,7 +223,8 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 		negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp) *10 / time.Millisecond ) /10
 
 		if tail_latency < tailLatencySLO - negotiationOverhead {
-			budget = tailLatencySLO - tail_latency - negotiationOverhead
+			// budget = tailLatencySLO - tail_latency - negotiationOverhead
+			budget = tailLatencySLO - tail_latency
 		} else {
 			budget = 0
 		}

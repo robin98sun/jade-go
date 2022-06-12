@@ -477,7 +477,7 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 			break
 		}
 
-		time.Sleep(50 * time.Nanosecond)
+		time.Sleep(50000 * time.Nanosecond)
 	}
 
 	cache.Lock()
