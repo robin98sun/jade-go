@@ -223,8 +223,8 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 		negotiationOverhead = float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp) *10 / time.Millisecond ) /10
 
 		if tail_latency < tailLatencySLO - negotiationOverhead {
-			// budget = tailLatencySLO - tail_latency - negotiationOverhead
-			budget = tailLatencySLO - tail_latency
+			budget = tailLatencySLO - tail_latency - negotiationOverhead
+			// budget = tailLatencySLO - tail_latency
 		} else {
 			budget = 0
 		}
