@@ -39,7 +39,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
-			j.log.Printf("[budget negotiation] retreved %v eligible neighbors from cache", len(eligibleNeighbors))
+			j.log.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
 			if 	dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL ||
@@ -57,6 +57,16 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 					budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
 				}
 
+				// for single fanout, no need to negotiate
+				if len(eligibleNeighbors) == 1 {
+					dispatchItem.Task.QueuingMechanism = kernel.TaskQueuingDDL_None
+					if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+						dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
+					}
+					budgetNegotiation = scheduler.BudgetNegotiationTypeNone
+				}
+
+				// for larger fanouts, do whatever needed to negotiate
 				if 	budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock ||
 				budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock ||
 					dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block || 
