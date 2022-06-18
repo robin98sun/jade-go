@@ -259,69 +259,75 @@ func (h *Histogram) Dequeue() *HistogramItem {
 			}
 			h.BucketHistogram.Delete(item)
 		}
-		total_count := float64(h.RootItem.Count)
-		deletedValue := item.Value
-		for _, p := range h.Percentiles {
-			// before_v:=p.Item.Value
+		total_count := float64(0)
+		if h.RootItem != nil {
+			total_count = float64(h.RootItem.Count)
+		}
+		if total_count > 0 {
+			deletedValue := item.Value
+			for _, p := range h.Percentiles {
+				// before_v:=p.Item.Value
 
-			if item == p.Item || deletedValue <= p.Item.Value {
-				p.Count--
-				if item == p.Item || deletedValue == p.Item.Value {
-					if is_node_removed {
-						// item node is removed from the tree
-						if larger != nil {
-							p.Item = larger
-							p.Count += larger.Duplications	
-						} else if smaller != nil {
-							p.Item = smaller
-						} else {
-							p.Item = nil
-						}
-					} 
-				}
-				percentile := float64(p.Count)/total_count
-				p.RealPercentage = percentile
+				if item == p.Item || deletedValue <= p.Item.Value {
+					p.Count--
+					if item == p.Item || deletedValue == p.Item.Value {
+						if is_node_removed {
+							// item node is removed from the tree
+							if larger != nil {
+								p.Item = larger
+								p.Count += larger.Duplications	
+							} else if smaller != nil {
+								p.Item = smaller
+							} else {
+								p.Item = nil
+							}
+						} 
+					}
+					percentile := float64(p.Count)/total_count
+					p.RealPercentage = percentile
 
-				if p.Item != nil {
-					for x:=p.Item.Larger; x!=nil && percentile < p.Percentile; x=x.Larger {
-						percentile = float64(p.Count + x.Duplications)/total_count
-						if percentile <= p.Percentile {
-							p.Item = x
-							p.Count += x.Duplications
-							p.RealPercentage = percentile
+					if p.Item != nil {
+						for x:=p.Item.Larger; x!=nil && percentile < p.Percentile; x=x.Larger {
+							percentile = float64(p.Count + x.Duplications)/total_count
+							if percentile <= p.Percentile {
+								p.Item = x
+								p.Count += x.Duplications
+								p.RealPercentage = percentile
+							}
 						}
 					}
-				}
-			} else if deletedValue > p.Item.Value {
-				percentile := float64(p.Count)/total_count
-				p.RealPercentage = percentile
-				for x:=p.Item.Smaller; x!=nil && percentile > p.Percentile; x=x.Smaller {
-					p.Item = x
-					p.Count -= x.Larger.Duplications
+				} else if deletedValue > p.Item.Value {
+					percentile := float64(p.Count)/total_count
 					p.RealPercentage = percentile
-					percentile = float64(p.Count-x.Duplications)/total_count
+					for x:=p.Item.Smaller; x!=nil && percentile > p.Percentile; x=x.Smaller {
+						p.Item = x
+						p.Count -= x.Larger.Duplications
+						p.RealPercentage = percentile
+						percentile = float64(p.Count-x.Duplications)/total_count
+					}
 				}
-			}
 
-			// after_v:=p.Item.Value
-			// smaller_v:=float64(-1)
-			// if p.Item.Smaller !=nil {
-			// 	smaller_v = p.Item.Smaller.Value
-			// }
-			// larger_v:=float64(-1)
-			// if p.Item.Larger !=nil {
-			// 	larger_v = p.Item.Larger.Value
-			// }
-			// if before_v != after_v {
-			// 	cc := p.Item.CumulativeCount()
-			// 	log.Printf("deleted item %v, before %v, after: %v, smaller: %v, larger: %v,    percentile: %v, real: %v(%v/%v)[%v]", 
-			// 		deletedValue, before_v, after_v, smaller_v, larger_v,
-			// 		p.Percentile, float64(cc)/float64(h.RootItem.Count), 
-			// 		cc, total_count, p.RealPercentage,
-			// 	)	
-			// }
-			
+				// after_v:=p.Item.Value
+				// smaller_v:=float64(-1)
+				// if p.Item.Smaller !=nil {
+				// 	smaller_v = p.Item.Smaller.Value
+				// }
+				// larger_v:=float64(-1)
+				// if p.Item.Larger !=nil {
+				// 	larger_v = p.Item.Larger.Value
+				// }
+				// if before_v != after_v {
+				// 	cc := p.Item.CumulativeCount()
+				// 	log.Printf("deleted item %v, before %v, after: %v, smaller: %v, larger: %v,    percentile: %v, real: %v(%v/%v)[%v]", 
+				// 		deletedValue, before_v, after_v, smaller_v, larger_v,
+				// 		p.Percentile, float64(cc)/float64(h.RootItem.Count), 
+				// 		cc, total_count, p.RealPercentage,
+				// 	)	
+				// }
+				
+			}
 		}
+		
 	}
 
 	if item != nil && h.Count > 0 {
