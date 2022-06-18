@@ -2,7 +2,7 @@ package histogram
 
 import (
 	"math"
-	// "sync"
+	"sync"
 	// "time"
 	// "uta.edu/aces/jade-go/kernel"
 	"strconv"
@@ -23,6 +23,7 @@ type Histogram struct {
 	Percentiles	map[string]*PercentileItem
 	Mean 		float64
 	Variance	float64
+	mutex       *sync.Mutex
 }
 
 type PercentileItem struct {
@@ -62,6 +63,7 @@ func NewHistogram(size int64, subBucketHistogramSize float64, accuracy int) *His
 		QueueSize: size,
 		BucketHistogram: NewBucketHistogram(sbs, bs),
 		Accuracy: accuracy_factor,
+		mutex: &sync.Mutex{},
 	}
 	return h
 }
@@ -132,6 +134,9 @@ func (h *Histogram) GetPercentileForValue(v float64) float64 {
 
 // the complexity of Enqueue shall be no larger than O(log n)
 func (h *Histogram) Enqueue(incomingValue float64, count int) *HistogramItem{
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 
 	v := h.UnifiedValue(incomingValue)
 
@@ -237,6 +242,7 @@ func (h *Histogram) Enqueue(incomingValue float64, count int) *HistogramItem{
 
 // the complexity of Dequeue shall be no larger than O(log n)
 func (h *Histogram) Dequeue() *HistogramItem {
+
 	var item *HistogramItem = nil
 
 	if len(h.Queue) > 0 {
