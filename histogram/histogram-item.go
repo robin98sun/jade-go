@@ -155,7 +155,10 @@ func (t *HistogramItem) CumulativeCount() int64 {
 // return the inserted node,
 // and if the root could be changed, then return the new root
 //     but if the root is not changed, then return nil
-func (t *HistogramItem) Insert(v float64, count int64) (*HistogramItem, *HistogramItem) {
+func (t *HistogramItem) Insert(v float64, count int64, recursion_level int) (*HistogramItem, *HistogramItem) {
+    if recursion_level > 30 {
+        log.Printf("[histogram][insert] recursion level: %v, incoming value: %v, count: %v, histogram item value: %v", recursion_level, v, count, t.Value)
+    }
     if v == t.Value {
         t.Duplications += count
         t.Count += count
@@ -196,9 +199,15 @@ func (t *HistogramItem) Insert(v float64, count int64) (*HistogramItem, *Histogr
         }
         return newItem, root
     } else if v < t.Value {
-        return t.Left.Insert(v, count)
+        if recursion_level > 30 {
+            log.Printf("[histogram][insert] recursive insert to left child")
+        }
+        return t.Left.Insert(v, count, recursion_level+1)
     } else {
-        return t.Right.Insert(v, count)
+        if recursion_level > 30 {
+            log.Printf("[histogram][insert] recursive insert to right child")
+        }
+        return t.Right.Insert(v, count, recursion_level+1)
     }
 }
 

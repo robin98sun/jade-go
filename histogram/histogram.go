@@ -140,7 +140,7 @@ func (h *Histogram) Enqueue(incomingValue float64, count int) *HistogramItem{
 	var item *HistogramItem = nil
 	var newRoot *HistogramItem = nil
 	if h.RootItem != nil {
-		item, newRoot = h.RootItem.Insert(v, int64(count))
+		item, newRoot = h.RootItem.Insert(v, int64(count), 0)
 		if newRoot != nil {
 			h.RootItem = newRoot
 		}

@@ -47,7 +47,7 @@ func create_tree(list []float64) *HistogramItem {
 		if root == nil {
 			root = NewHistogramItem(v)
 		} else {
-			_, newRoot := root.Insert(v, 1)
+			_, newRoot := root.Insert(v, 1, 0)
 			if newRoot != nil {
 				root = newRoot
 			}
@@ -78,7 +78,7 @@ func delete_in_order(t *testing.T, list string, order string, size int, enforceO
 		if root == nil {
 			root = NewHistogramItem(v)
 		} else {
-			_, newRoot := root.Insert(v, 1)
+			_, newRoot := root.Insert(v, 1, 0)
 			if newRoot != nil {
 				root = newRoot
 			}
@@ -195,7 +195,7 @@ func randomlyInsertAndDelete(t *testing.T, size int, enforceOrdering bool) {
 			if root == nil {
 				root = NewHistogramItem(valueToInsert)
 			} else {
-				_, newRoot := root.Insert(valueToInsert, 1)
+				_, newRoot := root.Insert(valueToInsert, 1, 0)
 				if newRoot != nil {
 					root = newRoot
 				}
