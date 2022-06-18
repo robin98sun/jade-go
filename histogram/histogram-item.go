@@ -199,15 +199,27 @@ func (t *HistogramItem) Insert(v float64, count int64, recursion_level int) (*Hi
         }
         return newItem, root
     } else if v < t.Value {
-        if recursion_level > 30 {
-            log.Printf("[histogram][insert] recursive insert to left child")
+        if t.Left == t || t.Left.Value == t.Value {
+            log.Printf("[histogram][insert] WARNING: left child is identical, t.Left == t ? %v", t.Left == t)
+            t.Left = nil
+            return t.Insert(v, count, recursion_level+1)
+        } else {
+            if recursion_level > 30 {
+                log.Printf("[histogram][insert] recursive insert to left child")
+            }
+            return t.Left.Insert(v, count, recursion_level+1)
         }
-        return t.Left.Insert(v, count, recursion_level+1)
     } else {
-        if recursion_level > 30 {
-            log.Printf("[histogram][insert] recursive insert to right child")
+        if t.Right == t || t.Right.Value == t.Value {
+            log.Printf("[histogram][insert] WARNING: right child is identical, t.Right == t ? %v", t.Right == t)
+            t.Right = nil
+            return t.Insert(v, count, recursion_level+1)
+        } else {
+            if recursion_level > 30 {
+                log.Printf("[histogram][insert] recursive insert to right child")
+            }
+            return t.Right.Insert(v, count, recursion_level+1)
         }
-        return t.Right.Insert(v, count, recursion_level+1)
     }
 }
 
