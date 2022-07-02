@@ -30,7 +30,7 @@ type TaskDispatchingOptions struct {
 	EstimatedMeanServiceTime  	float64  `json:"estimatedMeanServiceTime,omitempty"`  // for "exponential" / "poission"
 	ServiceTimeList        		[]float64 `json:"serviceTimeList,omitempty"` // in milliseconds
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
-	BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
+	// BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
 	BudgetNegotiationPhase 		BudgetNegotiationPhase `json:"budgetNegotiationPhase,omitempty"`
 	BudgetNegotiationInitiator  *kernel.Node `json:"budgetNegotiationInitiator,omitempty"`
 	CDFPoints                   int 	`json:"cdfPoints,omitempty"`

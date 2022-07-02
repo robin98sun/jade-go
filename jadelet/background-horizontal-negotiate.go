@@ -48,8 +48,13 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
 
 				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
-				if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
-					budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+				// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+				// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+				// }
+				if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
+				} else if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
+					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFBlock
 				}
 
 				budgetEstimationPercentilePoint := float64(0.95)
@@ -60,9 +65,9 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				// for single fanout, no need to negotiate
 				if len(eligibleNeighbors) == 1 {
 					dispatchItem.Task.QueuingMechanism = kernel.TaskQueuingDDL_None
-					if dispatchItem.Options != nil  {
-						dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
-					}
+					// if dispatchItem.Options != nil  {
+					// 	dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
+					// }
 					budgetNegotiation = scheduler.BudgetNegotiationTypeNone
 				}
 
@@ -93,7 +98,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 						tmpDispatchItem.TTL = dispatchItem.TTL - 1
 
 						tmpDispatchItem.Options = &scheduler.TaskDispatchingOptions{
-							BudgetNegotiation: budgetNegotiation,
+							// BudgetNegotiation: budgetNegotiation,
 							BudgetEstimationPercentilePoint: budgetEstimationPercentilePoint,
 						}
 						if dispatchItem.Options.CDFPoints > 0 {
@@ -136,9 +141,15 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 	
 	dispatchItem.TTL--
 	budgetNegotiation := scheduler.BudgetNegotiationTypeNone
-	if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
-		budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+	// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+	// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
+	// }
+	if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+		budgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
+	} else if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
+		budgetNegotiation = scheduler.BudgetNegotiationTypeCDFBlock
 	}
+
 	if 	dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
 		budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock {
 		// for non-block negotiation, the budget inquiry process will happen when the local resources have been provisioned
