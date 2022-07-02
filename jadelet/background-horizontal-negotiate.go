@@ -60,7 +60,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				// for single fanout, no need to negotiate
 				if len(eligibleNeighbors) == 1 {
 					dispatchItem.Task.QueuingMechanism = kernel.TaskQueuingDDL_None
-					if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
+					if dispatchItem.Options != nil  {
 						dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
 					}
 					budgetNegotiation = scheduler.BudgetNegotiationTypeNone
