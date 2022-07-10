@@ -277,10 +277,11 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 						if dispatchItem.SLO != nil && dispatchItem.SLO.TailLatencyInMilliseconds > 0 {
 							provisionOverhead := float64(0)
+							overheadCheckpoint := time.Now()
 							if !time.Time.IsZero(dispatchItem.BudgetEstimationDoneTimestamp) && dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp) > 0 {
-								provisionOverhead = float64(time.Now().Sub(dispatchItem.BudgetEstimationDoneTimestamp)*10 / time.Millisecond)/10
+								provisionOverhead = float64(overheadCheckpoint.Sub(dispatchItem.BudgetEstimationDoneTimestamp)*10 / time.Millisecond)/10
 							} else {
-								provisionOverhead = float64(time.Now().Sub(dispatchItem.ArriveTimestamp)*10/ time.Millisecond)/10
+								provisionOverhead = float64(overheadCheckpoint.Sub(dispatchItem.ArriveTimestamp)*10/ time.Millisecond)/10
 							}
 							dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
 							j.log.Printf("[task dispatcher] deduct %vms provision overheads to get precise SLO %vms", provisionOverhead, dispatchItem.SLO)
@@ -305,7 +306,8 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							
 
 							if tail_latency > 0 {
-								budget = dispatchItem.SLO.TailLatencyInMilliseconds - tail_latency
+								tailCalcOverhead := float64(time.Now().Sub(overheadCheckpoint)*10 / time.Millisecond)/10
+								budget = dispatchItem.SLO.TailLatencyInMilliseconds - tail_latency - tailCalcOverhead
 								j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
 									task.GetKey(), budget, fanoutDegree, tail_latency)
 							}

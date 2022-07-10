@@ -203,44 +203,6 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	return c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey].subtask, float64(subtaskItem.RequestTime)/float64(time.Millisecond), float64(subtaskItem.CommunicationTime)/float64(time.Millisecond)
 }
 
-// func (c *TaskCache) SaveStatOfModule(
-// 	appName string, moduleName string,
-// 	fanoutDegree int, subtaskItem *TaskCacheSubtaskItem,
-// ) {
-// 	if c == nil || subtaskItem == nil {
-// 		return
-// 	}
-
-// 	if _, ok := c.Stat[appName]; !ok {
-// 		c.Stat[appName] = make(map[string]map[string]*jadesdk.Stat)
-// 	}
-// 	appItem := c.Stat[appName]
-
-// 	if _, ok := appItem[moduleName]; !ok {
-// 		appItem[moduleName] = make(map[string]*jadesdk.Stat)
-// 	}
-// 	fanouts := appItem[moduleName]
-
-// 	realFanoutDegree := fanoutDegree
-// 	if realFanoutDegree <= 0 {
-// 		realFanoutDegree = 1
-// 	}
-// 	fanoutKey := strconv.Itoa(realFanoutDegree)
-// 	if _, ok := fanouts[fanoutKey]; !ok {
-// 		fanouts[fanoutKey] = jadesdk.NewStat()
-// 	}
-
-// 	stat := fanouts[fanoutKey]
-// 	stat.PreService.AddDuration(subtaskItem.PreServiceTime)
-// 	stat.PackageSize.AddNumber(int64(subtaskItem.ReceivePackageSize))
-// 	stat.Forwarding.AddDuration(subtaskItem.ForwardingTime)
-// 	stat.Service.AddDuration(subtaskItem.ServiceTime)
-// 	stat.Request.AddDuration(subtaskItem.RequestTime)
-// 	stat.Communication.AddDuration(subtaskItem.CommunicationTime)
-// 	stat.QueueLength.AddNumber(subtaskItem.QueueLength)
-// 	stat.QueueingTime.AddDuration(subtaskItem.QueueingTime)
-// }
-
 type TaskResult struct {
 	Status TaskStatus  `json:"status,omitempty"`
 	Result interface{} `json:"result,omitempty"`

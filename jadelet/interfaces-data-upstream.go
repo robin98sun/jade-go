@@ -50,7 +50,10 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 
 				// to see if the task is done
 				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
-				j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Printf)
+				isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Printf)
+				if isTaskDone {
+					// the query (task) is done
+				}
 				return
 			}
 		}

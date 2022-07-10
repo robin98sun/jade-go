@@ -211,7 +211,11 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 		}
 			// here is typically for non-negotiation
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
-		if dispatchItem.SLO != nil {
+		if dispatchItem.SLO != nil && 
+			( dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL ||
+			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None ||
+			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
+			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock){
 			provisionOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp)*10 / time.Millisecond)/10
 			dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
 		}
