@@ -73,7 +73,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 
 				// for larger fanouts, do whatever needed to negotiate
 				if 	budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock ||
-				budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock ||
+					budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock ||
 					dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block || 
 					dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
 					
@@ -123,11 +123,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 				}
 			} 
 			if to_cache_neighbor_subtask {
+				count_neighbors := 0
 				for _, neighbor := range eligibleNeighbors {
 					if neighbor.GetKey () != j.Config.SelfNode.GetKey() {
 						dispatchItem.Task.SaveNeighborNode(neighbor)
+						count_neighbors += 1
 					}
 				}
+				j.log.Printf("[budget negotiation] there are %v real neighbors among the %v eligible neighbors", count_neighbors, len(eligibleNeighbors))
 			}
 
 		}
@@ -204,14 +207,15 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 
 			cache.Unlock()
 			
-		} else {
-			// here is typically for non-negotiation
-			dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
-			if dispatchItem.SLO != nil {
-				provisionOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp)*10 / time.Millisecond)/10
-				dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
-			}
+		// } else {
 		}
+			// here is typically for non-negotiation
+		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
+		if dispatchItem.SLO != nil {
+			provisionOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp)*10 / time.Millisecond)/10
+			dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
+		}
+		// }
 
 		j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 	}

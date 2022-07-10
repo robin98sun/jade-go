@@ -258,20 +258,35 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
 
 				// calc 99 percentile for prod of histograms 
-				j.log.Printf("[task dispatcher] task budget: %v", budget)
 				j.log.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
 				if dispatchItem.SLO != nil {
 					j.log.Printf("[task dispatcher] SLO: %v", dispatchItem.SLO.TailLatencyInMilliseconds)
 				}
-				if budget == 0 {
+				if dispatchItem.Options != nil {
+					j.log.Printf("[task dispatcher] SLO percentile: %v", dispatchItem.Options.BudgetEstimationPercentilePoint)
+				}
+				if task.QueuingMechanism == kernel.TaskQueuingClass {
+					if dispatchItem.SLO != nil {
+						budget = dispatchItem.SLO.TailLatencyInMilliseconds
+					}
+				} else if budget == 0 {
 					// calculate budget using online measurement
 					if 	task.QueuingMechanism == kernel.TaskQueuingDDL || 
 						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
 						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
 						task.QueuingMechanism == kernel.TaskQueuingDDL_None {
 						if dispatchItem.SLO != nil && dispatchItem.SLO.TailLatencyInMilliseconds > 0 {
+							provisionOverhead := float64(0)
+							if !time.Time.IsZero(dispatchItem.BudgetEstimationDoneTimestamp) && dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp) > 0 {
+								provisionOverhead = float64(time.Now().Sub(dispatchItem.BudgetEstimationDoneTimestamp)*10 / time.Millisecond)/10
+							} else {
+								provisionOverhead = float64(time.Now().Sub(dispatchItem.ArriveTimestamp)*10/ time.Millisecond)/10
+							}
+							dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
+							j.log.Printf("[task dispatcher] deduct %vms provision overheads to get precise SLO %vms", provisionOverhead, dispatchItem.SLO)
+
 							j.log.Printf("[task dispatcher] going to calculate tail latency")
-							
+
 							histogram_list := []*histogram.Histogram{}
 							for _, subtaskOnNode := range workerSubtasks {
 								podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
@@ -298,7 +313,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					}
 					// for queueing by class,
 					//     and compatible with legacy using static budget
-					if budget == 0 && (task.QueuingMechanism == kernel.TaskQueuingDDL || task.QueuingMechanism == kernel.TaskQueuingClass) {
+					if budget == 0 && task.QueuingMechanism == kernel.TaskQueuingDDL {
 						j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
 						budget = dispatchItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 						if budget > 0 {
@@ -310,6 +325,9 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					}
 					j.log.Printf("[task dispatcher] budget evaluation is done")
 				}
+
+
+				j.log.Printf("[task dispatcher] task budget: %v", budget)
 				
 				// sort available subnodes if needed
 				if dispatchItem.Options != nil && dispatchItem.Options.SortSubnodes {
