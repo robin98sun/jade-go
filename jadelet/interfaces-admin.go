@@ -10,7 +10,7 @@ import (
 
 // UpdateConfigurations to configure JADE at runtime
 func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
-	j.log.Println("updating configuration")
+	j.log.Op.Println("updating configuration")
 	c := kernel.NewConfiguration()
 	err := r.DecodeJsonPayload(c)
 	if err != nil {
@@ -28,17 +28,23 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 		newNodeKey = j.Config.SelfNode.Key()
 	}
 	if originalNodeKey != newNodeKey && originalNodeKey != "" {
-		j.log.Printf("removing old capabilities for old nodekey[%v] while updating configuration", originalNodeKey)
+		j.log.Op.Printf("removing old capabilities for old nodekey[%v] while updating configuration", originalNodeKey)
 		j.subnodeCapabilityCache.DeleteNode(originalNodeKey)
 		j.neighborCapabilityCache.DeleteNode(originalNodeKey)
 	}
 
 	if newNodeKey != "" {
-		j.log.Printf("setting new capabilities for new nodekey[%v] while updating configuration", newNodeKey)
+		j.log.Op.Printf("setting new capabilities for new nodekey[%v] while updating configuration", newNodeKey)
 		if list, e := j.Config.Capabilities["public"]; e {
 			j.subnodeCapabilityCache.Set(newNodeKey, list)
 			j.neighborCapabilityCache.Set(newNodeKey, list)
 		}
+	}
+
+	if j.Config.Options != nil && j.log != nil {
+		j.log.Debug.Enabled = j.Config.Options.DebugLog
+		j.log.Perf.Enabled = j.Config.Options.PerfLog
+		j.log.Op.Enabled = j.Config.Options.OpLog 
 	}
 	w.WriteJson(c)
 	// renew itself in upper node

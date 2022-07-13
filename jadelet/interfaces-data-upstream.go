@@ -22,7 +22,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 	if err == nil {
 		// bs, _ := json.MarshalIndent(msg, "", "    ")
 		// j.log.Println("[app message collector] Received application message:", string(bs))
-		j.log.Printf("[app message collector] Received application message which claims for subtask[%v] of task[%v], from pod[%v]:",
+		j.log.Op.Printf("[app message collector] Received application message which claims for subtask[%v] of task[%v], from pod[%v]:",
 			msg.SubtaskKey, msg.TaskKey,
 			msg.Node.Key(),
 		)
@@ -30,7 +30,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			if msg.Status == scheduler.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
-			j.log.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
+			j.log.Op.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
 				msg.SubtaskKey, msg.TaskKey,
 				msg.Node.Key(),
 			)
@@ -38,7 +38,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			subtask, serviceRequestTime, communicationTime := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
 			if subtask != nil && subtask.Pod != nil {
 				j.DoneRequest(w, r, "message received")
-				j.log.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
+				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				
 				// then dequeue or release the pod queue
 				j.PodCache.SetPodIdle(subtask.Pod, serviceRequestTime, communicationTime)
@@ -49,15 +49,20 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				}
 
 				// to see if the task is done
-				j.log.Printf("[app message collector] checking if task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
-				isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Printf)
+				isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
 				if isTaskDone {
 					// the query (task) is done
+					j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
+					dispatchItem := j.TaskCache.GetDispatchingItem(msg.TaskKey)
+					subtasks := j.TaskCache.GetSubtasksRegardingNode(msg.TaskKey, "", "", "")
+					j.PerfCache.Enqueue(dispatchItem, timestampReceving, subtasks)
+				} else {
+					j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, scheduler.TaskStatusDone)
 				}
 				return
 			}
 		}
-		j.log.Printf("[app message collector] ERROR: the subtask[%v] of task[%v] claimed by a message from pod[%v] is not recognized",
+		j.log.Op.Printf("[app message collector] ERROR: the subtask[%v] of task[%v] claimed by a message from pod[%v] is not recognized",
 			msg.SubtaskKey, msg.TaskKey,
 			msg.Node.Key(),
 		)

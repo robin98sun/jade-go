@@ -99,7 +99,7 @@ func (j *JADE) ShowNode(w rest.ResponseWriter, r *rest.Request) {
 			break
 		}
 	}
-	j.log.Println("querying node:", nodeName)
+	j.log.Op.Println("querying node:", nodeName)
 	node, err := j.Kube.FindNode(nodeName)
 	if err == nil {
 		w.WriteJson(node)
@@ -178,11 +178,11 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 		traceType = t
 	}
 	if jobKey, e := query["jobId"]; e {
-		j.log.Printf("fetch traces for job[%v]", jobKey)
-		w.WriteJson(j.TaskCache.CollectTraces(traceType, jobKey, j.log.Printf))
+		j.log.Op.Printf("fetch traces for job[%v]", jobKey)
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, jobKey, j.log.Op.Printf))
 	} else {
-		j.log.Printf("fetch traces for all jobs")
-		w.WriteJson(j.TaskCache.CollectTraces(traceType, "", j.log.Printf))
+		j.log.Op.Printf("fetch traces for all jobs")
+		w.WriteJson(j.TaskCache.CollectTraces(traceType, "", j.log.Op.Printf))
 	}
 }
 

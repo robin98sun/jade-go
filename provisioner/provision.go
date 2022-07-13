@@ -26,7 +26,7 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 	deploymentName += "-" + purifyString(app.Owner)
 	// registry
 	// Environment variables
-	p.log.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
+	p.log.Op.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
 	deployedName, nodePort, err := client.ProvisionDeployment(
 		app.EnvName, app.Owner,
 		app.Name, app.Version, moduleName,
@@ -37,10 +37,10 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
 		allocationLimits, envVars, replicas,
 	)
 	if err != nil {
-		p.log.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
+		p.log.Op.Println("Error when provisioning pods, deployment:", deploymentName, ", error:", err.Error())
 		return deploymentName, 0, err
 	} else {
-		p.log.Println("Successfully provisioned pods, deployment:", deployedName)
+		p.log.Op.Println("Successfully provisioned pods, deployment:", deployedName)
 		return deployedName, nodePort, nil
 	}
 }

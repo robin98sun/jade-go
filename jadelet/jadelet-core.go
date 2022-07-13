@@ -11,6 +11,7 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 	"fmt"
 )
@@ -41,6 +42,7 @@ type JADE struct {
 	log             *kernel.Logger
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
 	PodCache        *scheduler.PodCache  `json:"podCache"`
+	PerfCache 		*perfstat.PerfCache `json:"perfCache"`
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
 	dist            *scheduler.Dist
@@ -62,30 +64,30 @@ func (j *JADE) Unlock() {
 }
 
 func (j *JADE) Verbose(on bool) {
-	j.log.Enable = on
+	j.log.Debug.Enabled = on
 	j.sdk.Verbose(on)
 }
 
 func (j *JADE) PrintConfig() {
-	j.log.Println("configurations from environment:")
-	j.log.Println("registry node:")
-	j.log.Println(j.Config.RegistryNode)
-	j.log.Println("")
-	j.log.Println("upper node:")
-	j.log.Println(j.Config.UpperNode)
-	j.log.Println("")
-	j.log.Println("self node:")
-	j.log.Println(j.Config.SelfNode)
-	j.log.Println("")
-	j.log.Println("capacity:")
-	j.log.Println(j.Config.Capacity)
-	j.log.Println("")
-	j.log.Println("capabilities:")
+	j.log.Op.Println("configurations from environment:")
+	j.log.Op.Println("registry node:")
+	j.log.Op.Println(j.Config.RegistryNode)
+	j.log.Op.Println("")
+	j.log.Op.Println("upper node:")
+	j.log.Op.Println(j.Config.UpperNode)
+	j.log.Op.Println("")
+	j.log.Op.Println("self node:")
+	j.log.Op.Println(j.Config.SelfNode)
+	j.log.Op.Println("")
+	j.log.Op.Println("capacity:")
+	j.log.Op.Println(j.Config.Capacity)
+	j.log.Op.Println("")
+	j.log.Op.Println("capabilities:")
 }
 
 func (j *JADE) PrintCapabilities() {
 	for _, c := range j.Config.Capabilities {
-		j.log.Println(c)
+		j.log.Op.Println(c)
 	}
 }
 
@@ -223,11 +225,11 @@ func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) (
 		subnodeExists = false
 	} else if _, exists := j.Subnodes[payload.NodeID]; !exists {
 		subnodeExists = false
-		msgstr := "WARNING: unknown visitor[%v], where existing subnodes are:"
-		for nid, _ := range j.Subnodes {
-			msgstr = fmt.Sprintf("%v %v,", msgstr, nid)
-		}
-		j.log.Printf(msgstr)
+		msgstr := fmt.Sprintf("WARNING: unknown visitor [%v] claiming as a subnode", payload.NodeID)
+		// for nid, _ := range j.Subnodes {
+		// 	msgstr = fmt.Sprintf("%v %v,", msgstr, nid)
+		// }
+		j.log.Op.Printf(msgstr)
 	}
 
 	if !subnodeExists {

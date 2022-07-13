@@ -28,7 +28,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 
 		if len(eligibleNeighbors) == 0 {
 			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
-			j.log.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
+			j.log.Debug.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
 			if eligibleNeighbors == nil {
 				eligibleNeighbors = []*kernel.Node{}
 			}
@@ -39,7 +39,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
-			j.log.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
+			j.log.Debug.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
 			if 	dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL ||
@@ -119,7 +119,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 						dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
 					}
 					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
-					j.log.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors, where original percentile point is %v", targetPercentile, len(eligibleNeighbors), budgetEstimationPercentilePoint)
+					j.log.Debug.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors, where original percentile point is %v", targetPercentile, len(eligibleNeighbors), budgetEstimationPercentilePoint)
 				}
 			} 
 			if to_cache_neighbor_subtask {
@@ -130,7 +130,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 						count_neighbors += 1
 					}
 				}
-				j.log.Printf("[budget negotiation] there are %v real neighbors among the %v eligible neighbors", count_neighbors, len(eligibleNeighbors))
+				j.log.Debug.Printf("[budget negotiation] there are %v real neighbors among the %v eligible neighbors", count_neighbors, len(eligibleNeighbors))
 			}
 
 		}
@@ -181,7 +181,7 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 			time.Sleep(50000 * time.Nanosecond)
 		}
 		if cache != nil {
-			j.log.Printf("[budget negotiation] all inquiries are done")
+			j.log.Debug.Printf("[budget negotiation] all inquiries are done")
 		}
 
 		dispatchItem.InquiryDoneTimestamp = time.Now()
@@ -221,7 +221,7 @@ func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseC
 		}
 		// }
 
-		j.log.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
+		j.log.Debug.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 	}
 
 	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
@@ -245,7 +245,7 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 		}
 		tail_latency := histogram.SearchCDFProduct(cdf_list, budgetEstimationPercentilePoint)
 
-		j.log.Printf("[budget negotiation] %v percentile tail latency of %v CDFs is %v",  budgetEstimationPercentilePoint*100, len(cdf_list), tail_latency)
+		j.log.Debug.Printf("[budget negotiation] %v percentile tail latency of %v CDFs is %v",  budgetEstimationPercentilePoint*100, len(cdf_list), tail_latency)
 
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 
@@ -261,12 +261,12 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
 
 
-		j.log.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
+		j.log.Debug.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
 			dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
 			dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.InquiryDoneTimestamp) / time.Millisecond,
 		)
 
-		j.log.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
+		j.log.Debug.Printf("[budget negotiation] tail latency SLO: %v, estimated budget: %v, deducted budget negotiation overhead: %v milliseconds", tailLatencySLO, budget, negotiationOverhead )
 
 	} else {
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
@@ -277,20 +277,20 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDispatchingItem, cache *scheduler.BudgetNegotiationResponseCache) *scheduler.BudgetNegotiationResponse {
 	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
 
-	j.log.Printf("[budget negotiation] inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
+	j.log.Debug.Printf("[budget negotiation] inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
 	apiPath := "/$jade$/inquiryBudget"
 	_, _, content, err := j.HTTPCommunicate("inquirying eligible neighbor", "POST", apiPath, neighbor, payload, 0, 10)
 	if err != nil {
-		j.log.Println("[budget negotiation] ERROR when inquirying eligible neighbor:", err.Error())
+		j.log.Debug.Println("[budget negotiation] ERROR when inquirying eligible neighbor:", err.Error())
 	} else {
 		resInst :=  &struct{
 			Payload *scheduler.BudgetNegotiationResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Println("[budget negotiation] ERROR of inquirying eligible neighbor: can not decode response, ", err)
+			j.log.Debug.Println("[budget negotiation] ERROR of inquirying eligible neighbor: can not decode response, ", err)
 		} else {
-			j.log.Println("[budget negotiation] response of inquirying eligible neighbor:", resInst.Payload)
+			j.log.Debug.Println("[budget negotiation] response of inquirying eligible neighbor:", resInst.Payload)
 
 			cache.SetResponse(neighbor, resInst.Payload)
 			return resInst.Payload
@@ -304,24 +304,24 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) [
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 
-	j.log.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
+	j.log.Debug.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
 	if j.Config.RegistryNode.IsAddrEmpty() {
-		j.log.Printf("[budget negotiation] ERROR: registry node is empty")
+		j.log.Debug.Printf("[budget negotiation] ERROR: registry node is empty")
 
 	}
 	apiPath := "/$jade$/eligibleNeighbors"
 	_, _, content, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {
-		j.log.Println("[budget negotiation] ERROR when fetching eligible neighbors:", err.Error())
+		j.log.Debug.Println("[budget negotiation] ERROR when fetching eligible neighbors:", err.Error())
 	} else {
 		resInst :=  &struct{
 			Payload []*kernel.Node `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Println("[budget negotiation] ERROR of fetching eligible neighbors: can not decode response, ", err)
+			j.log.Debug.Println("[budget negotiation] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Println("[budget negotiation] response of fetching eligible neighbors:", resInst.Payload)
+			j.log.Debug.Println("[budget negotiation] response of fetching eligible neighbors:", resInst.Payload)
 			return resInst.Payload
 		}
 	}

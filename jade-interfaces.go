@@ -33,12 +33,12 @@ func main() {
 	// construt JADE RESTful API server
 	j := jadelet.NewJadelet()
 	j.Init()
-	PRINT_LOGS := true
-	j.Verbose(PRINT_LOGS)
+	DEV_DEBUGGING := false
+	j.Verbose(DEV_DEBUGGING)
 
 	// APIs
 	api := rest.NewApi()
-	if PRINT_LOGS {
+	if DEV_DEBUGGING {
 		api.Use(rest.DefaultDevStack...)
 	} else {
 		api.Use(rest.DefaultCommonStack...)

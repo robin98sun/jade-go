@@ -29,10 +29,10 @@ func (j *JADE) feedbackProvisioning(result *TaskProvisioningResult) {
 		payload := j.GeneratePayloadOfRequest(nil, result, nil, nil)
 		res, _, _, err := j.HTTPCommunicate("feedback task provisioning", "POST", "/$jade$/collectProvisioning", j.Config.UpperNode, payload, 0, 10)
 		if err != nil {
-			j.log.Println("ERROR when feedback task provisioning:", err.Error())
+			j.log.Debug.Println("ERROR when feedback task provisioning:", err.Error())
 		} else {
 			resbytes, _ := json.MarshalIndent(res, "", "    ")
-			j.log.Println("Response from of collecter of task provisioning:", string(resbytes))
+			j.log.Debug.Println("Response from of collecter of task provisioning:", string(resbytes))
 		}
 	} else {
 		// send the result to UI

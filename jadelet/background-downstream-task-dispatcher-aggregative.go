@@ -30,7 +30,7 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 		duration := endTime.Sub(startTime)
 		podRoutineOverhead := math.Round(float64(duration*10/time.Millisecond))/10
 		if  podRoutineOverhead > 10 {
-			j.log.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", podRoutineOverhead)
+			j.log.Perf.Printf("[pod queue routine] WARNING: checking pod queues in {%v}milliseconds", podRoutineOverhead)
 		}
 	}
 }
@@ -44,7 +44,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 		return
 	}
 	podCacheItem := j.PodCache.SetPodBusy(pod)
-	queueItem := podCacheItem.Queue.Dequeue(j.log.Printf)
+	queueItem := podCacheItem.Queue.Dequeue(j.log.Debug.Printf)
 	if queueItem == nil {
 		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1))
 		j.PodCache.Unlock()
@@ -53,7 +53,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	j.PodCache.Unlock()
 
 	req := queueItem.Payload
-	j.log.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
+	j.log.Debug.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	
 	// inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
 	// if inQueueTime >= 0 {
@@ -80,13 +80,13 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *scheduler.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
-	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Printf)  {
+	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
 		if ! isConfirmingBudget {
-			j.log.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
+			j.log.Debug.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {
-			j.log.Printf("[task dispatcher] the task{%v} is confirming budget to neighbors", taskKey)
+			j.log.Debug.Printf("[task dispatcher] the task{%v} is confirming budget to neighbors", taskKey)
 			if dispatchItemToConfirm != nil && dispatchItemToConfirm.Options != nil {
-				j.log.Printf("[task dispatcher] the incoming task non-block budget negotiation phase: %v", dispatchItemToConfirm.Options.BudgetNegotiationPhase)
+				j.log.Debug.Printf("[task dispatcher] the incoming task non-block budget negotiation phase: %v", dispatchItemToConfirm.Options.BudgetNegotiationPhase)
 			}
 
 		}
@@ -118,7 +118,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			if priority == 0 {
 				priority = scheduler.TaskDefaultPriority
 			}
-			j.log.Printf("[task dispatcher] budget: %v, priority: %v", budget, priority)
+			j.log.Debug.Printf("[task dispatcher] budget: %v, priority: %v", budget, priority)
 
 			var neighborSubtasks []*scheduler.SubtaskOnNode
 			var allSubtasks []*scheduler.SubtaskOnNode
@@ -159,13 +159,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				allSubtasks = append(allSubtasks, neighborSubtasks...)
 			}
 
-			j.log.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks, the aggregator will be waiting for %v subtasks", len(workerSubtasks), len(neighborSubtasks), len(allSubtasks))
+			j.log.Debug.Printf("[task dispatcher] found %v internal subtasks, %v neighbor subtasks, the aggregator will be waiting for %v subtasks", len(workerSubtasks), len(neighborSubtasks), len(allSubtasks))
 
 			for _, aggregator := range aggregatorSubtasks {
 				if !isConfirmingBudget {
 					msg := NewAggregatorEnqueuingMessage(dispatchItem, allSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()
-					j.log.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+					j.log.Debug.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 					// Save the dispatching timestamp and fanout degree
 					aggregator.Subtask.Fanout = len(workerSubtasks)
 					aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
@@ -187,7 +187,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 				// dispatch the neighbor subtasks
 				if len(neighborSubtasks) > 0 {
-					j.log.Printf("[task dispatcher] dispatching neighbor subtasks")
+					j.log.Debug.Printf("[task dispatcher] dispatching neighbor subtasks")
 					
 					if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
 						(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
@@ -231,12 +231,12 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						dispatchItem.InquiryStartTimestamp = time.Now()
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
 						if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
-							j.log.Printf("[task dispatcher] non-block budget negotiation phase: %v", phase)
+							j.log.Debug.Printf("[task dispatcher] non-block budget negotiation phase: %v", phase)
 						}
 						if !isConfirmingBudget {
-							j.log.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+							j.log.Debug.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
 						} else {
-							j.log.Printf("[task dispatcher] confirming budget for subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+							j.log.Debug.Printf("[task dispatcher] confirming budget for subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
 
 						}
 					}
@@ -244,7 +244,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					// wait for the responses of budget negotiation
 					if budgetnegotationCache != nil {
 						j.TaskCache.SetBudgetNegotiationCache(task.GetKey(), budgetnegotationCache)
-						j.log.Printf("[task dispatcher] budget negotiation cache is setup")
+						j.log.Debug.Printf("[task dispatcher] budget negotiation cache is setup")
 					}
 				}
 			}
@@ -255,15 +255,15 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				//    together with the aggregator's address
 				fanoutDegree := len(workerSubtasks)
 				j.TaskCache.SetFanoutDegree(taskKey, int64(fanoutDegree))
-				j.log.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
+				j.log.Debug.Printf("[task dispatcher] task[%v] fanout degree: %v", task.GetKey(), fanoutDegree)
 
 				// calc 99 percentile for prod of histograms 
-				j.log.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
+				j.log.Debug.Printf("[task dispatcher] queueing mechanism: %v", task.QueuingMechanism)
 				if dispatchItem.SLO != nil {
-					j.log.Printf("[task dispatcher] SLO: %v", dispatchItem.SLO.TailLatencyInMilliseconds)
+					j.log.Debug.Printf("[task dispatcher] SLO: %v", dispatchItem.SLO.TailLatencyInMilliseconds)
 				}
 				if dispatchItem.Options != nil {
-					j.log.Printf("[task dispatcher] SLO percentile: %v", dispatchItem.Options.BudgetEstimationPercentilePoint)
+					j.log.Debug.Printf("[task dispatcher] SLO percentile: %v", dispatchItem.Options.BudgetEstimationPercentilePoint)
 				}
 				if task.QueuingMechanism == kernel.TaskQueuingClass {
 					if dispatchItem.SLO != nil {
@@ -284,16 +284,16 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 								provisionOverhead = float64(overheadCheckpoint.Sub(dispatchItem.ArriveTimestamp)*10/ time.Millisecond)/10
 							}
 							dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
-							j.log.Printf("[task dispatcher] deduct %vms provision overheads to get precise SLO %vms", provisionOverhead, dispatchItem.SLO)
+							j.log.Debug.Printf("[task dispatcher] deduct %vms provision overheads to get precise SLO %vms", provisionOverhead, dispatchItem.SLO)
 
-							j.log.Printf("[task dispatcher] going to calculate tail latency")
+							j.log.Debug.Printf("[task dispatcher] going to calculate tail latency")
 
 							histogram_list := []*histogram.Histogram{}
 							for _, subtaskOnNode := range workerSubtasks {
 								podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
 								histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
 							}
-							j.log.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
+							j.log.Debug.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
 							j.PodCache.Lock()
 
 							budgetEstimationPercentilePoint := float64(0.99)
@@ -302,13 +302,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							}
 							tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
 							j.PodCache.Unlock()
-							j.log.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
+							j.log.Debug.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
 							
 
 							if tail_latency > 0 {
 								tailCalcOverhead := float64(time.Now().Sub(overheadCheckpoint)*10 / time.Millisecond)/10
 								budget = dispatchItem.SLO.TailLatencyInMilliseconds - tail_latency - tailCalcOverhead
-								j.log.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
+								j.log.Debug.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
 									task.GetKey(), budget, fanoutDegree, tail_latency)
 							}
 						} 
@@ -316,20 +316,20 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					// for queueing by class,
 					//     and compatible with legacy using static budget
 					if budget == 0 && task.QueuingMechanism == kernel.TaskQueuingDDL {
-						j.log.Printf("[task dispatcher] checking task fanout table for budget sepcification")
+						j.log.Debug.Printf("[task dispatcher] checking task fanout table for budget sepcification")
 						budget = dispatchItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
 						if budget > 0 {
-							j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
+							j.log.Debug.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
 						} else {
 							budget = dispatchItem.GetDeterministicBudget(string(kernel.AppModuleWorker))
-							j.log.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
+							j.log.Debug.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
 						}
 					}
-					j.log.Printf("[task dispatcher] budget evaluation is done")
+					j.log.Debug.Printf("[task dispatcher] budget evaluation is done")
 				}
 
 
-				j.log.Printf("[task dispatcher] task budget: %v", budget)
+				j.log.Debug.Printf("[task dispatcher] task budget: %v", budget)
 				
 				// sort available subnodes if needed
 				if dispatchItem.Options != nil && dispatchItem.Options.SortSubnodes {
@@ -349,13 +349,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if worker.Subtask.ModuleName != string(kernel.AppModuleWorker) {
 					continue
 				}
-				j.log.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
+				j.log.Debug.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
 					worker.Subtask.Pod.GetKey(), worker.Node.Key(),
 					dispatchItem.GetReportToForModule(string(kernel.AppModuleWorker)).Desc(),
 				)
 				// backdoor for fake service time
 				estimatedServiceTime := float64(-1)
-				j.log.Printf("[task dispatcher][debugging] options: [%v], EstimatedServiceTimeModel: [%v]", dispatchItem.Options, dispatchItem.Options.EstimatedServiceTimeModel)
+				j.log.Debug.Printf("[task dispatcher][debugging] options: [%v], EstimatedServiceTimeModel: [%v]", dispatchItem.Options, dispatchItem.Options.EstimatedServiceTimeModel)
 
 				if dispatchItem.Options != nil && dispatchItem.Options.EstimatedServiceTimeModel != "" {
 					options := dispatchItem.Options
@@ -371,7 +371,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
 					} else if options.EstimatedServiceTimeModel == "custom" && i < len(options.ServiceTimeList) {
 						estimatedServiceTime = float64(options.ServiceTimeList[i])
-						j.log.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.Pod.GetKey(), worker.Node.Key())
+						j.log.Debug.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.Pod.GetKey(), worker.Node.Key())
 					}
 				}
 				// generate request payload for the subtask
@@ -382,12 +382,12 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				)
 				queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
 				if queue == nil {
-					j.log.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
+					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
 					continue
 				}
 				// enqueue the subtask
 				if estimatedServiceTime > 0 {
-					j.log.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
+					j.log.Debug.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
 						estimatedServiceTime, dispatchItem.Options.EstimatedServiceTimeModel,
 					)
 				}
@@ -412,7 +412,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
 					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
 					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) {
-					j.log.Printf("[task dispatcher] the non-block budget negotiation phase is [%v]", phase)
+					j.log.Debug.Printf("[task dispatcher] the non-block budget negotiation phase is [%v]", phase)
 				}
 
 				targetQueue := scheduler.PodQueueTypeMain
@@ -440,16 +440,16 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					worker.Subtask.GetKey(), taskKey, worker.Subtask.GetKey(), req,
 					queuingMech, budget, priority,
 					estimatedServiceTime,
-					j.log.Printf,
+					j.log.Debug.Printf,
 				)
 				if done || isConfirmingBudget{
 					if done {
-						j.log.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+						j.log.Debug.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
 					} else {
-						j.log.Printf("[task dispatcher] pod[%v] subtask[%v] for [%v] queueing has been served before budget negotiation is done", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+						j.log.Debug.Printf("[task dispatcher] pod[%v] subtask[%v] for [%v] queueing has been served before budget negotiation is done", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
 					}
 				} else {
-					j.log.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
+					j.log.Debug.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
 				}
 			}
 			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
@@ -526,7 +526,7 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 
 	cache.Unlock()
 
-	j.log.Printf("[budget negotiation] non-block negotiation is done, going to re-dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
+	j.log.Debug.Printf("[budget negotiation] non-block negotiation is done, going to re-dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 
 	if dispatchItem.Options == nil {
 		dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
@@ -541,12 +541,12 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 
 func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem, initiator *kernel.Node) {
 	localResponse := j.MultiplyCDFs(pods, dispatchItem)
-	j.log.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
+	j.log.Debug.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
 	payload := j.GeneratePayloadOfRequest(initiator, localResponse, nil, nil)
 	apiPath := "/$jade$/collectCDF"
 	_, _, _, err := j.HTTPCommunicate("reporting CDF to the initiator", "PUT", apiPath, initiator, payload, 0, 10)
 	if err != nil {
-		j.log.Println("[budget negotiation] ERROR when reporting CDF to the initiator:", err.Error())
+		j.log.Debug.Println("[budget negotiation] ERROR when reporting CDF to the initiator:", err.Error())
 	} 
 }
 

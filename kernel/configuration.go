@@ -4,6 +4,20 @@ import (
 	"uta.edu/aces/jadesdk"
 )
 
+
+type JadeletOptions struct {
+	DebugLog bool `json:"debugLog,omitempty"`
+	PerfLog  bool `json:"perfLog,omitempty"`
+	OpLog    bool `json:"opLog,omitempty"`
+}
+
+func NewJadeletOptions() *JadeletOptions {
+	return &JadeletOptions{
+		DebugLog: false,
+		PerfLog:  false,
+	}
+}
+
 // Conf configuration data structure in memory
 type Conf struct {
 	ISA 		 string 			   `json:"isa"` // instruction structure architecture of the host
@@ -13,6 +27,7 @@ type Conf struct {
 	RegistryNode *Node                 `json:"registryNode"`
 	Capabilities map[string][]*jadesdk.Capability `json:"capabilities"`
 	Capacity     *Capacity             `json:"capacity"`
+	Options      *JadeletOptions 	   `json:"options,omitempty"`
 }
 
 // NewConfiguration construct a new configuration instance with default values
@@ -23,6 +38,7 @@ func NewConfiguration() *Conf {
 	c.RegistryNode = NewNode()
 	c.Capabilities = make(map[string][]*jadesdk.Capability)
 	c.Capacity = NewCapacity()
+	c.Options = NewJadeletOptions()
 	return c
 }
 

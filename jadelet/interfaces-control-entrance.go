@@ -36,10 +36,11 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
 				taskItem.Arrived()
+				taskItem.GenTag()
 				validTasks[taskItem.Task.GetKey()] = taskItem
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
-				j.log.Println("WARN: received an invalid task")
+				j.log.Op.Println("WARN: received an invalid task")
 				res.TaskIDList = append(res.TaskIDList, "")
 			}
 		}
@@ -59,10 +60,10 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem)
 	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
 	for taskKey, dispatchItem := range tasklist {
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
-			j.log.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
+			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem
 		} else {
-			j.log.Printf("received an autonomous task [%v], ttl: %v", taskKey, dispatchItem.TTL)
+			j.log.Op.Printf("received an autonomous task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			task := dispatchItem.Task
 			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(kernel.AppModuleWorker)]; workerExists {

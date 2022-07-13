@@ -46,9 +46,9 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 		nodeCache = j.Neighbors
 	}
 	if _, exists := nodeCache[nodekey]; exists {
-		j.log.Printf("updating information for existing %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
+		j.log.Op.Printf("updating information for existing %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
 	} else {
-		j.log.Printf("registering information for new %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
+		j.log.Op.Printf("registering information for new %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
 	}
 
 	// Save the sub node in its sub node array
@@ -84,11 +84,11 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 	// defer j.Unlock()
 	if err != nil {
 		// the request has been rejected by validator
-		j.log.Println("[provisioning collecter] ERROR of validating feedback of provisioning:", err.Error())
+		j.log.Op.Println("[provisioning collecter] ERROR of validating feedback of provisioning:", err.Error())
 		j.PeacefulFatalRequest(w, r, err.Error())
 		return
 	}
-	j.log.Println("[provisioning collecter] Received feedback of provisioning from", req.NodeID)
+	j.log.Op.Println("[provisioning collecter] Received feedback of provisioning from", req.NodeID)
 
 	reqInst := &struct {
 		Payload *TaskProvisioningResult `json:"payload,omitempty"`
@@ -97,13 +97,13 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode task provisioning result: "+err.Error())
-		j.log.Println("[provisioning collecter] ERROR of decoding content of provisioning:", err.Error())
+		j.log.Op.Println("[provisioning collecter] ERROR of decoding content of provisioning:", err.Error())
 		return
 	}
 	feedback := reqInst.Payload
 	if feedback.Pod == nil {
 		// task is rejected by sub-node or provisioning failed
-		j.log.Printf("[provisioning collector] sub-node{%v} failed to provision pod for module{%v} of task{%v}", feedback.NodeKey, feedback.ModuleName, feedback.TaskKey)
+		j.log.Op.Printf("[provisioning collector] sub-node{%v} failed to provision pod for module{%v} of task{%v}", feedback.NodeKey, feedback.ModuleName, feedback.TaskKey)
 		// forward the rejection upword
 		j.TaskCache.RejectTask(feedback.TaskKey)
 		j.feedbackProvisioning(&TaskProvisioningResult{
@@ -114,8 +114,8 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 			SubtaskKey: "",
 		})
 	} else {
-		j.log.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v], module[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey, feedback.ModuleName)
-		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(kernel.AppModuleWorker), feedback.SubtaskKey, j.log.Printf)
+		j.log.Op.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v], module[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey, feedback.ModuleName)
+		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(kernel.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey, true)
 		whetherEnqueue := true
 		if feedback.ModuleName == string(kernel.AppModuleAggregator) {

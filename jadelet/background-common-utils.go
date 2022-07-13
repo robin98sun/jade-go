@@ -14,7 +14,7 @@ func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDis
 	j.registryMutex.Unlock()
 
 	payload := j.GeneratePayloadOfRequest(node, tasksToDispatch, nil, nil)
-	j.log.Println("dispatching tasks to node", nodeID)
+	j.log.Debug.Println("dispatching tasks to node", nodeID)
 	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", node, payload, 0, 10)
 }
 
@@ -26,7 +26,7 @@ func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *sch
 		[]*scheduler.TaskDispatchingItem{dispatchItem},
 		nil, nil,
 	)
-	j.log.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())
+	j.log.Debug.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())
 	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 10)
 }
 
@@ -81,7 +81,7 @@ func (j *JADE) newEnv(masterNode *jadesdk.Node, appName string, appVersion strin
 }
 
 func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.Requirements) []string {
-	j.log.Printf("Searching %v nodes", nodeType)
+	j.log.Debug.Printf("Searching %v nodes", nodeType)
 	var capableNodes []string
 	capabilityCache := j.subnodeCapabilityCache
 	capacityCache := j.subnodeCapabilityCache
@@ -95,6 +95,6 @@ func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.R
 	if len(requirements.Exclusive) > 0 && len(capableNodes) > 0 || len(requirements.Exclusive) == 0 {
 		capableNodes = capacityCache.SelectNodesCollectively(requirements.Collective, capableNodes)
 	}
-	j.log.Printf("%v %v nodes are selected", len(capableNodes), nodeType)
+	j.log.Debug.Printf("%v %v nodes are selected", len(capableNodes), nodeType)
 	return capableNodes
 }

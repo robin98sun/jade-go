@@ -5,6 +5,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
 	"fmt"
+	"strings"
 )
 
 
@@ -36,6 +37,7 @@ type TaskDispatchingOptions struct {
 	CDFPoints                   int 	`json:"cdfPoints,omitempty"`
 	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
 	BudgetEstimationPercentilePoint float64 `json:"budgetEstimationPercentilePoint,omitempty"`
+	TaskCategories				[]string  `json:"taskCategories,omitempty"`
 }
 
 const TaskDefaultPriority = 1000
@@ -58,6 +60,68 @@ type TaskDispatchingItem struct {
 	// if set 1, it means broadcast in current broadcast domain which contain multiple neighboring ASDs
 	TTL             int64 	`json:"ttl,omitempty"` 
 }
+
+// generate category tag of a task (query) at this tier
+func (t *TaskDispatchingItem) GenTag() string {
+	tag := t.Task.Application.Key()
+	if t.SLO != nil {
+		tag = fmt.Sprintf("%v,tail:%v", tag, t.SLO.TailLatencyInMilliseconds)
+	}
+	if t.Options != nil {
+		tag = fmt.Sprintf("%v,percentile:%v", tag, t.Options.BudgetEstimationPercentilePoint)
+	}
+	if t.Options == nil {
+		t.Options = &TaskDispatchingOptions{}
+	}
+	if len(t.Options.TaskCategories) == 0 {
+		t.Options.TaskCategories = []string{tag}
+	} else {
+		t.Options.TaskCategories = append(t.Options.TaskCategories, tag)
+	}
+	return tag	
+}
+
+// get category tag of a task (query) at this tier
+func (t *TaskDispatchingItem) GetTag() string {
+	tag := ""
+	if t.Options != nil && len(t.Options.TaskCategories) > 0 {
+		tag = t.Options.TaskCategories[len(t.Options.TaskCategories)-1]
+	}
+	return tag	
+}
+
+// get category tag of a task (query) at upper tier
+func (t *TaskDispatchingItem) GetUpperTierTag() string {
+	tag := ""
+	if t.Options != nil && len(t.Options.TaskCategories) > 1 {
+		tag = t.Options.TaskCategories[len(t.Options.TaskCategories)-2]
+	}
+	return tag	
+}
+
+// get unified category tag of a task (query) consulting the upper tier tag
+func (t *TaskDispatchingItem) GetUnifiedTag() string {
+	tag := ""
+	upperTierTag := t.GetUpperTierTag()
+	if upperTierTag != "" {
+		parts := strings.Split(upperTierTag, ",")
+		if len(parts) > 1 {
+			tailPart := parts[1]
+			parts = strings.Split(tailPart, ":")
+			if len(parts) > 1 && parts[0] == "tail" {
+				tag = fmt.Sprintf("%v,%v", t.Task.Application.Key(), tailPart)
+				if t.Options != nil {
+					tag = fmt.Sprintf("%v,percentile:%v", tag, t.Options.BudgetEstimationPercentilePoint)
+				}
+			}
+		}
+	}
+	if tag == "" {
+		tag = t.GetTag()
+	}
+	return tag	
+}
+
 
 func (t *TaskDispatchingItem) copy(withReport bool, minimum bool) *TaskDispatchingItem {
 	inst := &TaskDispatchingItem{}

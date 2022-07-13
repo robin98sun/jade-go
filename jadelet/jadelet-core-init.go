@@ -6,12 +6,15 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 )
 
 // Init to do initializing work
 func (j *JADE) Init() {
-	j.log = &kernel.Logger{}
+	j.log = kernel.NewLogger()
+	j.log.Op.Enabled = true
+	
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
@@ -26,6 +29,7 @@ func (j *JADE) Init() {
 	j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
+	j.PerfCache = perfstat.NewPerfCache()
 	j.dist = scheduler.NewDist()
 	// read environment variables into config
 	j.Config = kernel.ReadConfFromEnv()
@@ -35,7 +39,7 @@ func (j *JADE) Init() {
 	// read env metrics if the addon is deployed
 	
 	// setup k8s client instance
-	clients := kube.NewKubeClient(j.log)
+	clients := kube.NewKubeClient(j.log.Op)
 	clients.Init()
 	j.Kube = clients
 	j.Provisioner = provisioner.NewProvisioner(j.log)
@@ -43,9 +47,9 @@ func (j *JADE) Init() {
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
-	j.log.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
+	j.log.Op.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
 	if !j.Config.SelfNode.IsAddrEmpty() {
-		j.log.Printf("[init] setting capabilities during initializing")
+		j.log.Op.Printf("[init] setting capabilities during initializing")
 		if list, e := j.Config.Capabilities["public"]; e {
 			j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), list)
 			j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), list)
@@ -54,5 +58,11 @@ func (j *JADE) Init() {
 	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
 	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
 	// go j.routimeForPodQueues(1000)
+}
+
+func (j *JADE) SetVerboseAccordingToConf() {
+	if j.Config != nil && j.Config.Options != nil {
+
+	}
 }
 

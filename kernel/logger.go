@@ -5,43 +5,63 @@ import (
 )
 
 type Logger struct {
-	Enable bool
+	Debug *Printer
+	Perf *Printer
+	Op    *Printer
 }
 
-func (l *Logger) Println(args ...interface{}) {
-	if !l.Enable {
+func NewLogger() *Logger {
+	return &Logger{
+		Debug: &Printer{
+			Enabled: false,
+		},
+		Perf: &Printer{
+			Enabled: false,
+		},
+		Op: &Printer{
+			Enabled: false,
+		},
+	}
+}
+
+type Printer struct {
+	Enabled bool
+}
+
+func (p *Printer) Println(args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Println(args...)
 }
 
-func (l *Logger) Printf(template string, args ...interface{}) {
-	if !l.Enable {
+func (p *Printer) Printf(template string, args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Printf(template, args...)
 }
 
-func (l *Logger) Panic(args ...interface{}) {
-	if !l.Enable {
+func (p *Printer) Panic(args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Panic(args...)
 }
-func (l *Logger) Panicln(args ...interface{}) {
-	if !l.Enable {
+func (p *Printer) Panicln(args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Panicln(args...)
 }
-func (l *Logger) Panicf(template string, args ...interface{}) {
-	if !l.Enable {
+func (p *Printer) Panicf(template string, args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Panicf(template, args...)
 }
-func (l *Logger) Fatal(args ...interface{}) {
-	if !l.Enable {
+func (p *Printer) Fatal(args ...interface{}) {
+	if !p.Enabled {
 		return
 	}
 	golog.Fatal(args...)

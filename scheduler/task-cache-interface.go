@@ -297,6 +297,15 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 	return allSubtasksDone, allWorkersDone
 }
 
+func (c *TaskCache) GetDispatchingItem(taskKey string) *TaskDispatchingItem {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if taskItem, e := c.Cache[taskKey]; e {
+		return taskItem.task
+	}
+	return nil
+}
+
 func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
 	if c == nil {
 		return false
@@ -514,6 +523,9 @@ func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, 
 						subtaskItem.Priority = item.Priority
 						subtaskItem.Budget = item.Budget
 						subtaskItem.PreDispatchingTime = timestampSending.Sub(item.DispatchTime)
+
+						// to see if the subtask deadline has been violated
+						// deadline_violation := ( (subtaskItem.EnqueueTimestamp + subtaskItem.Budget * time.Millisecond) < subtaskItem.DispatchTimestamp )
 
 						return float64(subtaskItem.QueueingTime)/float64(time.Millisecond)
 					}

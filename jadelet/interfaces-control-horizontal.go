@@ -40,7 +40,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode requirements of listing eligible neighbors: "+err.Error())
-		j.log.Println("[registry] ERROR of decoding content of requirements:", err.Error())
+		j.log.Op.Println("[registry] ERROR of decoding content of requirements:", err.Error())
 		return
 	}
 
@@ -62,7 +62,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 			// j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[len(nodes)-1])
 		}
 	}
-	j.log.Printf("[fetch neighbors] selected %v eligible neighbors", len(nodes))
+	j.log.Op.Printf("[fetch neighbors] selected %v eligible neighbors", len(nodes))
 	// finish the request
 	j.DoneRequest(w, r, nodes)
 }
@@ -82,7 +82,7 @@ func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode CDF: "+err.Error())
-		j.log.Println("[collect CDF] ERROR of decoding CDF:", err.Error())
+		j.log.Op.Println("[collect CDF] ERROR of decoding CDF:", err.Error())
 		return
 	}
 
@@ -93,7 +93,7 @@ func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {
 		cache.SetResponse(response.Node, response)
 		j.DoneRequest(w, r, "OK")
 	} else {
-		j.log.Printf("[collect CDF] ERROR: Budget Negotiatin Cache does not exist for task: %v", response.TaskKey)
+		j.log.Op.Printf("[collect CDF] ERROR: Budget Negotiatin Cache does not exist for task: %v", response.TaskKey)
 		j.PeacefulFatalRequest(w, r, "cache does not exist")
 	}
 }
@@ -114,7 +114,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		j.PeacefulFatalRequest(w, r, "Can not decode requirements of listing eligible neighbors: "+err.Error())
-		j.log.Println("[inquiry] ERROR of decoding content of requirements:", err.Error())
+		j.log.Op.Println("[inquiry] ERROR of decoding content of requirements:", err.Error())
 		return
 	}
 
@@ -122,7 +122,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 
 	if dispatchItem == nil || dispatchItem.Task == nil || dispatchItem.Task.Requirements == nil || dispatchItem.Task.Application == nil {
 		j.PeacefulFatalRequest(w, r, "invalid task")
-		j.log.Println("[inquiry] invalid incoming task")
+		j.log.Op.Println("[inquiry] invalid incoming task")
 		return
 	}
 
@@ -139,20 +139,20 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 
 		// 
 		for _, nodekey := range availableNodes {
-			j.log.Printf("[inquiry] [jade version: %v] searching pod for application %v on node %v",
+			j.log.Op.Printf("[inquiry] [jade version: %v] searching pod for application %v on node %v",
 				j.Config.Version,
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
 			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
 			if workerPod == nil {
-				j.log.Printf("[inquiry]ERROR: NO worker pod for application %v on node %v",
+				j.log.Op.Printf("[inquiry]ERROR: NO worker pod for application %v on node %v",
 					dispatchItem.Task.Application.Key(),
 					nodekey,
 				)
 				continue
 			}
-			j.log.Printf("[inquiry] selected one pod [%v] for application %v on node %v",
+			j.log.Op.Printf("[inquiry] selected one pod [%v] for application %v on node %v",
 				workerPod.GetKey(),
 				dispatchItem.Task.Application.Key(),
 				nodekey,
@@ -180,13 +180,13 @@ func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *scheduler.TaskDisp
 	for _, workerPod := range pods {
 		podQueue := j.PodCache.GetPodQueue(workerPod)
 		if podQueue == nil {
-			j.log.Printf("[inquiry]ERROR: the queue of pod [%v] for application %v is nil",
+			j.log.Op.Printf("[inquiry] ERROR: the queue of pod [%v] for application %v is nil",
 				workerPod.GetKey(),
 				dispatchItem.Task.Application.Key(),
 			)
 			continue
 		}
-		j.log.Printf("[inquiry] got the queue of pod [%v] for application %v",
+		j.log.Op.Printf("[inquiry] got the queue of pod [%v] for application %v",
 			workerPod.GetKey(),
 			dispatchItem.Task.Application.Key(),
 		)
@@ -216,7 +216,7 @@ func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *scheduler.TaskDisp
 			}
 		}
 	}
-	j.log.Printf("[inquiry] selected %v histograms for application %v on %v nodes, response: %v",
+	j.log.Op.Printf("[inquiry] selected %v histograms for application %v on %v nodes, response: %v",
 		len(histogram_list), 
 		dispatchItem.Task.Application.Key(),
 		len(pods),

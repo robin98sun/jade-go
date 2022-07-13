@@ -33,16 +33,16 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 		task := taskItem.Task
 		existingItemInCache := j.TaskCache.GetTask(task.GetKey(), true)
 		if existingItemInCache != nil {
-			j.log.Printf("[task provision] the incoming task already exists, typically is to confirm the negotiated budget, the task involves %v neighbors", len(task.NeighborNodes))
+			j.log.Debug.Printf("[task provision] the incoming task already exists, typically is to confirm the negotiated budget, the task involves %v neighbors", len(task.NeighborNodes))
 			j.checkTaskStatus(task.GetKey(), true, taskItem)
 		} else {
-			j.log.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)
+			j.log.Debug.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)
 			if j.IsCoordinator() {
 				// allocate an aggregator pod if needed
 				aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 				aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 				if aggregatorPod == nil {
-					j.log.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
+					j.log.Debug.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
 					// provision an aggregator pod
 					containerSettings := task.Application.GetModule(string(kernel.AppModuleAggregator))
 					containerSettings.SetISAInImage(j.Config.ISA)
@@ -62,10 +62,10 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 					)
 					//
 					if err != nil {
-						j.log.Println("[task provision] ERROR when provisioning", string(kernel.AppModuleAggregator), "for task", task.GetKey())
+						j.log.Debug.Println("[task provision] ERROR when provisioning", string(kernel.AppModuleAggregator), "for task", task.GetKey())
 					} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
 						// Update self-node inside the pod
-						j.log.Println("[task provision] Error when updating pod configuration:", err)
+						j.log.Debug.Println("[task provision] Error when updating pod configuration:", err)
 					} else {
 						aggregatorPod = &kernel.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
@@ -92,15 +92,15 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				if aggregatorPod == nil {
 					// reject the task
 					rejectTaskCache[task.GetKey()] = taskItem
-					j.log.Println("[task provision] there should be an aggregator pod on this node but doesn't, the task is going to be rejected")
+					j.log.Debug.Println("[task provision] there should be an aggregator pod on this node but doesn't, the task is going to be rejected")
 				} else {
 					// the reportTo is very tricky here
 					// it's different for aggregator and worker module
 					// please think carefully why they are different
 					// that's critical of testing whether your understanding of dataflow is correct
-					j.log.Printf("[task provision] the reportTo of the dispatching message is %v", taskItem.ReportTo)
+					j.log.Debug.Printf("[task provision] the reportTo of the dispatching message is %v", taskItem.ReportTo)
 					reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
-					j.log.Printf("[task provision] the 'reportTo' for aggregator is %v", reportTo.Desc())
+					j.log.Debug.Printf("[task provision] the 'reportTo' for aggregator is %v", reportTo.Desc())
 
 					newTaskItem := taskItem.CopyForSubtask(false)
 
@@ -108,18 +108,18 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 						newTaskItem.SetReportToForModule(string(kernel.AppModuleAggregator), reportTo.Node, reportTo.Pod)
 					}
 
-					j.log.Println("[task provision] got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
+					j.log.Debug.Println("[task provision] got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
 
-					subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Printf)
+					subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(kernel.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Debug.Printf)
 
-					j.log.Printf("[task provision] saving %v neighbors in task cache", len(task.NeighborNodes))
+					j.log.Debug.Printf("[task provision] saving %v neighbors in task cache", len(task.NeighborNodes))
 					if len(task.NeighborNodes) > 0 {
 						for _, neighborNode := range task.NeighborNodes {
 							j.TaskCache.SaveNeighborNode(
 								j.Config.SelfNode, 
 								task.GetKey(), string(kernel.AppModuleAggregator), 
 								neighborNode, 
-								j.log.Printf,
+								j.log.Debug.Printf,
 							)
 						}
 					}
@@ -135,7 +135,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 					ackAggregatorSubtasks[task.GetKey()] = subtask.GetKey()	
 				}
 			} else {
-				j.log.Println("[task provision] This node is not an coordinator because it does not have any subnodes, so it's going to only deploy worker instead of aggregator")
+				j.log.Debug.Println("[task provision] This node is not an coordinator because it does not have any subnodes, so it's going to only deploy worker instead of aggregator")
 				goodTaskCache[task.GetKey()] = &DispatchItemWithAggregator{
 					DispatchingItem: taskItem,
 					OriginalDispatchItem: taskItem,
@@ -166,7 +166,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	// acknowledge good tasks
 	if j.HasUpperNode() && len(ackAggregatorPods) > 0 {
 		for taskKey, pod := range ackAggregatorPods {
-			j.log.Printf("[task provision] Acknowledging good task[%v] before propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
+			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] before propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 			aggregatorSubtaskKey := ackAggregatorSubtasks[taskKey]
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
@@ -183,7 +183,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	// seconds := 15
 	seconds := 60 
-	j.log.Printf("[task provision] waiting {%v} seconds for pod up", seconds)
+	j.log.Debug.Printf("[task provision] waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
 	newConf := &jadesdk.Conf{
 		SelfNode: &jadesdk.Node{
@@ -213,9 +213,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		originalDispatchItem := disptachItem.OriginalDispatchItem
 		task := taskItem.Task
 		reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
-		j.log.Printf("[task provision] evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo.Desc(), taskItem.SLO)
+		j.log.Debug.Printf("[task provision] evaluating task[%v], report to [%v], SLO: %v", task.GetKey(), reportTo.Desc(), taskItem.SLO)
 		if reportTo == nil {
-			j.log.Printf("[task provision] ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
+			j.log.Debug.Printf("[task provision] ERROR while evaluating task[%v], no 'report to' setting", task.GetKey())
 			continue
 			// very weird right? 
 			// please see line 72
@@ -227,7 +227,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		availableNodes := []string{}
 		if j.IsCoordinator() {
 			availableNodes = j.selectAvaiableNodes(JadeNodeTypeSubnode, task.Requirements)
-			j.log.Printf("[task provision] found {%v} available nodes: %v", len(availableNodes), availableNodes)
+			j.log.Debug.Printf("[task provision] found {%v} available nodes: %v", len(availableNodes), availableNodes)
 		} else {
 			availableNodes = []string{j.SelfNodeKey()}
 		}
@@ -235,13 +235,13 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		if len(availableNodes) == 0 && originalDispatchItem != nil && len(originalDispatchItem.Task.NeighborNodes) > 0 {
 			if _, e := readyTaskCache[task.GetKey()]; !e {
 				readyTaskCache[task.GetKey()] = nil
-				j.log.Printf("[task provision] accept the task even without available subnodes because of %v neighbor nodes", len(task.NeighborNodes))
+				j.log.Debug.Printf("[task provision] accept the task even without available subnodes because of %v neighbor nodes", len(task.NeighborNodes))
 			}
 		} 
 
 		// 2. for each available sub-nodes:
 		for _, nodekey := range availableNodes {
-			j.log.Printf("[task provision] provision available node[%v]", nodekey)
+			j.log.Debug.Printf("[task provision] provision available node[%v]", nodekey)
 			//		search pod on that node for this task
 			workerAllocation := task.Requirements.Allocations[string(kernel.AppModuleWorker)]
 			aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
@@ -249,7 +249,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			aggregatorPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
-				j.log.Printf("[task provision] [%v] is a self-node", nodekey)
+				j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
 				if workerPod == nil {
 					// provision a worker Pod for it
 					containerSettings := task.Application.GetModule(string(kernel.AppModuleWorker))
@@ -270,10 +270,10 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					)
 
 					if err != nil {
-						j.log.Println("[task provision] ERROR when provisioning", string(kernel.AppModuleWorker), "for task", task.GetKey())
+						j.log.Debug.Println("[task provision] ERROR when provisioning", string(kernel.AppModuleWorker), "for task", task.GetKey())
 						// Update self-node inside the pod
 					} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
-						j.log.Println("[task provision] ERROR when updating pod nodePort", string(kernel.AppModuleWorker), "for task", task.GetKey())
+						j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(kernel.AppModuleWorker), "for task", task.GetKey())
 					} else {
 						workerPod = &kernel.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
@@ -299,7 +299,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				}
 				if workerPod == nil {
 					// reject if the worker pod can not be allocated
-					j.log.Printf("[task provision] rejecting task %v", task.GetKey())
+					j.log.Debug.Printf("[task provision] rejecting task %v", task.GetKey())
 					rejectTaskCache[task.GetKey()] = taskItem
 				}
 			}
@@ -307,8 +307,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			if taskItem.Options != nil {
 				toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
 			}
-			j.log.Printf("[task provision] worker pod is nil? %v", workerPod==nil)
-			j.log.Printf("[task provision] allocation requirements: %v", workerAllocation.Describe())
+			j.log.Debug.Printf("[task provision] worker pod is nil? %v", workerPod==nil)
+			j.log.Debug.Printf("[task provision] allocation requirements: %v", workerAllocation.Describe())
 			if workerPod != nil && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
 				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
 				// 		 	 	and there should be a switch in the task data structure
@@ -317,8 +317,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
 				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, kernel.AppModuleWorker)
 				if j.IsCoordinator() {
-					j.log.Printf("[task provision] Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod, "", "", j.log.Printf)
+					j.log.Debug.Printf("[task provision] Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, workerPod, "", "", j.log.Debug.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; !e {
 					readyTaskCache[task.GetKey()] = workerPod
@@ -332,14 +332,14 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
 				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
 				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
-				j.log.Printf("[task provision] Found an aggregator pod or unknown type pod on node[%v]", nodekey)	
+				j.log.Debug.Printf("[task provision] Found an aggregator pod or unknown type pod on node[%v]", nodekey)	
 				var subtask *kernel.SubTask
 				if aggregatorPod == nil {
-					j.log.Printf("[task provision] Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "", j.log.Printf)
+					j.log.Debug.Printf("[task provision] Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleWorker), taskItem, nil, "", "", j.log.Debug.Printf)
 				} else {
-					j.log.Printf("[task provision] Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "", j.log.Printf)
+					j.log.Debug.Printf("[task provision] Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(kernel.AppModuleAggregator), taskItem, aggregatorPod, "", "", j.log.Debug.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
@@ -383,7 +383,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		nodesToDispatch[nodekey] = dispatchingList
 	}
 
-	j.log.Printf("[task provision] Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
+	j.log.Debug.Printf("[task provision] Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
 	for nodekey, dispatchingList := range nodesToDispatch {
 		go j.dispatchTasks(nodekey, dispatchingList)
 	}	
@@ -405,7 +405,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		if pod == nil {continue}
 
 		if j.IsSelfNode(pod.NodeKey) {
-			j.log.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
+			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
 				taskKey,
@@ -418,7 +418,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	if j.IsCoordinator() {
 		// check task status and enqueue them the task is ready
 		for taskKey := range readyTaskCache {
-			j.log.Printf("[task provision] check status for good task[%v] after propagating", taskKey)
+			j.log.Debug.Printf("[task provision] check status for good task[%v] after propagating", taskKey)
 			j.checkTaskStatus(taskKey, false, nil)
 		}
 	}
