@@ -1,0 +1,55 @@
+package perfstat
+
+import (
+	// "uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler"
+	// "sync"
+	"time"
+)
+
+
+type SubtaskPerfVector struct {
+	DispatchItem *scheduler.TaskDispatchingItem
+	SubtaskPerf  map[string]*SubtaskPerfItem
+}
+
+func NewSubtaskPerfVector(dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) *SubtaskPerfVector {
+	vector := &SubtaskPerfVector{
+		DispatchItem: dispatchItem,
+		SubtaskPerf: make(map[string]*SubtaskPerfItem),
+	}
+
+	for snKey, snItems := range subtasks {
+		if len(snItems) == 0 {
+			continue
+		}
+
+		perfItem := &SubtaskPerfItem{}
+
+		for _, subtaskItem := range snItems {
+			perfItem.ResponseTime += float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
+			perfItem.GivenBudget += subtaskItem.Budget
+			perfItem.CommunicationTime += float64(float64(subtaskItem.CommunicationTime) / float64(time.Millisecond))
+			perfItem.QueueingTime += float64(float64(subtaskItem.QueueingTime) / float64(time.Millisecond))
+
+			// it's violation time, so it shall be negative or zero if not violated
+			perfItem.DeadlineViolationTime +=  perfItem.QueueingTime - subtaskItem.Budget
+		}
+
+		// do average here (since M/M/1 only has 1 subtask per node)
+		// but could do other stat if wanted
+
+		if len(snItems) > 1 {
+			perfItem.ResponseTime /= float64(len(snItems))
+			perfItem.GivenBudget /= float64(len(snItems))
+			perfItem.CommunicationTime /= float64(len(snItems))
+			perfItem.QueueingTime /= float64(len(snItems))
+			perfItem.DeadlineViolationTime /= float64(len(snItems))
+		}
+
+		vector.SubtaskPerf[snKey] = perfItem
+
+	}
+
+	return vector
+}

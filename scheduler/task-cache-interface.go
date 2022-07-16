@@ -555,3 +555,24 @@ func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCache
 	}
 	return nil
 }
+
+func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string) map[string][]*TaskCacheSubtaskItem {
+	result := make(map[string][]*TaskCacheSubtaskItem)
+	if taskItem, e := c.Cache[taskKey]; e {
+		for nodeKeyInCache, dispatchedNode := range taskItem.dispatchedNodes {
+			if nodeKey != "" && nodeKeyInCache != nodeKey {
+				continue
+			}
+			result[nodeKeyInCache] = []*TaskCacheSubtaskItem{}
+			for moduleNameInCache, moduleItem := range dispatchedNode.modules {
+				if moduleName != "" && moduleName != moduleNameInCache {
+					continue
+				}
+				for _, subtaskItem := range moduleItem.subtasks {
+					result[nodeKeyInCache] = append(result[nodeKeyInCache], subtaskItem)
+				}
+			}
+		}
+	}
+	return result
+}

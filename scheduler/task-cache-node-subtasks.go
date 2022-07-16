@@ -52,7 +52,7 @@ type TaskCacheSubtaskItem struct {
 	CommunicationTime  time.Duration `json:"communicationTime,omitempty"`
 	EnqueuingOverhead  time.Duration `json:"enqueuingOverhead,omitempty"`
 	AmountPreempted    int           `json:"amountPreempted,omitempty"`
-	Budget             float64         `json:"budget,omitempty"`
+	Budget             float64       `json:"budget,omitempty"`
 	Priority           int           `json:"priority,omitempty"`
 	RetryCountOfSending int64        `json:"retryCountOfSending,omitempty"`
 	RetryCountOfReceiving int64      `json:"retryCountOfReceiving,omitempty"`

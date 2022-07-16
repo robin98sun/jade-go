@@ -38,6 +38,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 				taskItem.Arrived()
 				taskItem.GenTag()
 				validTasks[taskItem.Task.GetKey()] = taskItem
+				j.PerfCache.EnqueueArrivalTime(taskItem, taskItem.ArriveTimestamp)
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
 				j.log.Op.Println("WARN: received an invalid task")

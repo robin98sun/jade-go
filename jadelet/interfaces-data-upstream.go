@@ -54,8 +54,8 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					// the query (task) is done
 					j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
 					dispatchItem := j.TaskCache.GetDispatchingItem(msg.TaskKey)
-					subtasks := j.TaskCache.GetSubtasksRegardingNode(msg.TaskKey, "", "", "")
-					j.PerfCache.Enqueue(dispatchItem, timestampReceving, subtasks)
+					subtasks := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "")
+					j.PerfCache.EnqueueResponse(dispatchItem, timestampReceving, subtasks)
 				} else {
 					j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, scheduler.TaskStatusDone)
 				}
