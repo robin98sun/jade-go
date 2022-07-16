@@ -16,21 +16,25 @@ type TaskCategoryItem struct {
 	HistLength  int
 	SliceLength int
 	SliceCount  int
+	PercentilePoint float64
+	TailLatencySLO float64
 }
 
 
-func NewTaskCategoryItem() *TaskCategoryItem {
+func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	
 	histLength := 1000
-	histCount := 100
+	histCount := 1
 	sliceLength := 10
-	sliceCount := histLength * histCount / sliceLength
+	sliceCount := 10000
 
 	tci := &TaskCategoryItem{
 		HistCount: histCount,
 		HistLength: histLength,
 		SliceLength: sliceLength,
 		SliceCount:  sliceCount,
+		PercentilePoint: percentile,
+		TailLatencySLO: slo,
 		HistogramPipeOfTaskResponseTime: []*histogram.Histogram{},
 		MatrixPipeOfSubtaskPerf: []*SubtaskPerfMatrix{},
 		ArrivalRateTrackers: []*ArrivalRateTracker{},
@@ -38,18 +42,7 @@ func NewTaskCategoryItem() *TaskCategoryItem {
 
 	for i:=0; i<histCount; i++ {
 		hist := histogram.NewHistogram(int64(histLength), float64(0.1), 1)
-		hist.AddPercentilePoint(float64(0.99))
-		hist.AddPercentilePoint(float64(0.995)) // (0.99)^1/2
-		hist.AddPercentilePoint(float64(0.997)) // (0.99)^1/3
-		hist.AddPercentilePoint(float64(0.9975)) // (0.99)^1/4
-		// hist.AddPercentilePoint(float64(0.998)) // (0.99)^1/5
-		// hist.AddPercentilePoint(float64(0.9983)) // (0.99)^1/6
-		// hist.AddPercentilePoint(float64(0.9986)) // (0.99)^1/7
-		// hist.AddPercentilePoint(float64(0.9987)) // (0.99)^1/8
-		// hist.AddPercentilePoint(float64(0.9987)) // (0.99)^1/8
-		// hist.AddPercentilePoint(float64(0.9989)) // (0.99)^1/9
-		// hist.AddPercentilePoint(float64(0.999)) // (0.99)^1/10
-
+		hist.AddPercentilePoint(percentile)
 		tci.HistogramPipeOfTaskResponseTime = append(tci.HistogramPipeOfTaskResponseTime, hist)
 	}
 

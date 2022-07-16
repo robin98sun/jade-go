@@ -61,6 +61,22 @@ type TaskDispatchingItem struct {
 	TTL             int64 	`json:"ttl,omitempty"` 
 }
 
+func (t *TaskDispatchingItem) GetPercentile() float64 {
+	percentile := 0.99
+	if t.Options != nil {
+		percentile = t.Options.BudgetEstimationPercentilePoint
+	}
+	return percentile
+}
+
+func (t *TaskDispatchingItem) GetTailLatencySLOInMilliseconds() float64 {
+	slo := 0
+	if t.SLO != nil {
+		slo = t.SLO.TailLatencyInMilliseconds
+	}
+	return slo
+}
+
 // generate category tag of a task (query) at this tier
 func (t *TaskDispatchingItem) GenTag() string {
 	tag := t.Task.Application.Key()

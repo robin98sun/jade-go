@@ -11,9 +11,13 @@ import (
 type SubtaskPerfVector struct {
 	DispatchItem *scheduler.TaskDispatchingItem
 	SubtaskPerf  map[string]*SubtaskPerfItem
+	TailLatency  float64
 }
 
-func NewSubtaskPerfVector(dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) *SubtaskPerfVector {
+func NewSubtaskPerfVector(
+	dispatchItem *scheduler.TaskDispatchingItem, 
+	subtasks map[string][]*scheduler.TaskCacheSubtaskItem,
+) *SubtaskPerfVector {
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
 		SubtaskPerf: make(map[string]*SubtaskPerfItem),

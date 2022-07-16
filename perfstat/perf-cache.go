@@ -38,7 +38,9 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 	taskTag := dispatchItem.GetUnifiedTag()
 
 	if _, e := p.TaskCategories[taskTag]; !e {
-		p.TaskCategories[taskTag] = NewTaskCategoryItem()
+		percentile := dispatchItem.GetPercentile()
+		slo := dispatchItem.GetTailLatencySLOInMilliseconds()
+		p.TaskCategories[taskTag] = NewTaskCategoryItem(percentile, slo)
 	}
 
 	categoryItem := p.TaskCategories[taskTag]
