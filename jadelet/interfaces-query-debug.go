@@ -186,6 +186,22 @@ func (j *JADE) ShowTraces(w rest.ResponseWriter, r *rest.Request) {
 	}
 }
 
+func (j *JADE) ShowPerfTraces(w rest.ResponseWriter, r *rest.Request) {
+	query := make(map[string]string)
+	err := r.DecodeJsonPayload(&query)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	traceType := "concise"
+	if t, e := query["type"]; e {
+		traceType = t
+	}
+	
+	j.log.Op.Printf("fetch [%v] performance traces", traceType)
+	w.WriteJson(j.PerfCache.CollectTraces(traceType, j.log.Op.Printf))
+}
+
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.PodCache)
 }

@@ -3,7 +3,7 @@ package perfstat
 import (
 	"uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jade-go/scheduler"
-	// "sync"
+	"sync"
 	"time"
 )
 
@@ -18,6 +18,7 @@ type TaskCategoryItem struct {
 	SliceCount  int
 	PercentilePoint float64
 	TailLatencySLO float64
+	mutex   *sync.Mutex
 }
 
 
@@ -38,6 +39,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		HistogramPipeOfTaskResponseTime: []*histogram.Histogram{},
 		MatrixPipeOfSubtaskPerf: []*SubtaskPerfMatrix{},
 		ArrivalRateTrackers: []*ArrivalRateTracker{},
+		mutex: &sync.Mutex{},
 	}
 
 	for i:=0; i<histCount; i++ {
@@ -51,6 +53,8 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 }
 
 func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	dequeuedTime := arrivalTime
 	for i:=0; i<len(t.ArrivalRateTrackers);i++ {
@@ -69,24 +73,9 @@ func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
 
 func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 
-	// subtask performance matrix
-	vector := NewSubtaskPerfVector(dispatchItem, subtasks)
-
-	dequeuedVector := vector
-	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
-		matrix := t.MatrixPipeOfSubtaskPerf[i]
-		dequeuedVector = matrix.Enqueue(dequeuedVector)
-		if dequeuedVector == nil {
-			break
-		}
-	}
-
-	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
-		newMatrix := NewSubtaskPerfMatrix(t.HistLength)
-		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
-		newMatrix.Enqueue(dequeuedVector)
-	}
-
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	
 	// histogram of task response time
 	dequeuedValue := taskResponseTime
 	for i:=0; i<len(t.HistogramPipeOfTaskResponseTime); i++ {
@@ -100,6 +89,29 @@ func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, dispatchIte
 		} else {
 			dequeuedValue = float64(-1)
 		}
+	}
+
+	// subtask performance matrix
+	var tail float64
+	if len(t.HistogramPipeOfTaskResponseTime) > 0 {
+		tail = t.HistogramPipeOfTaskResponseTime[0].GetValueAtPercentile(t.PercentilePoint)
+	}
+
+	vector := NewSubtaskPerfVector(dispatchItem, subtasks, tail)
+
+	dequeuedVector := vector
+	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
+		matrix := t.MatrixPipeOfSubtaskPerf[i]
+		dequeuedVector = matrix.Enqueue(dequeuedVector)
+		if dequeuedVector == nil {
+			break
+		}
+	}
+
+	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
+		newMatrix := NewSubtaskPerfMatrix(t.SliceLength)
+		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
+		newMatrix.Enqueue(dequeuedVector)
 	}
 
 }

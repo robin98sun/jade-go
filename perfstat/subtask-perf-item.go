@@ -11,6 +11,7 @@ type SubtaskPerfItem struct {
 	ResponseTime      		float64 // without queueing, equal with "unloaded service response time"
 									// but including communication time
 	GivenBudget             float64 // the budget (in milliseconds) has been assigned to the subtask
+	DeadlineViolationCount  int
 	DeadlineViolationTime 	float64
 	CommunicationTime		float64
 	QueueingTime            float64

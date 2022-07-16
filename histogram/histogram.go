@@ -111,13 +111,22 @@ func (h *Histogram) AddPercentilePoint(p float64) {
 	h.Percentiles[item.Key] = item
 }
 
-func (h *Histogram) GetPercentile(p float64) *PercentileItem {
+func (h *Histogram) GetPercentileItem(p float64) *PercentileItem {
 	if h.Percentiles == nil {return nil}
 	key:=PercentileKey(p)
 	if percentileItem , ok := h.Percentiles[key]; ok {
 		return percentileItem
 	} 
 	return nil
+}
+
+func (h *Histogram) GetValueAtPercentile(p float64) float64 {
+	percentileItem := h.GetPercentileItem(p)
+	if percentileItem != nil && percentileItem.Item != nil {
+		return percentileItem.Item.Value
+	}
+
+	return CalcPercentileOfProduct(p, []*Histogram{h}, false)
 }
 
 func (h *Histogram) GetPercentileForValue(v float64) float64 {
@@ -546,25 +555,31 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 
 	if len(histogram_list) == 1 {
 		if histogram_list[0] == nil {return float64(0)}
-		if _, e := histogram_list[0].Percentiles[percentile_key]; !e {
-			histItem := histogram_list[0].GetPercentile(percentile)
-			if histItem != nil {
-				return histItem.Item.Value
-			}
+
+		// a vivid example of numb code under extremely tied status
+		// if _, e := histogram_list[0].Percentiles[percentile_key]; !e {
+		// 	histItem := histogram_list[0].GetPercentile(percentile)
+		// 	if histItem != nil {
+		// 		return histItem.Item.Value
+		// 	}
+		// }
+		percentileItem := histogram_list[0].GetPercentileItem(percentile)
+		if percentileItem != nil && percentileItem.Item != nil {
+			return percentileItem.Item.Value
 		}
 	}
 
 	max_subhistogram_length := 0
-	does_percentile_is_tracked_by_all_histograms := true
+	is_percentile_tracked_by_all_histograms := true
 	good_histogram_list := []*Histogram{}
 	for _, histogram := range histogram_list {
 		if histogram == nil {continue}
 		good_histogram_list = append(good_histogram_list, histogram)
-		if does_percentile_is_tracked_by_all_histograms {
+		if is_percentile_tracked_by_all_histograms {
 			if histogram.Percentiles == nil {
-				does_percentile_is_tracked_by_all_histograms = false
+				is_percentile_tracked_by_all_histograms = false
 			} else if _, e := histogram.Percentiles[percentile_key]; !e {
-				does_percentile_is_tracked_by_all_histograms = false
+				is_percentile_tracked_by_all_histograms = false
 			}
 		}
 		l := histogram.GetLengthOfSubHistograms()
@@ -577,10 +592,10 @@ func CalcPercentileOfProduct(percentile float64, histogram_list []*Histogram, ve
 
 	start_point := float64(-1)
 	start_index := 0
-	if does_percentile_is_tracked_by_all_histograms {
+	if is_percentile_tracked_by_all_histograms {
 		for i:=0; i<len(good_histogram_list); i++ {
 			h := good_histogram_list[i]
-			r := h.GetPercentile(percentile)
+			r := h.GetPercentileItem(percentile)
 			v := start_point
 			if r != nil && r.Item != nil {
 				v = r.Item.Value

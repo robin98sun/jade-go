@@ -70,7 +70,7 @@ func (t *TaskDispatchingItem) GetPercentile() float64 {
 }
 
 func (t *TaskDispatchingItem) GetTailLatencySLOInMilliseconds() float64 {
-	slo := 0
+	slo := float64(0)
 	if t.SLO != nil {
 		slo = t.SLO.TailLatencyInMilliseconds
 	}

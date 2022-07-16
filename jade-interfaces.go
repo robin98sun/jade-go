@@ -76,6 +76,7 @@ func main() {
 		rest.Get("/debug/subnodes", j.ShowSubnodes),
 		rest.Get("/debug/neighbors", j.ShowNeighbors),
 		rest.Post("/debug/collectTraces", j.ShowTraces),
+		rest.Post("/debug/collectPerfTraces", j.ShowPerfTraces),
 		rest.Get("/debug/podCache", j.ShowPodCache),
 		rest.Get("/debug/taskCache", j.ShowTaskCache),
 		rest.Get("/debug/subnodeCapabilityCache", j.ShowCapabilityCacheSubnodes),
