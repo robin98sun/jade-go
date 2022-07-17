@@ -50,7 +50,7 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 }
 
 
-func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, adjusted_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
 
@@ -66,6 +66,8 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 	taskResponseTime := float64(finishTimestamp.Sub(dispatchItem.ArriveTimestamp)/time.Millisecond)
 
 	categoryItem.EnqueueResponse(taskResponseTime, dispatchItem, subtasks)
+
+
 
 }
 

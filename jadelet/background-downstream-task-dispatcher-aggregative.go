@@ -46,7 +46,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	podCacheItem := j.PodCache.SetPodBusy(pod)
 	queueItem := podCacheItem.Queue.Dequeue(j.log.Debug.Printf)
 	if queueItem == nil {
-		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1))
+		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1), float64(-1), float64(-1))
 		j.PodCache.Unlock()
 		return
 	}
@@ -288,29 +288,41 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 							j.log.Debug.Printf("[task dispatcher] going to calculate tail latency")
 
-							histogram_list := []*histogram.Histogram{}
+
+							pods_to_calculate_unloaded_tail := []*kernel.Pod{}
+
 							for _, subtaskOnNode := range workerSubtasks {
-								podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
-								histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+								pods_to_calculate_unloaded_tail = append(pods_to_calculate_unloaded_tail, subtaskOnNode.Subtask.Pod)
 							}
-							j.log.Debug.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
-							j.PodCache.Lock()
+							// histogram_list := []*histogram.Histogram{}
+							// for _, subtaskOnNode := range workerSubtasks {
+							// 	podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
+							// 	histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+							// }
+							// j.log.Debug.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
+							// j.PodCache.Lock()
 
 							budgetEstimationPercentilePoint := float64(0.99)
 							if dispatchItem.Options != nil && dispatchItem.Options.BudgetEstimationPercentilePoint > 0 && dispatchItem.Options.BudgetEstimationPercentilePoint <= 1 {
 								budgetEstimationPercentilePoint = dispatchItem.Options.BudgetEstimationPercentilePoint
 							}
-							tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
-							j.PodCache.Unlock()
-							j.log.Debug.Printf("[task dispatcher] tail latency of %v histograms at percentile point %v is %v", len(histogram_list), budgetEstimationPercentilePoint, tail_latency)
-							
+							// unloaded_tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
+							// j.PodCache.Unlock()
 
-							if tail_latency > 0 {
-								tailCalcOverhead := float64(time.Now().Sub(overheadCheckpoint)*10 / time.Millisecond)/10
-								budget = dispatchItem.SLO.TailLatencyInMilliseconds - tail_latency - tailCalcOverhead
-								j.log.Debug.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
-									task.GetKey(), budget, fanoutDegree, tail_latency)
+							unloaded_tail_latency := j.PodCache.CalcTailForPods(pods_to_calculate_unloaded_tail, budgetEstimationPercentilePoint, scheduler.PodQueueHistogramTypeServiceResponseTime)
+
+							j.log.Debug.Printf("[task dispatcher] tail latency of %v pods at percentile point %v is %v", len(pods_to_calculate_unloaded_tail), budgetEstimationPercentilePoint, unloaded_tail_latency)
+							
+							// could never happen, don't know why it is here
+							if unloaded_tail_latency < 0 {
+								unloaded_tail_latency = 0
 							}
+
+							j.TaskCache.SetUnloadedTailLatencyForTask(taskKey, unloaded_tail_latency)
+							tailCalcOverhead := float64(time.Now().Sub(overheadCheckpoint)*10 / time.Millisecond)/10
+							budget = dispatchItem.SLO.TailLatencyInMilliseconds - unloaded_tail_latency - tailCalcOverhead
+							j.log.Debug.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
+								task.GetKey(), budget, fanoutDegree, unloaded_tail_latency)
 						} 
 					}
 					// for queueing by class,

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/histogram"
 )
 
 type PodCache struct {
@@ -124,13 +125,13 @@ func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.A
 	return inst
 }
 
-func (p *PodCache) SetPodIdle(pod *kernel.Pod, serviceRequestTime float64, communicationTime float64) *PodCacheItem {
-	return p.setPodIdleOrNot(pod, true, serviceRequestTime, communicationTime)
+func (p *PodCache) SetPodIdle(pod *kernel.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem {
+	return p.setPodIdleOrNot(pod, true, serviceRequestTime, communicationTime, queueingTime, budget)
 }
 func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
-	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1))
+	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1), float64(-1), float64(-1))
 }
-func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64) *PodCacheItem  {
+func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem  {
 
 	// p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
@@ -145,6 +146,12 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 				podItem.IsIdle = idle
 				if podItem.Queue.HistogramServiceTime != nil && serviceRequestTime >= 0 {
 					podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
+				}
+				if podItem.Queue.HistogramWithQueueingTime != nil && queueingTime >= 0 && serviceRequestTime >= 0 {
+					podItem.Queue.HistogramWithQueueingTime.Enqueue(serviceRequestTime+queueingTime, 1)	
+				}
+				if podItem.Queue.HistogramAdjustedServiceTime != nil && budget >= 0 && queueingTime >= 0 && serviceRequestTime >= 0 {
+					podItem.Queue.HistogramAdjustedServiceTime.Enqueue(serviceRequestTime+queueingTime-budget, 1)	
 				}
 				// if podItem.Queue.HistogramCommunicationTime != nil && communicationTime >= 0 {
 				// 	podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
@@ -277,4 +284,34 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application,
 		p.Pods = make(map[string]*kernel.Pod)
 	}
 	p.Pods[pod.GetKey()] = pod
+}
+
+
+func (p *PodCache) CalcTailForPods(pods []*kernel.Pod, percentile float64, histType PodQueueHistogramType) float64 {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	histogram_list := []*histogram.Histogram{}
+
+	for _, pod := range pods {
+		if nodeItem, e := p.Nodes[pod.NodeKey]; e {
+			key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
+			if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
+				if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
+					if histType == PodQueueHistogramTypeServiceResponseTime {
+						histogram_list = append(histogram_list, podItem.Queue.HistogramServiceTime)
+					} else if histType == PodQueueHistogramTypeServiceResponseTimeWithQueueingTime {
+						histogram_list = append(histogram_list, podItem.Queue.HistogramWithQueueingTime)
+					} else if histType == PodQueueHistogramTypeAdjustedServiceResponseTime {
+						histogram_list = append(histogram_list, podItem.Queue.HistogramAdjustedServiceTime)
+					}
+				}
+			}
+		}
+	}
+
+	if len(histogram_list) > 0 {
+		return histogram.CalcPercentileOfProduct(percentile, histogram_list, false)
+	}
+	return 0
 }

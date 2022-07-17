@@ -140,6 +140,7 @@ type TaskCacheTaskItem struct {
 	FinishTimestamp     time.Time `json:"finishTimestamp,omitempty"`
 	Fanout              int64     `json:"fanout,omitempty"`
 	AcceptTimestamp    time.Time     `json:"acceptTimestamp,omitempty"`
+	UnloadedTailLatency float64 `jason:"unloadedTail,omitempty"`
 	BudgetNegotiationCache *BudgetNegotiationResponseCache `json:"budgetNegotiationCache,omitempty"`
 }
 

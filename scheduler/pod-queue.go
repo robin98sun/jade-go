@@ -15,6 +15,13 @@ const (
 	PodQueueTypeShadow  PodQueueType  = "shadow"
 )
 
+type PodQueueHistogramType string
+const(
+	PodQueueHistogramTypeServiceResponseTime PodQueueHistogramType = "service-response-time"
+	PodQueueHistogramTypeServiceResponseTimeWithQueueingTime PodQueueHistogramType = "service-response-time-with-queueing-time"
+	PodQueueHistogramTypeAdjustedServiceResponseTime PodQueueHistogramType = "adjusted-service-response-time"
+)
+
 type PodQueue struct {
 	Pod          	*kernel.Pod
 	MainQueue       []*PodQueueItem
@@ -22,6 +29,8 @@ type PodQueue struct {
 	ItemsInQueue 	map[string]*PodQueueItem
 	mutex        *sync.Mutex
 	HistogramServiceTime *histogram.Histogram
+	HistogramWithQueueingTime *histogram.Histogram
+	HistogramAdjustedServiceTime *histogram.Histogram
 	// HistogramInQueueTime *histogram.Histogram
 	// HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
@@ -29,21 +38,16 @@ type PodQueue struct {
 
 func NewPodQueue() *PodQueue {
 	h_st := histogram.NewHistogram(1000, float64(0.1), 1)
-	h_st.AddPercentilePoint(float64(0.99))
-	h_st.AddPercentilePoint(float64(0.95))
-	h_st.AddPercentilePoint(float64(0.9))
-	// h_qt := histogram.NewHistogram(10000, float64(0.1), 1)
-	// h_qt.AddPercentilePoint(float64(0.99))
-	// h_ct := histogram.NewHistogram(10000, float64(0.1), 1)
-	// h_ct.AddPercentilePoint(float64(0.99))
+	h_wq := histogram.NewHistogram(1000, float64(0.1), 1)
+	h_ad := histogram.NewHistogram(1000, float64(0.1), 1)
 	return &PodQueue{
 		MainQueue:        []*PodQueueItem{},
 		ShadowQueue:  	  []*PodQueueItem{},
 		mutex:        	  &sync.Mutex{},
 		ItemsInQueue: 	  make(map[string]*PodQueueItem),
-		HistogramServiceTime:  		h_st,
-		// HistogramInQueueTime:  		h_qt,
-		// HistogramCommunicationTime: h_ct,
+		HistogramServiceTime:  		  h_st,
+		HistogramWithQueueingTime:    h_wq,
+		HistogramAdjustedServiceTime: h_ad,
 		dequeueClock: 0,
 	}
 }
