@@ -9,24 +9,30 @@ import (
 
 
 type SubtaskPerfVector struct {
-	DispatchItem 			 *scheduler.TaskDispatchingItem
-	SubtaskPerf  			 map[string]*SubtaskPerfItem
-	TailLatency  			 float64
-	Fanout       			 int
-	DeadlineViolationCount 	 int
-	MaxDeadlineViolationTime float64
+	DispatchItem 			 		*scheduler.TaskDispatchingItem
+	SubtaskPerf  			 		map[string]*SubtaskPerfItem
+	TailLatency  			 		float64
+	Fanout       			 		int
+	DeadlineViolationCount 	 		int
+	MaxDeadlineViolationTime 		float64
 	CumulativeDeadlineViolationTime float64
+	UnloadedTailLatency      		float64
+	AdjustedUnloadedTaillatency     float64
 }
 
 func NewSubtaskPerfVector(
 	dispatchItem *scheduler.TaskDispatchingItem, 
 	subtasks map[string][]*scheduler.TaskCacheSubtaskItem,
 	tailLatency float64,
+	unloadedTailLatency float64,
+	adjustedUnloadedTailLatency float64,
 ) *SubtaskPerfVector {
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
 		SubtaskPerf: make(map[string]*SubtaskPerfItem),
 		TailLatency: tailLatency,
+		UnloadedTailLatency: unloadedTailLatency,
+		AdjustedUnloadedTaillatency: adjustedUnloadedTailLatency,
 	}
 
 	for snKey, snItems := range subtasks {

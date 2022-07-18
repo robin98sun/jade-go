@@ -50,7 +50,7 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 }
 
 
-func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, adjusted_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
 
@@ -65,7 +65,7 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 
 	taskResponseTime := float64(finishTimestamp.Sub(dispatchItem.ArriveTimestamp)/time.Millisecond)
 
-	categoryItem.EnqueueResponse(taskResponseTime, dispatchItem, subtasks)
+	categoryItem.EnqueueResponse(taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, dispatchItem, subtasks)
 
 
 
@@ -88,6 +88,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"arrival_rate",
 					"task_tail_latency",
 					"distance_of_tail_to_slo", 
+					"unloaded_tail_latency",
+					"adjusted_unloaded_tail_latency",
 				}
 
 	if traceType == "full" {

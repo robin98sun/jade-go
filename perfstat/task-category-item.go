@@ -71,7 +71,7 @@ func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
 	}
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64, dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -97,7 +97,7 @@ func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, dispatchIte
 		tail = t.HistogramPipeOfTaskResponseTime[0].GetValueAtPercentile(t.PercentilePoint)
 	}
 
-	vector := NewSubtaskPerfVector(dispatchItem, subtasks, tail)
+	vector := NewSubtaskPerfVector(dispatchItem, subtasks, tail, unloaded_tail_latency, adjusted_unloaded_tail_latency)
 
 	dequeuedVector := vector
 	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
