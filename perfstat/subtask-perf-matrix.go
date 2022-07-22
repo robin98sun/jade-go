@@ -3,7 +3,7 @@ package perfstat
 import (
 	// "uta.edu/aces/jade-go/histogram"
 	// "uta.edu/aces/jade-go/scheduler"
-	// "sync"
+	"sync"
 	// "time"
 )
 
@@ -12,16 +12,20 @@ type SubtaskPerfMatrix struct {
 	Length  int
 	VectorsOfSubtaskPerf []*SubtaskPerfVector
 	VectorKeys map[string]int
+	mutex   *sync.Mutex
 }
 
 func NewSubtaskPerfMatrix(length int) *SubtaskPerfMatrix {
 	return &SubtaskPerfMatrix{
 		Length: length,
+		mutex: &sync.Mutex{},
 	}
 }
 
 func (m *SubtaskPerfMatrix) Enqueue(vector *SubtaskPerfVector) *SubtaskPerfVector {
 	
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if m.VectorKeys == nil {
 		m.VectorKeys = make(map[string]int)
@@ -62,6 +66,9 @@ func (m *SubtaskPerfMatrix) Dequeue() *SubtaskPerfVector {
 }
 
 func (m *SubtaskPerfMatrix) GetValidKeys() []string {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	
 	validKeys := []string{}
 	for key, count := range m.VectorKeys {
 		if count > 0 {
