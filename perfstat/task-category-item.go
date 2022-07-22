@@ -5,6 +5,7 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 
@@ -18,6 +19,7 @@ type TaskCategoryItem struct {
 	SliceCount  int
 	PercentilePoint float64
 	TailLatencySLO float64
+	MemoryOccupation uintptr
 	mutex   *sync.Mutex
 }
 
@@ -27,7 +29,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	histLength := 1000
 	histCount := 1
 	sliceLength := 10
-	sliceCount := 10000
+	sliceCount := 100000
 
 	tci := &TaskCategoryItem{
 		HistCount: histCount,
@@ -39,6 +41,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		HistogramPipeOfTaskResponseTime: []*histogram.Histogram{},
 		MatrixPipeOfSubtaskPerf: []*SubtaskPerfMatrix{},
 		ArrivalRateTrackers: []*ArrivalRateTracker{},
+		MemoryOccupation: 0,
 		mutex: &sync.Mutex{},
 	}
 
@@ -47,6 +50,8 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		hist.AddPercentilePoint(percentile)
 		tci.HistogramPipeOfTaskResponseTime = append(tci.HistogramPipeOfTaskResponseTime, hist)
 	}
+
+	tci.MemoryOccupation = unsafe.Sizeof(tci)
 
 	
 	return tci
@@ -69,6 +74,7 @@ func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
 		newTracker.Enqueue(dequeuedTime)
 		t.ArrivalRateTrackers = append(t.ArrivalRateTrackers, newTracker)
 	}
+	t.MemoryOccupation = unsafe.Sizeof(t)
 }
 
 func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64, dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
@@ -97,6 +103,7 @@ func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_ta
 		tail = t.HistogramPipeOfTaskResponseTime[0].GetValueAtPercentile(t.PercentilePoint)
 	}
 
+	
 	vector := NewSubtaskPerfVector(dispatchItem, subtasks, tail, unloaded_tail_latency, adjusted_unloaded_tail_latency)
 
 	dequeuedVector := vector
@@ -113,6 +120,9 @@ func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_ta
 		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
 		newMatrix.Enqueue(dequeuedVector)
 	}
+
+	t.MemoryOccupation = unsafe.Sizeof(t)
+	vector.MemoryOccupation = t.MemoryOccupation
 
 }
 

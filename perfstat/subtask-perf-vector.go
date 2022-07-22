@@ -18,6 +18,7 @@ type SubtaskPerfVector struct {
 	CumulativeDeadlineViolationTime float64
 	UnloadedTailLatency      		float64
 	AdjustedUnloadedTaillatency     float64
+	MemoryOccupation                uintptr
 }
 
 func NewSubtaskPerfVector(
@@ -33,6 +34,7 @@ func NewSubtaskPerfVector(
 		TailLatency: tailLatency,
 		UnloadedTailLatency: unloadedTailLatency,
 		AdjustedUnloadedTaillatency: adjustedUnloadedTailLatency,
+		MemoryOccupation: 0,
 	}
 
 	for snKey, snItems := range subtasks {

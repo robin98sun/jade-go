@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 	"strconv"
+	"fmt"
 )
 
 
 // PerfCache
 type PerfCache struct {
-	LengthPerCategory int64
 	TaskCategories map[string]*TaskCategoryItem
 	mutex *sync.Mutex 
 }
@@ -30,6 +30,13 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		mutex: &sync.Mutex{},
 	}
+}
+
+func (p *PerfCache) Clear() {
+	p.Lock()
+	defer p.Unlock()
+
+	p.TaskCategories = make(map[string]*TaskCategoryItem)
 }
 
 func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time) {
@@ -90,6 +97,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"distance_of_tail_to_slo", 
 					"unloaded_tail_latency",
 					"adjusted_unloaded_tail_latency",
+					"memory_consumption",
 				}
 
 	if traceType == "full" {
@@ -142,6 +150,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.FormatFloat(arrivalRate, 'f', -1, 64),
 					strconv.FormatFloat(tail, 'f', -1, 64),
 					strconv.FormatFloat(taskCategoryItem.TailLatencySLO - tail, 'f', -1, 64),
+					fmt.Sprintf("%v",vector.MemoryOccupation),
 				}
 
 				if traceType == "full" {

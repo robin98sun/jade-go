@@ -135,3 +135,11 @@ func (j *JADE) ClearPodCache(w rest.ResponseWriter, r *rest.Request) {
 	}
 	j.DoneRequest(w, r, "OK")
 }
+
+func (j *JADE) ClearPerfCache(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+		j.PerfCache.Clear()
+		runtime.GC()
+	}
+	j.DoneRequest(w, r, "OK")
+}
