@@ -47,7 +47,7 @@ func NewSubtaskPerfVector(
 
 		for _, subtaskItem := range snItems {
 			// only count for worker module
-			if subtaskItem.GetModuleName() == kernel.AppModuleAggregator {
+			if subtaskItem.GetModuleName() == string(kernel.AppModuleAggregator) {
 				continue
 			}
 			vector.Fanout += 1
