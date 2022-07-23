@@ -2,20 +2,27 @@ package perfstat
 
 import (
 	"time"
+	"sync"
 )
 
 type ArrivalRateTracker struct {
 	Length int
 	Queue []time.Time
+	mutex *sync.Mutex
 }
 
 func NewArrivalRateTracker(length int) *ArrivalRateTracker {
 	return &ArrivalRateTracker{
 		Length: length,
+		mutex:  &sync.Mutex,
 	}
 }
 
 func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) time.Time {
+
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
 
 	var dequeuedTime time.Time
 
@@ -41,6 +48,8 @@ func (a *ArrivalRateTracker) Dequeue() time.Time {
 }
 
 func (a *ArrivalRateTracker) GetArrivalRatePerSecond() float64 {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	if len(a.Queue) <= 1 {
 		return 0
 	}

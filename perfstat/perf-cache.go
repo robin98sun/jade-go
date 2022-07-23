@@ -86,6 +86,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 
 	headline := []string{
 					"task_tag", 
+					"matrix_index",
 					"vector_index",
 					"task_tail_latency_slo_latency(ms)", 
 					"task_tail_latency_slo_percentile", 
@@ -133,14 +134,17 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 			minSliceLength = len(taskCategoryItem.ArrivalRateTrackers)
 		}
 		vector_index := 0
+		matrix_index := 0
 		for i := minSliceLength-1; i>=0; i-- {
 			arrivalRate := taskCategoryItem.ArrivalRateTrackers[i].GetArrivalRatePerSecond()
 			matrix := taskCategoryItem.MatrixPipeOfSubtaskPerf[i]
-			for j:= len(matrix.VectorsOfSubtaskPerf)-1; j>=0; j-- {
+			matrix_index++
+			for j:= 0; j<len(matrix.VectorsOfSubtaskPerf); j++ {
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
 				line := []string{
 					taskTag,
+					strconv.Itoa(matrix_index),
 					strconv.Itoa(vector_index),
 					strconv.FormatFloat(taskCategoryItem.TailLatencySLO, 'f', -1, 64),
 					strconv.FormatFloat(taskCategoryItem.PercentilePoint, 'f', -1, 64),
