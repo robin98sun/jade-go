@@ -13,6 +13,7 @@ import (
 // PerfCache
 type PerfCache struct {
 	TaskCategories map[string]*TaskCategoryItem
+	ArrivalRateTracker *ArrivalRateTracker
 	mutex *sync.Mutex 
 }
 
@@ -28,6 +29,7 @@ func (p *PerfCache) Unlock() {
 func NewPerfCache() *PerfCache {
 	return &PerfCache{
 		TaskCategories: make(map[string]*TaskCategoryItem),
+		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
 	}
 }
@@ -53,7 +55,10 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 	p.Unlock()
 
 	categoryItem.EnqueueArrivalTime(arrivalTime)
+	p.ArrivalRateTracker.Enqueue(arrivalTime)
 
+	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
+	categoryItem.EnqueueOverallArrivalRate(instantOverallArrivalRate)
 }
 
 
@@ -94,7 +99,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"deadline_violation_count",
 					"max_deadline_violation_time(ms)",
 					"cumulative_deadline_violation_time(ms)",
-					"arrival_rate",
+					"overall_instant_arrival_rate",
+					"task_class_arrival_rate",
 					"task_tail_latency",
 					"distance_of_tail_to_slo", 
 					"unloaded_tail_latency",
@@ -136,12 +142,13 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 		vector_index := 0
 		matrix_index := 0
 		for i := minSliceLength-1; i>=0; i-- {
-			arrivalRate := taskCategoryItem.ArrivalRateTrackers[i].GetArrivalRatePerSecond()
+			taskClassArrivalRate := taskCategoryItem.ArrivalRateTrackers[i].GetArrivalRatePerSecond()
 			matrix := taskCategoryItem.MatrixPipeOfSubtaskPerf[i]
 			matrix_index++
 			for j:= 0; j<len(matrix.VectorsOfSubtaskPerf); j++ {
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
+				instantOverallArrivalRate := taskCategoryItem.OverallArrivalRates[i][j]
 				line := []string{
 					taskTag,
 					strconv.Itoa(matrix_index),
@@ -152,7 +159,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.Itoa(vector.DeadlineViolationCount),
 					strconv.FormatFloat(vector.MaxDeadlineViolationTime, 'f', -1, 64),
 					strconv.FormatFloat(vector.CumulativeDeadlineViolationTime, 'f', -1, 64),
-					strconv.FormatFloat(arrivalRate, 'f', -1, 64),
+					strconv.FormatFloat(instantOverallArrivalRate, 'f', -1, 64),
+					strconv.FormatFloat(taskClassArrivalRate, 'f', -1, 64),
 					strconv.FormatFloat(tail, 'f', -1, 64),
 					strconv.FormatFloat(taskCategoryItem.TailLatencySLO - tail, 'f', -1, 64),
 					fmt.Sprintf("%v",vector.MemoryOccupation),
