@@ -61,6 +61,15 @@ type TaskCacheSubtaskItem struct {
 	MetricsEnv 		   *jadesdk.MetricsEnv `json:"metricsEnv,omitempty"`
 }
 
+
+func (i *TaskCacheSubtaskItem) GetModuleName() string {
+	if i == nil || i.subtask == nil {
+		return ""
+	}
+
+	return i.subtask.ModuleName
+}
+
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {
 	if i == nil {
 		return nil

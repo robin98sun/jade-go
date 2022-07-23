@@ -3,6 +3,7 @@ package perfstat
 import (
 	// "uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/kernel"
 	// "sync"
 	"time"
 )
@@ -45,6 +46,10 @@ func NewSubtaskPerfVector(
 		perfItem := &SubtaskPerfItem{}
 
 		for _, subtaskItem := range snItems {
+			// only count for worker module
+			if subtaskItem.GetModuleName() == kernel.AppModuleAggregator {
+				continue
+			}
 			vector.Fanout += 1
 
 			perfItem.ResponseTime += float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
