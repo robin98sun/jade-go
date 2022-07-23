@@ -91,6 +91,7 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
 	tasksCleared := 0
 	if j.TaskCache != nil {
+		j.log.Op.Printf("clearing task cache")
 
 		req := &struct{
 			Seconds int `json:"seconds,omitempty"`
@@ -124,22 +125,27 @@ func (j *JADE) ClearTaskCacheAndStat(w rest.ResponseWriter, r *rest.Request) {
 			// perform GC
 			runtime.GC()
 		}	
+		j.log.Op.Printf("task cache is cleared")
 	}
 	j.DoneRequest(w, r, tasksCleared)
 }
 
 func (j *JADE) ClearPodCache(w rest.ResponseWriter, r *rest.Request) {
 	if j.PodCache != nil {
+		j.log.Op.Printf("clearing pod cache")
 		j.PodCache.Clear()
 		runtime.GC()
+		j.log.Op.Printf("pod cache is cleared")
 	}
 	j.DoneRequest(w, r, "OK")
 }
 
 func (j *JADE) ClearPerfCache(w rest.ResponseWriter, r *rest.Request) {
 	if j.PerfCache != nil {
+		j.log.Op.Printf("clearing performance cache")
 		j.PerfCache.Clear()
 		runtime.GC()
+		j.log.Op.Printf("performance cache is cleared")
 	}
 	j.DoneRequest(w, r, "OK")
 }

@@ -8,12 +8,10 @@ import (
 // traceType: full / concise; jobKey: the id of which job you want to fetch, "" for all
 func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(string, ...interface{})) [][]string {
 
-	printf("[task cache] trying to acquire the lock to collect (%v) traces for job[%v]", traceType, jobKey)
+	printf("[task cache] going to collect (%v) traces for job[%v]", traceType, jobKey)
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
-	printf("[task cache] acquired the lock to collect (%v) traces for job[%v]", traceType, jobKey)
 
 	traces := [][]string{}
 	headline := []string{}
