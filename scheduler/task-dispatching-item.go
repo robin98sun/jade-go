@@ -38,6 +38,7 @@ type TaskDispatchingOptions struct {
 	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
 	BudgetEstimationPercentilePoint float64 `json:"budgetEstimationPercentilePoint,omitempty"`
 	TaskCategories				[]string  `json:"taskCategories,omitempty"`
+	ProvisionPodsIfNotExist     bool    `json:"provisionPodsIfNotExist,omitempty"`
 }
 
 const TaskDefaultPriority = 1000

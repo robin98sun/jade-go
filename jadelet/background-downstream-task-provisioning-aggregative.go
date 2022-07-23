@@ -41,7 +41,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 				// allocate an aggregator pod if needed
 				aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
 				aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
-				if aggregatorPod == nil {
+				if aggregatorPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					j.log.Debug.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
 					// provision an aggregator pod
 					containerSettings := task.Application.GetModule(string(kernel.AppModuleAggregator))
@@ -250,7 +250,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
 				j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
-				if workerPod == nil {
+				if workerPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					// provision a worker Pod for it
 					containerSettings := task.Application.GetModule(string(kernel.AppModuleWorker))
 					containerSettings.SetISAInImage(j.Config.ISA)
