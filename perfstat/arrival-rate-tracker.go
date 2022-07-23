@@ -18,7 +18,7 @@ func NewArrivalRateTracker(length int) *ArrivalRateTracker {
 	}
 }
 
-func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) time.Time {
+func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) (time.Time, float64) {
 
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
@@ -33,7 +33,16 @@ func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) time.Time {
 	if len(a.Queue) > a.Length {
 		dequeuedTime = a.Dequeue()
 	}
-	return dequeuedTime
+
+
+	instantArrivalRate := float64(0)
+	timespanInSeconds := float64(a.Queue[len(a.Queue)-1].Sub(a.Queue[0])/time.Second)
+
+	if timespanInSeconds > 0 {
+		instantArrivalRate = float64(len(a.Queue)) / timespanInSeconds
+	}
+
+	return dequeuedTime, instantArrivalRate
 }
 
 func (a *ArrivalRateTracker) Dequeue() time.Time {

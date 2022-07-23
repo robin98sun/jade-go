@@ -29,7 +29,7 @@ func (p *PerfCache) Unlock() {
 func NewPerfCache() *PerfCache {
 	return &PerfCache{
 		TaskCategories: make(map[string]*TaskCategoryItem),
-		ArrivalRateTracker: NewArrivalRateTracker(10),
+		ArrivalRateTracker: NewArrivalRateTracker(5),
 		mutex: &sync.Mutex{},
 	}
 }
@@ -55,9 +55,8 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 	p.Unlock()
 
 	categoryItem.EnqueueArrivalTime(arrivalTime)
-	p.ArrivalRateTracker.Enqueue(arrivalTime)
+	_, instantOverallArrivalRate := p.ArrivalRateTracker.Enqueue(arrivalTime)
 
-	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
 	categoryItem.EnqueueOverallArrivalRate(instantOverallArrivalRate)
 }
 
@@ -166,6 +165,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.FormatFloat(taskClassArrivalRate, 'f', -1, 64),
 					strconv.FormatFloat(tail, 'f', -1, 64),
 					strconv.FormatFloat(taskCategoryItem.TailLatencySLO - tail, 'f', -1, 64),
+					strconv.FormatFloat(vector.UnloadedTailLatency, 'f', -1, 64),
+					strconv.FormatFloat(vector.AdjustedUnloadedTaillatency, 'f', -1, 64),
 					fmt.Sprintf("%v",vector.MemoryOccupation),
 				}
 				vector_index++

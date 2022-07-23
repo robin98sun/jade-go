@@ -97,7 +97,7 @@ func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
 			break
 		}
 		tracker := t.ArrivalRateTrackers[i]
-		dequeuedTime = tracker.Enqueue(arrivalTime)
+		dequeuedTime, _ = tracker.Enqueue(arrivalTime)
 	}
 	if !time.Time.IsZero(dequeuedTime) && len(t.ArrivalRateTrackers) < t.SliceCount {
 		newTracker := NewArrivalRateTracker(t.SliceLength)
