@@ -14,7 +14,7 @@ type ArrivalRateTracker struct {
 func NewArrivalRateTracker(length int) *ArrivalRateTracker {
 	return &ArrivalRateTracker{
 		Length: length,
-		mutex:  &sync.Mutex,
+		mutex:  &sync.Mutex{},
 	}
 }
 
