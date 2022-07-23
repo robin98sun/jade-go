@@ -84,6 +84,9 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 }
 
 func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...interface{})) [][]string {
+
+	printf("[perf cache] going to collect (%v) traces", traceType)
+
 	p.Lock()
 	defer p.Unlock()
 
@@ -190,7 +193,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 		}
 
 	}
-
+	printf("[perf cache] %v lines of performance traces have been collected", len(traces))
 	return traces
 
 }

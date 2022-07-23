@@ -475,6 +475,6 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 			}
 		}
 	}
-	printf("[task cache] %v lines of traces have been collected for job[%v]", len(traces), jobKey)
+	printf("[task cache] %v lines of task traces have been collected for job[%v]", len(traces), jobKey)
 	return traces
 }
