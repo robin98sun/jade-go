@@ -319,3 +319,23 @@ func (p *PodCache) CalcTailForPods(pods []*kernel.Pod, percentile float64, histT
 	}
 	return 0
 }
+
+func (p *PodCache) CleanAndResetQueues() {
+	p.Lock()
+	defer p.Unlock()
+
+	for _, nodeItem := range p.Nodes {
+		if len(nodeItem.AppModules) == 0 {
+			continue
+		}
+		for _, appModuleItem := range nodeItem.AppModules {
+			if len(appModuleItem.Cache) == 0 {
+				continue
+			}
+			for _, podItem := range appModuleItem.Cache {
+				podItem.IsIdle = true
+				podItem.Queue.Clean()
+			}
+		}
+	}
+}

@@ -149,3 +149,13 @@ func (j *JADE) ClearPerfCache(w rest.ResponseWriter, r *rest.Request) {
 	}
 	j.DoneRequest(w, r, "OK")
 }
+
+
+func (j *JADE) CleanAndResetQueues(w rest.ResponseWriter, r *rest.Request) {
+	if j.PodCache != nil {
+		j.log.Op.Printf("cleaning and reseting all queues")
+		j.PodCache.CleanAndResetQueues()
+		j.log.Op.Printf("all queues are cleaned up and well reset")
+	}
+	j.DoneRequest(w, r, "OK")
+}

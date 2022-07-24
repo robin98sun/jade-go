@@ -85,6 +85,7 @@ func main() {
 		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
 		rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
 		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
+		rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
 	)
 	if err != nil {
 		log.Fatal(err)

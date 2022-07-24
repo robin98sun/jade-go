@@ -60,6 +60,17 @@ func (p *PodQueue) Unlock() {
 	p.mutex.Unlock()
 }
 
+
+func (p *PodQueue) Clean() {
+	p.Lock()
+	defer p.Unlock()
+
+	p.dequeueClock = 0
+	p.MainQueue = []*PodQueueItem{}
+	p.ShadowQueue = []*PodQueueItem{}
+	p.ItemsInQueue = make(map[string]*PodQueueItem)
+}
+
 func (p *PodQueue) Length() int {
 	if p == nil {
 		return 0
