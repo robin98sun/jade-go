@@ -65,7 +65,10 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					}
 				}
 
-				go postQueryPerfAnalysis()	
+				postQueryPerfAnalysis()	
+
+				// if kick it to the background, it would cause dead-lock
+				// go postQueryPerfAnalysis()	
 				
 				return
 			}
