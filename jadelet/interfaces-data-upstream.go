@@ -40,16 +40,14 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			if subtask != nil && subtask.Pod != nil {
 				j.DoneRequest(w, r, "message received")
 				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
+				// then dequeue or release the pod queue
+				j.PodCache.SetPodIdle(subtask.Pod, serviceRequestTime, communicationTime, queueingTime, budget)
+				// forward aggregator subtask to upper tier if possible
+				if subtask.ModuleName == string(kernel.AppModuleAggregator) && j.HasUpperNode() {
+					j.sdk.SendReportMessageToJadelet(j.Config.UpperNode.GetSDKNode(), msg)
+				}
 
 				postQueryPerfAnalysis := func() {
-					// then dequeue or release the pod queue
-					j.PodCache.SetPodIdle(subtask.Pod, serviceRequestTime, communicationTime, queueingTime, budget)
-
-					// forward aggregator subtask to upper tier if possible
-					if subtask.ModuleName == string(kernel.AppModuleAggregator) && j.HasUpperNode() {
-						j.sdk.SendReportMessageToJadelet(j.Config.UpperNode.GetSDKNode(), msg)
-					}
-
 					// to see if the task is done
 					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
 
