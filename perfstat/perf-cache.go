@@ -29,7 +29,7 @@ func (p *PerfCache) Unlock() {
 func NewPerfCache() *PerfCache {
 	return &PerfCache{
 		TaskCategories: make(map[string]*TaskCategoryItem),
-		ArrivalRateTracker: NewArrivalRateTracker(5),
+		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
 	}
 }

@@ -34,9 +34,8 @@ func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) (time.Time, float64)
 		dequeuedTime = a.Dequeue()
 	}
 
-
 	instantArrivalRate := float64(0)
-	timespanInSeconds := float64(a.Queue[len(a.Queue)-1].Sub(a.Queue[0])/time.Second)
+	timespanInSeconds := float64(a.Queue[len(a.Queue)-1].Sub(a.Queue[0])/time.Millisecond)/float64(1000)
 
 	if timespanInSeconds > 0 {
 		instantArrivalRate = float64(len(a.Queue)) / timespanInSeconds
