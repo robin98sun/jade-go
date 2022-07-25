@@ -169,7 +169,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
 				line := []string{
-					strconv.FormatUint(vector.ArrivalClock, 64),
+					strconv.FormatUint(vector.ArrivalClock, 10),
 					strconv.Itoa(vector_index_overall),
 					taskTag,
 					strconv.Itoa(matrix_index),
