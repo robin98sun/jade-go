@@ -3,6 +3,7 @@ package perfstat
 import (
 	"time"
 	"sync"
+	"sort"
 )
 
 type ArrivalRateTracker struct {
@@ -30,6 +31,11 @@ func (a *ArrivalRateTracker) Enqueue(arrivalTime time.Time) (time.Time, float64)
 		a.Queue = []time.Time{}
 	}
 	a.Queue = append(a.Queue, arrivalTime)
+
+	sort.Slice(a.Queue, func(i, j int) bool {
+	    return a.Queue[i].Before(a.Queue[j])
+	})
+
 	if len(a.Queue) > a.Length {
 		dequeuedTime = a.Dequeue()
 	}
