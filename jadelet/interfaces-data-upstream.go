@@ -65,7 +65,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					}
 				}
 
-				go postQueryPerfAnalysis()	
+				postQueryPerfAnalysis()	
 				
 				return
 			}
