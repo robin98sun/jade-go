@@ -15,5 +15,9 @@ type SubtaskPerfItem struct {
 	DeadlineViolationTime 	float64
 	CommunicationTime		float64
 	QueueingTime            float64
+	MostRecentCumulativeDeadlineViolationCountAtBeginning int
+	MostRecentCumulativeDeadlineViolationTimeAtBeginning  float64
+	MostRecentCumulativeDeadlineViolationCountAtEnd int
+	MostRecentCumulativeDeadlineViolationTimeAtEnd float64
 }
 

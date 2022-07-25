@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 	"strconv"
-	"fmt"
 	"math"
 )
 
@@ -67,12 +66,13 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 		p.TaskCategories[taskTag] = NewTaskCategoryItem(percentile, slo)
 	}
 	categoryItem := p.TaskCategories[taskTag]
+	currentClock := p.GetArrivalClock()
+	p.IncreaseArrivalClock()
 	p.Unlock()
 
-	categoryItem.EnqueueArrivalTime(arrivalTime)
 	_, instantOverallArrivalRate := p.ArrivalRateTracker.Enqueue(arrivalTime)
 
-	categoryItem.EnqueueOverallArrivalRate(instantOverallArrivalRate)
+	categoryItem.ReserveForResponse(currentClock, dispatchItem, arrivalTime, instantOverallArrivalRate)
 }
 
 
@@ -91,8 +91,8 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 
 	taskResponseTime := float64(finishTimestamp.Sub(dispatchItem.ArriveTimestamp)/time.Millisecond)
 
-	categoryItem.EnqueueResponse(taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, dispatchItem, subtasks)
-
+	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
+	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate)
 
 
 }
@@ -107,7 +107,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 	traces := [][]string{}
 
 	headline := []string{
-					"vector_index_overall",
+					"vector_arrival_clock",
+					"vector_index_in_cache",
 					"task_tag", 
 					"matrix_index",
 					"vector_index_in_matrix",
@@ -123,7 +124,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"task_class_arrival_rate",
 					"unloaded_tail_latency",
 					"adjusted_unloaded_tail_latency",
-					"memory_consumption",
 				}
 
 	if traceType == "full" {
@@ -131,6 +131,10 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"node_key",
 					"subtask_deadline_violation_count_on_node", 
 					"subtask_deadline_violation_time_on_node(ms)",
+					"cumulative_deadline_violation_count_on_node_at_beginning",
+					"cumulative_deadline_violation_time_on_node_at_beginning(ms)",
+					"cumulative_deadline_violation_count_on_node_at_end",
+					"cumulative_deadline_violation_time_on_node_at_end(ms)",
 				   }...)
 	}
 
@@ -142,8 +146,8 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 	if traceType == "full" {
 		for _, taskCategoryItem := range p.TaskCategories {
 			for _, matrix := range taskCategoryItem.MatrixPipeOfSubtaskPerf {
-				validKeys := matrix.GetValidKeys()
-				for _, key := range validKeys {
+				validKeys := matrix.GetNodeKeys()
+				for key := range validKeys {
 					nodeKeySet[key] = true
 				}
 			}
@@ -154,21 +158,18 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 	// generate traces in a flat table
 	vector_index_overall := 0
 	for taskTag, taskCategoryItem := range p.TaskCategories {
-		minSliceLength := len(taskCategoryItem.MatrixPipeOfSubtaskPerf)
-		if len(taskCategoryItem.ArrivalRateTrackers) < minSliceLength {
-			minSliceLength = len(taskCategoryItem.ArrivalRateTrackers)
-		}
+		matrixCount := len(taskCategoryItem.MatrixPipeOfSubtaskPerf)
+		
 		matrix_index := 0
-		for i := minSliceLength-1; i>=0; i-- {
-			taskClassArrivalRate := taskCategoryItem.ArrivalRateTrackers[i].GetArrivalRatePerSecond()
+		for i := matrixCount-1; i>=0; i-- {
 			matrix := taskCategoryItem.MatrixPipeOfSubtaskPerf[i]
 			matrix_index++
 			vector_index_in_matrix := 0
 			for j:= 0; j<len(matrix.VectorsOfSubtaskPerf); j++ {
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
-				instantOverallArrivalRate := taskCategoryItem.OverallArrivalRates[i][j]
 				line := []string{
+					strconv.FormatUint(vector.ArrivalClock, 64),
 					strconv.Itoa(vector_index_overall),
 					taskTag,
 					strconv.Itoa(matrix_index),
@@ -181,11 +182,10 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.Itoa(vector.DeadlineViolationCount),
 					strconv.FormatFloat(vector.MaxDeadlineViolationTime, 'f', -1, 64),
 					strconv.FormatFloat(vector.CumulativeDeadlineViolationTime, 'f', -1, 64),
-					strconv.FormatFloat(instantOverallArrivalRate, 'f', -1, 64),
-					strconv.FormatFloat(taskClassArrivalRate, 'f', -1, 64),
+					strconv.FormatFloat(vector.InstantOverallArrivalRateAtBeginning, 'f', -1, 64),
+					strconv.FormatFloat(vector.InstantTaskArrivalRateAtBeginning, 'f', -1, 64),
 					strconv.FormatFloat(vector.UnloadedTailLatency, 'f', -1, 64),
 					strconv.FormatFloat(vector.AdjustedUnloadedTaillatency, 'f', -1, 64),
-					fmt.Sprintf("%v",vector.MemoryOccupation),
 				}
 				vector_index_overall++
 				vector_index_in_matrix++
@@ -198,10 +198,33 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 							dvc = nodePerfItem.DeadlineViolationCount
 							dvt = nodePerfItem.DeadlineViolationTime
 						}
+
+						ddlVioCountOnNodeAtBeginning := 0
+						ddlVioTimeOnNodeAtBeginning := float64(0)
+						if v, e := vector.MostRecentCumulativeDeadlineViolationCountAtBeginning[nodeKey]; e {
+							ddlVioCountOnNodeAtBeginning = v
+						}
+						if v, e := vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning[nodeKey]; e {
+							ddlVioTimeOnNodeAtBeginning = v
+						}
+
+						ddlVioCountOnNodeAtEnd := 0
+						ddlVioTimeOnNodeAtEnd := float64(0)
+						if v, e := vector.MostRecentCumulativeDeadlineViolationCountAtEnd[nodeKey]; e {
+							ddlVioCountOnNodeAtEnd = v
+						}
+						if v, e := vector.MostRecentCumulativeDeadlineViolationTimeAtEnd[nodeKey]; e {
+							ddlVioTimeOnNodeAtEnd = v
+						}
+
 						nodeline := append(line, []string{
 							nodeKey,
 							strconv.Itoa(dvc),
 							strconv.FormatFloat(dvt, 'f', -1, 64),
+							strconv.Itoa(ddlVioCountOnNodeAtBeginning),
+							strconv.FormatFloat(ddlVioTimeOnNodeAtBeginning, 'f', -1, 64),
+							strconv.Itoa(ddlVioCountOnNodeAtEnd),
+							strconv.FormatFloat(ddlVioTimeOnNodeAtEnd, 'f', -1, 64),
 						}...)
 						traces = append(traces, nodeline)
 					}

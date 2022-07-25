@@ -5,22 +5,19 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 
 type TaskCategoryItem struct {
 	HistogramPipeOfTaskResponseTime []*histogram.Histogram
 	MatrixPipeOfSubtaskPerf []*SubtaskPerfMatrix
-	ArrivalRateTrackers []*ArrivalRateTracker
-	OverallArrivalRates [][]float64
+	ArrivalRateTracker *ArrivalRateTracker
 	HistCount   int
 	HistLength  int
 	SliceLength int
 	SliceCount  int
 	PercentilePoint float64
 	TailLatencySLO float64
-	MemoryOccupation uintptr
 	mutex   *sync.Mutex
 }
 
@@ -41,9 +38,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		TailLatencySLO: slo,
 		HistogramPipeOfTaskResponseTime: []*histogram.Histogram{},
 		MatrixPipeOfSubtaskPerf: []*SubtaskPerfMatrix{},
-		ArrivalRateTrackers: []*ArrivalRateTracker{},
-		OverallArrivalRates: [][]float64{},
-		MemoryOccupation: 0,
+		ArrivalRateTracker: NewArrivalRateTracker(sliceLength),
 		mutex: &sync.Mutex{},
 	}
 
@@ -52,62 +47,42 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		hist.AddPercentilePoint(percentile)
 		tci.HistogramPipeOfTaskResponseTime = append(tci.HistogramPipeOfTaskResponseTime, hist)
 	}
-
-	tci.MemoryOccupation = unsafe.Sizeof(tci)
-
 	
 	return tci
 }
 
-func (t *TaskCategoryItem) EnqueueOverallArrivalRate(arrivalRate float64) float64 {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	
-	dequeuedArrivalRate := arrivalRate
+func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64) {
+	vector := NewSubtaskPerfVector(dispatchItem)
+	vector.ArrivalClock = currentClock
 
-	for i := 0; i<len(t.OverallArrivalRates); i++ {
-		if dequeuedArrivalRate < 0 {
-			break
-		}
-		t.OverallArrivalRates[i] = append(t.OverallArrivalRates[i], dequeuedArrivalRate)
-		if len(t.OverallArrivalRates[i]) > t.SliceLength {
-			dequeuedArrivalRate = t.OverallArrivalRates[i][0]
-			t.OverallArrivalRates[i] = t.OverallArrivalRates[i][1:]
-		} else {
-			dequeuedArrivalRate = -1
-		}
-	}
+	dequeuedVector := vector
 
-	if dequeuedArrivalRate >= 0 && len(t.OverallArrivalRates) < t.SliceCount {
-		t.OverallArrivalRates = append(t.OverallArrivalRates, []float64{dequeuedArrivalRate})
-		dequeuedArrivalRate = -1
-	}
-
-	return dequeuedArrivalRate
-
-}
-
-func (t *TaskCategoryItem) EnqueueArrivalTime(arrivalTime time.Time) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	dequeuedTime := arrivalTime
-	for i:=0; i<len(t.ArrivalRateTrackers);i++ {
-		if time.Time.IsZero(dequeuedTime) {
+	vector.InstantOverallArrivalRateAtBeginning = instantOverallArrivalRate
+	_, vector.InstantTaskArrivalRateAtBeginning = t.ArrivalRateTracker.Enqueue(arrivalTime)
+
+	// enqueue the vector
+	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
+		matrix := t.MatrixPipeOfSubtaskPerf[i]
+		dequeuedVector = matrix.Enqueue(dequeuedVector)
+		if dequeuedVector == nil {
 			break
 		}
-		tracker := t.ArrivalRateTrackers[i]
-		dequeuedTime, _ = tracker.Enqueue(arrivalTime)
 	}
-	if !time.Time.IsZero(dequeuedTime) && len(t.ArrivalRateTrackers) < t.SliceCount {
-		newTracker := NewArrivalRateTracker(t.SliceLength)
-		newTracker.Enqueue(dequeuedTime)
-		t.ArrivalRateTrackers = append(t.ArrivalRateTrackers, newTracker)
+
+	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
+		newMatrix := NewSubtaskPerfMatrix(t.SliceLength)
+		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
+		newMatrix.Enqueue(dequeuedVector)
 	}
-	t.MemoryOccupation = unsafe.Sizeof(t)
+
+
+	vector.MostRecentCumulativeDeadlineViolationCountAtBeginning, vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64, dispatchItem *scheduler.TaskDispatchingItem, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64) {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -133,26 +108,24 @@ func (t *TaskCategoryItem) EnqueueResponse(taskResponseTime float64, unloaded_ta
 		tail = t.HistogramPipeOfTaskResponseTime[0].GetValueAtPercentile(t.PercentilePoint)
 	}
 
-	
-	vector := NewSubtaskPerfVector(dispatchItem, subtasks, tail, unloaded_tail_latency, adjusted_unloaded_tail_latency)
-
-	dequeuedVector := vector
+	taskKey := "N/A"
+	if dispatchItem != nil && dispatchItem.Task != nil {
+		taskKey = dispatchItem.Task.GetKey()
+	}
 	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
 		matrix := t.MatrixPipeOfSubtaskPerf[i]
-		dequeuedVector = matrix.Enqueue(dequeuedVector)
-		if dequeuedVector == nil {
+		if matrix.TaskExist(taskKey) {
+			vector := matrix.GetVector(taskKey)
+			vector.IncarnateSubtasks(subtasks)
+			vector.TailLatency = tail
+			vector.UnloadedTailLatency = unloaded_tail_latency
+			vector.AdjustedUnloadedTaillatency = adjusted_unloaded_tail_latency
+			vector.InstantOverallArrivalRateAtEnd = instantOverallArrivalRate
+			vector.InstantTaskArrivalRateAtEnd = t.ArrivalRateTracker.GetArrivalRatePerSecond()
+			vector.MostRecentCumulativeDeadlineViolationCountAtEnd, vector.MostRecentCumulativeDeadlineViolationTimeAtEnd = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
 			break
 		}
 	}
-
-	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
-		newMatrix := NewSubtaskPerfMatrix(t.SliceLength)
-		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
-		newMatrix.Enqueue(dequeuedVector)
-	}
-
-	t.MemoryOccupation = unsafe.Sizeof(t)
-	vector.MemoryOccupation = t.MemoryOccupation
 
 }
 

@@ -11,7 +11,7 @@ import (
 type SubtaskPerfMatrix struct {
 	Length  int
 	VectorsOfSubtaskPerf []*SubtaskPerfVector
-	VectorKeys map[string]int
+	TaskKeys map[string]bool
 	mutex   *sync.Mutex
 }
 
@@ -22,28 +22,54 @@ func NewSubtaskPerfMatrix(length int) *SubtaskPerfMatrix {
 	}
 }
 
+func (m *SubtaskPerfMatrix) TaskExist(taskKey string) bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.TaskKeys != nil {
+		if value, e := m.TaskKeys[taskKey]; e && value {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *SubtaskPerfMatrix) GetVector(taskKey string) *SubtaskPerfVector {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.VectorsOfSubtaskPerf == nil {
+		return nil
+	}
+	for _, vector := range m.VectorsOfSubtaskPerf {
+		if vector.GetTaskKey() == taskKey {
+			return vector
+		}
+	}
+	return nil
+}
+
 func (m *SubtaskPerfMatrix) Enqueue(vector *SubtaskPerfVector) *SubtaskPerfVector {
 	
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if m.VectorKeys == nil {
-		m.VectorKeys = make(map[string]int)
+	// taskkeys
+	if m.TaskKeys == nil {
+		m.TaskKeys = make(map[string]bool)
 	}
+	m.TaskKeys[vector.GetTaskKey()] = true
 
-	for key := range vector.SubtaskPerf {
-		if _, e := m.VectorKeys[key]; !e {
-			m.VectorKeys[key] = 0
-		}
-		m.VectorKeys[key] += 1
-	}
 
+	// enqueue the vector
 	if m.VectorsOfSubtaskPerf == nil {
 		m.VectorsOfSubtaskPerf = []*SubtaskPerfVector{}
 	}
 
 	m.VectorsOfSubtaskPerf = append(m.VectorsOfSubtaskPerf, vector)
 
+	// dequeue a vector if exceeding the limit of length
 	if len(m.VectorsOfSubtaskPerf) > m.Length {
 		return m.Dequeue()
 	}
@@ -55,27 +81,80 @@ func (m *SubtaskPerfMatrix) Dequeue() *SubtaskPerfVector {
 	if len(m.VectorsOfSubtaskPerf) == 0 {
 		return nil
 	}
-
 	itemDequeued := m.VectorsOfSubtaskPerf[0]
 
-	for key, _ := range itemDequeued.SubtaskPerf {
-		m.VectorKeys[key] -= 1
-	}
+	delete(m.TaskKeys, itemDequeued.GetTaskKey())
+
 	m.VectorsOfSubtaskPerf = m.VectorsOfSubtaskPerf[1:]
 	return itemDequeued
 }
 
-func (m *SubtaskPerfMatrix) GetValidKeys() []string {
+func (m *SubtaskPerfMatrix) GetNodeKeys() map[string]int{
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	
-	validKeys := []string{}
-	for key, count := range m.VectorKeys {
-		if count > 0 {
-			validKeys = append(validKeys, key)
+	nodes := map[string]int{}
+	for _, vector := range m.VectorsOfSubtaskPerf {
+		if vector.SubtaskPerf == nil {
+			continue
+		}
+		for nodekey, _ := range vector.SubtaskPerf {
+			if count, e:= nodes[nodekey]; e{
+				nodes[nodekey] = count + 1
+			} else {
+				nodes[nodekey] = 1
+			}
 		}
 	}
-	return validKeys
+
+	return nodes
+}
+
+func (m *SubtaskPerfMatrix) GetDeadlineViolation(nodekey string) (int, float64) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	count := 0
+	cumulativeTime := float64(0)
+	for _, vector := range m.VectorsOfSubtaskPerf {
+		if vector.SubtaskPerf == nil {
+			continue
+		}
+		if nodeItem, e := vector.SubtaskPerf[nodekey]; e {
+			count += nodeItem.DeadlineViolationCount
+			cumulativeTime += nodeItem.DeadlineViolationTime
+		} 
+	}
+
+	return count, cumulativeTime
+}
+
+func (m *SubtaskPerfMatrix) GetDeadlineViolationForAllNodes() (map[string]int, map[string]float64) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	counts := map[string]int{}
+	cumulativeTimes := map[string]float64{}
+	for _, vector := range m.VectorsOfSubtaskPerf {
+		if vector.SubtaskPerf == nil {
+			continue
+		}
+		for nodekey, nodeItem := range vector.SubtaskPerf {
+			if v, e := counts[nodekey]; e{
+				counts[nodekey] = v + nodeItem.DeadlineViolationCount
+			} else {
+				counts[nodekey] = nodeItem.DeadlineViolationCount
+			}
+
+			if v, e := cumulativeTimes[nodekey]; e {
+				cumulativeTimes[nodekey] = v + nodeItem.DeadlineViolationTime
+			} else {
+				cumulativeTimes[nodekey] = nodeItem.DeadlineViolationTime
+			}
+		} 
+	}
+
+	return counts, cumulativeTimes
 }
 
 

@@ -10,6 +10,7 @@ import (
 
 
 type SubtaskPerfVector struct {
+	ArrivalClock                    uint64
 	DispatchItem 			 		*scheduler.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
 	TailLatency  			 		float64
@@ -19,25 +20,35 @@ type SubtaskPerfVector struct {
 	CumulativeDeadlineViolationTime float64
 	UnloadedTailLatency      		float64
 	AdjustedUnloadedTaillatency     float64
-	MemoryOccupation                uintptr
+	InstantOverallArrivalRateAtBeginning   float64
+	InstantOverallArrivalRateAtEnd         float64
+	InstantTaskArrivalRateAtBeginning   float64
+	InstantTaskArrivalRateAtEnd         float64
+	MostRecentCumulativeDeadlineViolationCountAtBeginning map[string]int
+	MostRecentCumulativeDeadlineViolationTimeAtBeginning map[string]float64
+	MostRecentCumulativeDeadlineViolationCountAtEnd map[string]int
+	MostRecentCumulativeDeadlineViolationTimeAtEnd map[string]float64
 }
 
 func NewSubtaskPerfVector(
-	dispatchItem *scheduler.TaskDispatchingItem, 
-	subtasks map[string][]*scheduler.TaskCacheSubtaskItem,
-	tailLatency float64,
-	unloadedTailLatency float64,
-	adjustedUnloadedTailLatency float64,
+	dispatchItem *scheduler.TaskDispatchingItem,
 ) *SubtaskPerfVector {
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
 		SubtaskPerf: make(map[string]*SubtaskPerfItem),
-		TailLatency: tailLatency,
-		UnloadedTailLatency: unloadedTailLatency,
-		AdjustedUnloadedTaillatency: adjustedUnloadedTailLatency,
-		MemoryOccupation: 0,
 	}
 
+	return vector
+}
+
+func (v *SubtaskPerfVector) GetTaskKey() string {
+	if v != nil && v.DispatchItem != nil && v.DispatchItem.Task != nil {
+		return v.DispatchItem.Task.GetKey()
+	}
+	return "N/A"
+}
+
+func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 	for snKey, snItems := range subtasks {
 		if len(snItems) == 0 {
 			continue
@@ -50,7 +61,7 @@ func NewSubtaskPerfVector(
 			if subtaskItem.GetModuleName() == string(kernel.AppModuleAggregator) {
 				continue
 			}
-			vector.Fanout += 1
+			v.Fanout += 1
 
 			perfItem.ResponseTime += float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 			perfItem.GivenBudget += subtaskItem.Budget
@@ -61,13 +72,13 @@ func NewSubtaskPerfVector(
 			deadlineViolationTime := perfItem.QueueingTime - subtaskItem.Budget
 			perfItem.DeadlineViolationTime += deadlineViolationTime
 			if perfItem.QueueingTime > subtaskItem.Budget {
-				vector.DeadlineViolationCount += 1	
+				v.DeadlineViolationCount += 1	
 				perfItem.DeadlineViolationCount += 1
 			}
-			if deadlineViolationTime > vector.MaxDeadlineViolationTime {
-				vector.MaxDeadlineViolationTime = deadlineViolationTime
+			if deadlineViolationTime > v.MaxDeadlineViolationTime {
+				v.MaxDeadlineViolationTime = deadlineViolationTime
 			}
-			vector.CumulativeDeadlineViolationTime += deadlineViolationTime
+			v.CumulativeDeadlineViolationTime += deadlineViolationTime
 
 		}
 
@@ -82,9 +93,7 @@ func NewSubtaskPerfVector(
 			perfItem.DeadlineViolationTime /= float64(len(snItems))
 		}
 
-		vector.SubtaskPerf[snKey] = perfItem
+		v.SubtaskPerf[snKey] = perfItem
 
 	}
-
-	return vector
 }
