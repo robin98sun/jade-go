@@ -7,6 +7,7 @@ import (
 	"time"
 	"strconv"
 	"fmt"
+	"math"
 )
 
 
@@ -14,6 +15,7 @@ import (
 type PerfCache struct {
 	TaskCategories map[string]*TaskCategoryItem
 	ArrivalRateTracker *ArrivalRateTracker
+	arrivalClock uint64
 	mutex *sync.Mutex 
 }
 
@@ -24,6 +26,19 @@ func (p *PerfCache) Lock() {
 
 func (p *PerfCache) Unlock() {
 	p.mutex.Unlock()
+}
+
+func (p *PerfCache) GetArrivalClock() uint64 {
+	return p.arrivalClock
+}
+
+func (p *PerfCache) IncreaseArrivalClock() uint64 {
+	if p.arrivalClock == math.MaxUint64 {
+		p.arrivalClock = 0
+	} else {
+		p.arrivalClock++
+	}
+	return p.arrivalClock
 }
 
 func NewPerfCache() *PerfCache {
@@ -92,10 +107,13 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 	traces := [][]string{}
 
 	headline := []string{
+					"vector_index_overall",
 					"task_tag", 
 					"matrix_index",
-					"vector_index",
+					"vector_index_in_matrix",
 					"task_tail_latency_slo_latency(ms)", 
+					"task_tail_latency",
+					"distance_of_tail_to_slo", 
 					"task_tail_latency_slo_percentile", 
 					"fanout_degree",
 					"deadline_violation_count",
@@ -103,8 +121,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"cumulative_deadline_violation_time(ms)",
 					"overall_instant_arrival_rate",
 					"task_class_arrival_rate",
-					"task_tail_latency",
-					"distance_of_tail_to_slo", 
 					"unloaded_tail_latency",
 					"adjusted_unloaded_tail_latency",
 					"memory_consumption",
@@ -136,26 +152,30 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 
 
 	// generate traces in a flat table
+	vector_index_overall := 0
 	for taskTag, taskCategoryItem := range p.TaskCategories {
 		minSliceLength := len(taskCategoryItem.MatrixPipeOfSubtaskPerf)
 		if len(taskCategoryItem.ArrivalRateTrackers) < minSliceLength {
 			minSliceLength = len(taskCategoryItem.ArrivalRateTrackers)
 		}
-		vector_index := 0
 		matrix_index := 0
 		for i := minSliceLength-1; i>=0; i-- {
 			taskClassArrivalRate := taskCategoryItem.ArrivalRateTrackers[i].GetArrivalRatePerSecond()
 			matrix := taskCategoryItem.MatrixPipeOfSubtaskPerf[i]
 			matrix_index++
+			vector_index_in_matrix := 0
 			for j:= 0; j<len(matrix.VectorsOfSubtaskPerf); j++ {
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
 				instantOverallArrivalRate := taskCategoryItem.OverallArrivalRates[i][j]
 				line := []string{
+					strconv.Itoa(vector_index_overall),
 					taskTag,
 					strconv.Itoa(matrix_index),
-					strconv.Itoa(vector_index),
+					strconv.Itoa(vector_index_in_matrix),
 					strconv.FormatFloat(taskCategoryItem.TailLatencySLO, 'f', -1, 64),
+					strconv.FormatFloat(tail, 'f', -1, 64),
+					strconv.FormatFloat(taskCategoryItem.TailLatencySLO - tail, 'f', -1, 64),
 					strconv.FormatFloat(taskCategoryItem.PercentilePoint, 'f', -1, 64),
 					strconv.Itoa(vector.Fanout),
 					strconv.Itoa(vector.DeadlineViolationCount),
@@ -163,13 +183,12 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.FormatFloat(vector.CumulativeDeadlineViolationTime, 'f', -1, 64),
 					strconv.FormatFloat(instantOverallArrivalRate, 'f', -1, 64),
 					strconv.FormatFloat(taskClassArrivalRate, 'f', -1, 64),
-					strconv.FormatFloat(tail, 'f', -1, 64),
-					strconv.FormatFloat(taskCategoryItem.TailLatencySLO - tail, 'f', -1, 64),
 					strconv.FormatFloat(vector.UnloadedTailLatency, 'f', -1, 64),
 					strconv.FormatFloat(vector.AdjustedUnloadedTaillatency, 'f', -1, 64),
 					fmt.Sprintf("%v",vector.MemoryOccupation),
 				}
-				vector_index++
+				vector_index_overall++
+				vector_index_in_matrix++
 
 				if traceType == "full" {
 					for nodeKey, _ := range nodeKeySet {

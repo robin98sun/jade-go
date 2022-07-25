@@ -38,7 +38,6 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 				taskItem.Arrived()
 				taskItem.GenTag()
 				validTasks[taskItem.Task.GetKey()] = taskItem
-				j.PerfCache.EnqueueArrivalTime(taskItem, taskItem.ArriveTimestamp)
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
 				j.log.Op.Println("WARN: received an invalid task")
@@ -69,6 +68,7 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem)
 			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(kernel.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
+					j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
 				}
 			}
 		}
