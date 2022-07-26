@@ -14,6 +14,7 @@ import (
 type PerfCache struct {
 	TaskCategories map[string]*TaskCategoryItem
 	ArrivalRateTracker *ArrivalRateTracker
+	
 	arrivalClock uint64
 	responseClock uint64
 	mutex *sync.Mutex 
