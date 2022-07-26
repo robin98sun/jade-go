@@ -14,7 +14,7 @@ import (
 type PerfCache struct {
 	TaskCategories map[string]*TaskCategoryItem
 	ArrivalRateTracker *ArrivalRateTracker
-	
+
 	arrivalClock uint64
 	responseClock uint64
 	mutex *sync.Mutex 
@@ -139,6 +139,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"deadline_violation_count",
 					"max_deadline_violation_time(ms)",
 					"cumulative_deadline_violation_time(ms)",
+					"dispatching_rate",
 					"overall_instant_arrival_rate",
 					"task_class_arrival_rate",
 					"unloaded_tail_latency",
@@ -202,6 +203,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.Itoa(vector.DeadlineViolationCount),
 					strconv.FormatFloat(vector.MaxDeadlineViolationTime, 'f', -1, 64),
 					strconv.FormatFloat(vector.CumulativeDeadlineViolationTime, 'f', -1, 64),
+					strconv.FormatFloat(vector.DispatchingRate, 'f', -1, 64),
 					strconv.FormatFloat(vector.InstantOverallArrivalRateAtBeginning, 'f', -1, 64),
 					strconv.FormatFloat(vector.InstantTaskArrivalRateAtBeginning, 'f', -1, 64),
 					strconv.FormatFloat(vector.UnloadedTailLatency, 'f', -1, 64),

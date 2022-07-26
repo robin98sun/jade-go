@@ -80,6 +80,10 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 
 
 	vector.MostRecentCumulativeDeadlineViolationCountAtBeginning, vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
+
+	if dispatchItem != nil && dispatchItem.Options!=nil && dispatchItem.Options.DispatchingRatePerSecond > 0 {
+		vector.DispatchingRate = dispatchItem.Options.DispatchingRatePerSecond 
+	}
 }
 
 func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64) {

@@ -21,6 +21,7 @@ type SubtaskPerfVector struct {
 	CumulativeDeadlineViolationTime float64
 	UnloadedTailLatency      		float64
 	AdjustedUnloadedTaillatency     float64
+	DispatchingRate                 float64
 	InstantOverallArrivalRateAtBeginning   float64
 	InstantOverallArrivalRateAtEnd         float64
 	InstantTaskArrivalRateAtBeginning   float64
