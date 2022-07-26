@@ -11,6 +11,7 @@ import (
 
 type SubtaskPerfVector struct {
 	ArrivalClock                    uint64
+	ResponseClock					uint64
 	DispatchItem 			 		*scheduler.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
 	TailLatency  			 		float64

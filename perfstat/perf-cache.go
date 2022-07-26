@@ -15,6 +15,7 @@ type PerfCache struct {
 	TaskCategories map[string]*TaskCategoryItem
 	ArrivalRateTracker *ArrivalRateTracker
 	arrivalClock uint64
+	responseClock uint64
 	mutex *sync.Mutex 
 }
 
@@ -38,6 +39,19 @@ func (p *PerfCache) IncreaseArrivalClock() uint64 {
 		p.arrivalClock++
 	}
 	return p.arrivalClock
+}
+
+func (p *PerfCache) GetResponseClock() uint64 {
+	return p.responseClock
+}
+
+func (p *PerfCache) IncreaseResponseClock() uint64 {
+	if p.responseClock == math.MaxUint64 {
+		p.responseClock = 0
+	} else {
+		p.responseClock++
+	}
+	return p.responseClock
 }
 
 func NewPerfCache() *PerfCache {
@@ -91,8 +105,11 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 
 	taskResponseTime := float64(finishTimestamp.Sub(dispatchItem.ArriveTimestamp)/time.Millisecond)
 
+	responseClock := p.GetResponseClock()
+	p.IncreaseResponseClock()
+
 	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
-	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate)
+	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, responseClock)
 
 
 }
@@ -108,6 +125,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 
 	headline := []string{
 					"vector_arrival_clock",
+					"vector_response_clock",
 					"vector_index_in_cache",
 					"task_tag", 
 					"matrix_index",
@@ -170,6 +188,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 				tail := vector.TailLatency
 				line := []string{
 					strconv.FormatUint(vector.ArrivalClock, 10),
+					strconv.FormatUint(vector.ResponseClock, 10),
 					strconv.Itoa(vector_index_overall),
 					taskTag,
 					strconv.Itoa(matrix_index),

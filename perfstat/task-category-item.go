@@ -24,7 +24,7 @@ type TaskCategoryItem struct {
 
 func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	
-	histLength := 1000
+	histLength := 10000
 	histCount := 1
 	sliceLength := 10
 	sliceCount := 10000
@@ -82,7 +82,7 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	vector.MostRecentCumulativeDeadlineViolationCountAtBeginning, vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64) {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64) {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -118,6 +118,7 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchi
 			vector := matrix.GetVector(taskKey)
 			vector.IncarnateSubtasks(subtasks)
 			vector.TailLatency = tail
+			vector.ResponseClock = responseClock
 			vector.UnloadedTailLatency = unloaded_tail_latency
 			vector.AdjustedUnloadedTaillatency = adjusted_unloaded_tail_latency
 			vector.InstantOverallArrivalRateAtEnd = instantOverallArrivalRate
