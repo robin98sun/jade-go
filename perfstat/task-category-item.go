@@ -86,7 +86,7 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	}
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64) {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64) {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -124,6 +124,7 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchi
 			vector.TailLatency = tail
 			vector.ResponseClock = responseClock
 			vector.UnloadedTailLatency = unloaded_tail_latency
+			vector.QueueingBudget = queueing_budget
 			vector.AdjustedUnloadedTaillatency = adjusted_unloaded_tail_latency
 			vector.InstantOverallArrivalRateAtEnd = instantOverallArrivalRate
 			vector.InstantTaskArrivalRateAtEnd = t.ArrivalRateTracker.GetArrivalRatePerSecond()

@@ -318,9 +318,10 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 								unloaded_tail_latency = 0
 							}
 
-							j.TaskCache.SetUnloadedTailLatencyForTask(taskKey, unloaded_tail_latency)
 							tailCalcOverhead := float64(time.Now().Sub(overheadCheckpoint)*10 / time.Millisecond)/10
 							budget = dispatchItem.SLO.TailLatencyInMilliseconds - unloaded_tail_latency - tailCalcOverhead
+
+							j.TaskCache.SetUnloadedTailLatencyAndBudgetForTask(dispatchItem.Task.GetKey(), unloaded_tail_latency, budget)
 							j.log.Debug.Printf("[task dispatcher] task[%v] budget calculated from online histograms: %v, where tail latency for fanout[%v]: %v", 
 								task.GetKey(), budget, fanoutDegree, unloaded_tail_latency)
 						} 

@@ -18,6 +18,8 @@ type PerfCache struct {
 	arrivalClock uint64
 	responseClock uint64
 	mutex *sync.Mutex 
+
+	PerfEventMatrices *PerfEventMatrixPipe
 }
 
 
@@ -60,6 +62,7 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
+		PerfEventMatrices: NewPerfEventMatrixPipe(0, 100, 0.99),
 	}
 }
 
@@ -91,7 +94,7 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 }
 
 
-func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, adjusted_unloaded_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, queueing_budget float64, adjusted_unloaded_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
 
@@ -110,7 +113,7 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 	p.IncreaseResponseClock()
 
 	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
-	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, responseClock)
+	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, responseClock)
 
 
 }
@@ -143,6 +146,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"overall_instant_arrival_rate",
 					"task_class_arrival_rate",
 					"unloaded_tail_latency",
+					"queueing_budget",
 					"adjusted_unloaded_tail_latency",
 				}
 
@@ -207,6 +211,7 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					strconv.FormatFloat(vector.InstantOverallArrivalRateAtBeginning, 'f', -1, 64),
 					strconv.FormatFloat(vector.InstantTaskArrivalRateAtBeginning, 'f', -1, 64),
 					strconv.FormatFloat(vector.UnloadedTailLatency, 'f', -1, 64),
+					strconv.FormatFloat(vector.QueueingBudget, 'f', -1, 64),
 					strconv.FormatFloat(vector.AdjustedUnloadedTaillatency, 'f', -1, 64),
 				}
 				vector_index_overall++

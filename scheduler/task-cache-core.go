@@ -141,6 +141,7 @@ type TaskCacheTaskItem struct {
 	Fanout              int64     `json:"fanout,omitempty"`
 	AcceptTimestamp    time.Time     `json:"acceptTimestamp,omitempty"`
 	UnloadedTailLatency float64 `jason:"unloadedTail,omitempty"`
+	Budget 				float64 `jason:"budget,omitempty"`
 	BudgetNegotiationCache *BudgetNegotiationResponseCache `json:"budgetNegotiationCache,omitempty"`
 }
 
@@ -183,6 +184,8 @@ func (t *TaskCacheTaskItem) CheckStatus() TaskStatus {
 	t.status = checkStatus(t.status, items)
 	return t.status
 }
+
+
 
 
 // Budget Negotiation Response Cache
@@ -240,3 +243,5 @@ func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, resp
 		cacheItem.ResponseArriveAt = time.Now()
 	}
 }
+
+

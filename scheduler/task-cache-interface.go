@@ -297,13 +297,13 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 	return allSubtasksDone, allWorkersDone
 }
 
-func (c *TaskCache) GetDispatchingItem(taskKey string) (*TaskDispatchingItem, float64) {
+func (c *TaskCache) GetDispatchingItem(taskKey string) (*TaskDispatchingItem, float64, float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		return taskItem.task, taskItem.UnloadedTailLatency
+		return taskItem.task, taskItem.UnloadedTailLatency, taskItem.Budget
 	}
-	return nil, 0
+	return nil, 0, 0
 }
 
 func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
@@ -579,12 +579,13 @@ func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string,
 	return result, pods_to_calculate_adjusted_tail
 }
 
-func (c *TaskCache) SetUnloadedTailLatencyForTask(taskKey string, unloadedTailLatency float64) {
+func (c *TaskCache) SetUnloadedTailLatencyAndBudgetForTask(taskKey string, unloadedTailLatency float64, budget float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	
 	if cacheItem, ok := c.Cache[taskKey]; ok {
 		cacheItem.UnloadedTailLatency = unloadedTailLatency
-	}	
+		cacheItem.Budget = budget
+	}
+
 }

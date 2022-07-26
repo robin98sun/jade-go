@@ -260,6 +260,8 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *schedul
 
 		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
 
+		j.TaskCache.SetUnloadedTailLatencyAndBudgetForTask(dispatchItem.Task.GetKey(), tail_latency, budget)
+
 
 		j.log.Debug.Printf("[budget negotiation] budget negotiation done in %v milliseconds, budget estimation done in %v milliseconds",
 			dispatchItem.InquiryDoneTimestamp.Sub(dispatchItem.InquiryStartTimestamp) / time.Millisecond,
