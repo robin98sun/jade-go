@@ -165,7 +165,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 		for i:=0; i<len(m.Pipe); i++ {
 			vector = m.Pipe[i].Enqueue(vector)
 		}
-		if vector != nil && (m.PipeLength < 0 || len(m.Pipe) < m.PipeLength){
+		if vector != nil && (m.PipeLength <= 0 || len(m.Pipe) < m.PipeLength){
 			newMatrix := NewPerfEventMatrix(m.MatrixLength)
 			newMatrix.Enqueue(vector)
 			m.Pipe = append(m.Pipe, newMatrix)
