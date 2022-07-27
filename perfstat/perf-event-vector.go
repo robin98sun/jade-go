@@ -50,6 +50,15 @@ type PerfEventVector struct {
 	NormalizedTaskSLOViolationCount float64
 }
 
+func NewPerfEventVector() *PerfEventVector {
+	return &PerfEventVector{
+		EventClock: 0,
+		QueueSlice: make(map[string]*QueuePerfItem),
+		TaskSLOViolationCount: 0,
+		NormalizedTaskSLOViolationCount: 0,
+	}
+}
+
 func (v *PerfEventVector) Copy() *PerfEventVector {
 	if v == nil {
 		return nil

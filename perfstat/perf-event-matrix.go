@@ -16,7 +16,7 @@ func NewPerfEventMatrix(length int) *PerfEventMatrix {
 		Length: length,
 		mutex: &sync.Mutex{},
 		Vectors: []*PerfEventVector{},
-		CumulativeVector: &PerfEventVector{},
+		CumulativeVector: NewPerfEventVector(),
 	}
 }
 
