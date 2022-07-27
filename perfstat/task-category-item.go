@@ -51,7 +51,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	return tci
 }
 
-func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64) {
+func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) {
 	vector := NewSubtaskPerfVector(dispatchItem)
 	vector.ArrivalClock = currentClock
 
@@ -78,15 +78,14 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 		newMatrix.Enqueue(dequeuedVector)
 	}
 
-
-	vector.MostRecentCumulativeDeadlineViolationCountAtBeginning, vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
+	vector.MostRecentCumulativePerfVectorAtBeginning = cumulativePerfVector
 
 	if dispatchItem != nil && dispatchItem.Options!=nil && dispatchItem.Options.DispatchingRatePerSecond > 0 {
 		vector.DispatchingRate = dispatchItem.Options.DispatchingRatePerSecond 
 	}
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64) {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64, cumulativePerfVector *PerfEventVector) {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -128,7 +127,7 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchi
 			vector.AdjustedUnloadedTaillatency = adjusted_unloaded_tail_latency
 			vector.InstantOverallArrivalRateAtEnd = instantOverallArrivalRate
 			vector.InstantTaskArrivalRateAtEnd = t.ArrivalRateTracker.GetArrivalRatePerSecond()
-			vector.MostRecentCumulativeDeadlineViolationCountAtEnd, vector.MostRecentCumulativeDeadlineViolationTimeAtEnd = t.MatrixPipeOfSubtaskPerf[0].GetDeadlineViolationForAllNodes()
+			vector.MostRecentCumulativePerfVectorAtEnd = cumulativePerfVector
 			break
 		}
 	}

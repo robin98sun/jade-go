@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 	"math"
+	"sort"
+	"strconv"
 )
 
 type PerfEventMatrixPipe struct {
@@ -15,6 +17,7 @@ type PerfEventMatrixPipe struct {
 	BasePercentile float64
 	QueueClocks map[string]uint64
 	EventClock uint64
+	Snapshots []*PerfEventVector
 }
 
 func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
@@ -27,11 +30,23 @@ func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile flo
 		BasePercentile: basePercentile,
 		QueueClocks: map[string]uint64{},
 		EventClock: 0,
+		Snapshots: []*PerfEventVector{},
 	}
 
 	go pipe.daemon()
 
 	return pipe
+}
+
+func (m *PerfEventMatrixPipe) GetInstantCumulativePerfVector() *PerfEventVector {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if len(m.Pipe) == 0 {
+		return nil
+	}
+
+	return m.Pipe[0].GetInstantCumulativePerfVector()
 }
 
 
@@ -93,6 +108,8 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 		newEvent.TaskPerf.SLOViolationCount = 1
 		if percentile > 0 && percentile < 1 {
 			newEvent.TaskPerf.NormalizedSLOViolationCount = math.Log(basePercentile) / math.Log(percentile)
+		} else {
+			newEvent.TaskPerf.NormalizedSLOViolationCount = 1
 		}
 	}
 
@@ -154,6 +171,77 @@ func (m *PerfEventMatrixPipe) daemon() {
 			m.Pipe = append(m.Pipe, newMatrix)
 		}
 
+		if len(m.Pipe) > 0 {
+			snapshot := m.Pipe[0].GetInstantCumulativePerfVector()
+			if m.Snapshots == nil {
+				m.Snapshots = []*PerfEventVector{snapshot}
+			} else {
+				m.Snapshots = append(m.Snapshots, snapshot)
+				if m.MatrixLength > 0 && m.PipeLength > 0 {
+					if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
+						m.Snapshots = m.Snapshots[1:]
+					}
+				}
+			}
+		}
+
 		m.mutex.Unlock()
+
 	}
+}
+
+
+func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{})) [][]string {
+	printf("[perf event matrix pipe] going to collect traces")
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	traces := [][]string{}
+
+	headline := []string{
+					"event_clock",
+					"recent_task_slo_violation_count",
+					"recent_task_slo_violation_normalized_count",
+				}
+
+
+	queueKeys := []string{}
+	for queueKey := range m.QueueClocks {
+		queueKeys = append(queueKeys, queueKey)
+	}
+
+	sort.Strings(queueKeys)
+
+	for _, queueKey := range queueKeys {
+		headline = append(headline, queueKey + "-" + "ddl_violation_count")
+		headline = append(headline, queueKey + "-" + "ddl_violation_time")
+	}
+
+	traces = append(traces, headline)
+
+
+	for i := 0; i<len(m.Snapshots); i++ {
+		snapshot := m.Snapshots[i]
+		line := []string{
+			strconv.FormatUint(snapshot.EventClock, 10),
+			strconv.Itoa(snapshot.TaskSLOViolationCount),
+			strconv.FormatFloat(snapshot.NormalizedTaskSLOViolationCount, 'f', -1, 64),
+		}
+
+		for _, queueKey := range queueKeys {
+			ddl_violation_count := 0
+			ddl_violation_time := float64(0)
+
+			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
+				ddl_violation_count = perfItem.DeadlineViolationCount
+				ddl_violation_time = perfItem.DeadlineViolationTime
+			}
+
+			line = append(line, strconv.Itoa(ddl_violation_count))
+			line = append(line, strconv.FormatFloat(ddl_violation_time, 'f', -1, 64))
+		}
+		traces = append(traces, line)
+	}
+
+	return traces
 }

@@ -73,6 +73,10 @@ func (p *PerfCache) Clear() {
 	p.TaskCategories = make(map[string]*TaskCategoryItem)
 }
 
+func (p *PerfCache) AppendQueuePerfEvent(queueKey string, deadlineViolationTime float64) {
+	p.PerfEventMatrices.AppendQueuePerfEvent(queueKey, deadlineViolationTime)
+}
+
 func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
@@ -90,7 +94,7 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 
 	_, instantOverallArrivalRate := p.ArrivalRateTracker.Enqueue(arrivalTime)
 
-	categoryItem.ReserveForResponse(currentClock, dispatchItem, arrivalTime, instantOverallArrivalRate)
+	categoryItem.ReserveForResponse(currentClock, dispatchItem, arrivalTime, instantOverallArrivalRate, p.PerfEventMatrices.GetInstantCumulativePerfVector())
 }
 
 
@@ -109,12 +113,17 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 
 	taskResponseTime := float64(finishTimestamp.Sub(dispatchItem.ArriveTimestamp)/time.Millisecond)
 
+	p.PerfEventMatrices.AppendTaskPerfEvent(
+		dispatchItem.GetTailLatencySLOInMilliseconds(),
+		dispatchItem.GetPercentile(),
+		taskResponseTime,
+	)
+
 	responseClock := p.GetResponseClock()
 	p.IncreaseResponseClock()
 
 	instantOverallArrivalRate := p.ArrivalRateTracker.GetArrivalRatePerSecond()
-	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, responseClock)
-
+	categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, responseClock, p.PerfEventMatrices.GetInstantCumulativePerfVector())
 
 }
 
@@ -228,21 +237,26 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 
 						ddlVioCountOnNodeAtBeginning := 0
 						ddlVioTimeOnNodeAtBeginning := float64(0)
-						if v, e := vector.MostRecentCumulativeDeadlineViolationCountAtBeginning[nodeKey]; e {
-							ddlVioCountOnNodeAtBeginning = v
-						}
-						if v, e := vector.MostRecentCumulativeDeadlineViolationTimeAtBeginning[nodeKey]; e {
-							ddlVioTimeOnNodeAtBeginning = v
+						if vector.MostRecentCumulativePerfVectorAtBeginning != nil && len(vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice) > 0 {
+							if v, e := vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey]; e {
+								ddlVioCountOnNodeAtBeginning = v.DeadlineViolationCount
+							}
+							if v, e := vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey]; e {
+								ddlVioTimeOnNodeAtBeginning = v.DeadlineViolationTime
+							}
 						}
 
 						ddlVioCountOnNodeAtEnd := 0
 						ddlVioTimeOnNodeAtEnd := float64(0)
-						if v, e := vector.MostRecentCumulativeDeadlineViolationCountAtEnd[nodeKey]; e {
-							ddlVioCountOnNodeAtEnd = v
+						if vector.MostRecentCumulativePerfVectorAtEnd != nil && len(vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice) > 0 {
+							if v, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey]; e {
+								ddlVioCountOnNodeAtEnd = v.DeadlineViolationCount
+							}
+							if v, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey]; e {
+								ddlVioTimeOnNodeAtEnd = v.DeadlineViolationTime
+							}
 						}
-						if v, e := vector.MostRecentCumulativeDeadlineViolationTimeAtEnd[nodeKey]; e {
-							ddlVioTimeOnNodeAtEnd = v
-						}
+						
 
 						nodeline := append(line, []string{
 							nodeKey,

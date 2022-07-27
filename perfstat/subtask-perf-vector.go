@@ -27,10 +27,10 @@ type SubtaskPerfVector struct {
 	InstantOverallArrivalRateAtEnd         float64
 	InstantTaskArrivalRateAtBeginning   float64
 	InstantTaskArrivalRateAtEnd         float64
-	MostRecentCumulativeDeadlineViolationCountAtBeginning map[string]int
-	MostRecentCumulativeDeadlineViolationTimeAtBeginning map[string]float64
-	MostRecentCumulativeDeadlineViolationCountAtEnd map[string]int
-	MostRecentCumulativeDeadlineViolationTimeAtEnd map[string]float64
+
+	MostRecentCumulativePerfVectorAtBeginning *PerfEventVector
+	MostRecentCumulativePerfVectorAtEnd  *PerfEventVector
+
 }
 
 func NewSubtaskPerfVector(
