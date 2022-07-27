@@ -86,6 +86,7 @@ func main() {
 		rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
 		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
 		rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
+		rest.Get("/debug/perfcache", j.ShowPerfCache),
 	)
 	if err != nil {
 		log.Fatal(err)

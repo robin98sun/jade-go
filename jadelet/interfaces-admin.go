@@ -6,6 +6,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
 	"runtime"
+	"encoding/json"
 )
 
 // UpdateConfigurations to configure JADE at runtime
@@ -159,3 +160,16 @@ func (j *JADE) CleanAndResetQueues(w rest.ResponseWriter, r *rest.Request) {
 	}
 	j.DoneRequest(w, r, "OK")
 }
+
+func (j *JADE) ShowPerfCache(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+		j.PerfCache.Lock()
+		defer j.PerfCache.Unlock()
+		j.log.Op.Printf("getting perf cache")
+		res, _ := json.MarshalIndent(j.PerfCache, "", " ")
+		j.DoneRequest(w, r, res)
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
+}
+
