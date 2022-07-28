@@ -18,6 +18,7 @@ type PerfEventMatrixPipe struct {
 	QueueClocks map[string]uint64
 	EventClock uint64
 	Snapshots []*PerfEventVector
+	ListenerStarted bool
 }
 
 func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
@@ -36,6 +37,21 @@ func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile flo
 	go pipe.daemon()
 
 	return pipe
+}
+
+
+func (m *PerfEventMatrixPipe) StartListener() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.ListenerStarted = true
+}
+
+func (m *PerfEventMatrixPipe) StopListener() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.ListenerStarted = false
 }
 
 func (m *PerfEventMatrixPipe) GetInstantCumulativePerfVector() *PerfEventVector {
@@ -127,6 +143,13 @@ func (m *PerfEventMatrixPipe) daemon() {
 	for {
 		time.Sleep(500 * time.Millisecond)
 		m.mutex.Lock()
+
+		if !m.ListenerStarted {
+			m.mutex.Unlock()
+			continue
+		}
+
+
 		currentClock := m.GetEventClock()
 		m.increaseEventClock()
 

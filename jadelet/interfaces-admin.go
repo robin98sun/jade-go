@@ -173,3 +173,13 @@ func (j *JADE) ShowPerfCache(w rest.ResponseWriter, r *rest.Request) {
 	}
 }
 
+func (j *JADE) StartPerfEventListener(w rest.ResponseWriter, r *rest.Request) {
+	j.PerfCache.PerfEventMatrices.StartListener()
+	j.DoneRequest(w, r, "OK")
+}
+
+func (j *JADE) StopPerfEventListener(w rest.ResponseWriter, r *rest.Request) {
+	j.PerfCache.PerfEventMatrices.StopListener()
+	j.DoneRequest(w, r, "OK")
+}
+

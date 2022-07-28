@@ -66,6 +66,8 @@ func main() {
 		rest.Delete("/podCache", j.ClearPodCache),
 		rest.Delete("/perfCache", j.ClearPerfCache),
 		rest.Get("/jobs", j.GetJobIdList),
+		rest.Put("/startPerfEventListener", j.StartPerfEventListener),
+		rest.Put("/stopPerfEventListener", j.StopPerfEventListener),
 		// for debugging
 		rest.Get("/debug/jadelet", j.ShowJadelet),
 		rest.Get("/debug/configurations", j.ShowConfigurations),
