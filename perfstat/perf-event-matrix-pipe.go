@@ -157,12 +157,13 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		startTime := time.Now()
 
+		m.mutex.Lock()
+		
 		if !m.ListenerStarted {
 			m.mutex.Unlock()
 			continue
 		}
 
-		m.mutex.Lock()
 
 		currentClock := m.EventClock
 
