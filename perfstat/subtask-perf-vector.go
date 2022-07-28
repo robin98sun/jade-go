@@ -21,6 +21,8 @@ type SubtaskPerfVector struct {
 	CumulativeDeadlineViolationTime float64
 	UnloadedTailLatency      		float64
 	QueueingBudget          		float64
+	ProvisionOverhead               float64
+	AggregationOverhead             float64
 	AdjustedUnloadedTaillatency     float64
 	DispatchingRate                 float64
 	InstantOverallArrivalRateAtBeginning   float64
@@ -100,3 +102,44 @@ func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.T
 
 	}
 }
+
+func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, provisionOverhead float64, aggregationOverhead float64) []*Event {
+	events := []*Event{}
+
+	max_key := ""
+	max_response_time := float64(0)
+	event_dict := map[string]*Event{}
+	for key, item := range v.SubtaskPerf {
+		if item.ResponseTime + item.QueueingTime > taskLatencySLO - provisionOverhead - aggregationOverhead {
+			event := &Event{
+				EventType: EventTypeQueuePerformance,
+				QueuePerf: &QueuePerfItem{
+					ExceedingTaskSLOCount: 1,
+				},
+			}
+			event_dict[key] = event
+			events = append(events, event)
+		}
+		if item.ResponseTime > max_response_time {
+			max_response_time = item.ResponseTime
+			max_key = key
+		}
+	}
+
+	if item, e := event_dict[max_key]; e {
+		item.QueuePerf.MaximumResponseCount = 1
+		if item.QueuePerf.ExceedingTaskSLOCount > 0 {
+			item.QueuePerf.MaximumAndExceedingTaskSLOCount = 1
+		}
+	} else {
+		event := &Event{
+			EventType: EventTypeQueuePerformance,
+			QueuePerf: &QueuePerfItem{
+				MaximumResponseCount: 1,
+			},
+		}
+		events = append(events, event)
+	}
+
+	return events
+} 

@@ -39,6 +39,13 @@ func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile flo
 	return pipe
 }
 
+func (m *PerfEventMatrixPipe) GetQueueClocks() map[string]uint64 {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	return m.QueueClocks
+}
+
 
 func (m *PerfEventMatrixPipe) StartListener() {
 	m.mutex.Lock()
@@ -67,6 +74,8 @@ func (m *PerfEventMatrixPipe) GetInstantCumulativePerfVector() *PerfEventVector 
 
 
 func (m *PerfEventMatrixPipe) GetEventClock() uint64 {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	return m.EventClock
 }
 
@@ -79,7 +88,7 @@ func (m *PerfEventMatrixPipe) increaseEventClock() uint64 {
 	return m.EventClock
 }
 
-func (m *PerfEventMatrixPipe) AppendQueuePerfEvent(queueKey string, deadlineViolationTime float64) {
+func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -103,7 +112,7 @@ func (m *PerfEventMatrixPipe) AppendQueuePerfEvent(queueKey string, deadlineViol
 
 }
 
-func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percentile float64, responseTime float64) {
+func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percentile float64, responseTime float64, relevantQueueEvents []*Event, callback *func(uint64)) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -114,6 +123,7 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 			Percentile: percentile,
 			ResponseTime: responseTime,
 		},
+		Callback: callback,
 	}
 
 	basePercentile := 0.99
@@ -129,10 +139,12 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 		}
 	}
 
-	if m.EventBuffer == nil {
-		m.EventBuffer = []*Event{newEvent}
-	} else {
-		m.EventBuffer = append(m.EventBuffer, newEvent)
+	m.EventBuffer = append(m.EventBuffer, newEvent)
+
+	if relevantQueueEvents != nil {
+		for _, e := range relevantQueueEvents {
+			m.EventBuffer = append(m.EventBuffer, e)
+		}
 	}
 
 }
@@ -142,14 +154,16 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 	for {
 		time.Sleep(500 * time.Millisecond)
-		m.mutex.Lock()
 
 		if !m.ListenerStarted {
 			m.mutex.Unlock()
 			continue
 		}
 
-		currentClock := m.GetEventClock()
+		m.mutex.Lock()
+
+		currentClock := m.EventClock
+
 		m.increaseEventClock()
 
 		vector := &PerfEventVector{
@@ -166,14 +180,17 @@ func (m *PerfEventMatrixPipe) daemon() {
 					m.QueueClocks[event.QueuePerf.QueueKey] = currentClock
 
 					if scale, e := vector.QueueSlice[event.QueuePerf.QueueKey]; e {
-						scale.DeadlineViolationCount += event.QueuePerf.DeadlineViolationCount
-						scale.DeadlineViolationTime += event.QueuePerf.DeadlineViolationTime
+						scale.Add(event.QueuePerf)
 					} else {
 						vector.QueueSlice[event.QueuePerf.QueueKey] = event.QueuePerf
 					}
 				} else if event.EventType == EventTypeTaskPerformance {
 					vector.TaskSLOViolationCount += event.TaskPerf.SLOViolationCount
 					vector.NormalizedTaskSLOViolationCount += event.TaskPerf.NormalizedSLOViolationCount
+				}
+
+				if event.Callback != nil {
+					go (*event.Callback)(currentClock)
 				}
 				
 			}
@@ -227,12 +244,14 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 	sort.Strings(queueKeys)
 
 	for _, queueKey := range queueKeys {
-		headline = append(headline, queueKey + "-" + "ddl_violation_count")
-		headline = append(headline, queueKey + "-" + "ddl_violation_time")
+		headline = append(headline, queueKey + "::" + "ddl_violation_count")
+		headline = append(headline, queueKey + "::" + "ddl_violation_time")
+		headline = append(headline, queueKey + "::" + "max_response_count")
+		headline = append(headline, queueKey + "::" + "exceeding_slo_count")
+		headline = append(headline, queueKey + "::" + "max_and_exceeding_slo_count")
 	}
 
 	traces = append(traces, headline)
-
 
 	for i := 0; i<len(m.Snapshots); i++ {
 		snapshot := m.Snapshots[i]
@@ -245,14 +264,23 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 		for _, queueKey := range queueKeys {
 			ddl_violation_count := 0
 			ddl_violation_time := float64(0)
+			max_response_count := 0
+			exceeding_slo_count := 0
+			max_and_exceeding_slo_count := 0
 
 			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
 				ddl_violation_count = perfItem.DeadlineViolationCount
 				ddl_violation_time = perfItem.DeadlineViolationTime
+				max_response_count = perfItem.MaximumResponseCount
+				exceeding_slo_count = perfItem.ExceedingTaskSLOCount
+				max_and_exceeding_slo_count = perfItem.MaximumAndExceedingTaskSLOCount
 			}
 
 			line = append(line, strconv.Itoa(ddl_violation_count))
 			line = append(line, strconv.FormatFloat(ddl_violation_time, 'f', -1, 64))
+			line = append(line, strconv.Itoa(max_response_count))
+			line = append(line, strconv.Itoa(exceeding_slo_count))
+			line = append(line, strconv.Itoa(max_and_exceeding_slo_count))
 		}
 		traces = append(traces, line)
 	}

@@ -16,6 +16,9 @@ const (
 type QueuePerfItem struct {
 	DeadlineViolationTime  float64
 	DeadlineViolationCount int
+	MaximumResponseCount   int
+	ExceedingTaskSLOCount  int
+	MaximumAndExceedingTaskSLOCount  int
 	QueueKey               string
 }
 
@@ -25,8 +28,19 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 	return &QueuePerfItem{
 		DeadlineViolationTime: i.DeadlineViolationTime,
 		DeadlineViolationCount: i.DeadlineViolationCount,
+		MaximumResponseCount: i.MaximumResponseCount,
+		ExceedingTaskSLOCount: i.ExceedingTaskSLOCount,
+		MaximumAndExceedingTaskSLOCount: i.MaximumAndExceedingTaskSLOCount,
 		QueueKey: i.QueueKey,
 	}
+}
+
+func (i *QueuePerfItem) Add(j *QueuePerfItem) {
+	i.DeadlineViolationTime += j.DeadlineViolationTime
+	i.DeadlineViolationCount += j.DeadlineViolationCount
+	i.MaximumResponseCount += j.MaximumResponseCount
+	i.ExceedingTaskSLOCount += j.ExceedingTaskSLOCount
+	i.MaximumAndExceedingTaskSLOCount += j.MaximumAndExceedingTaskSLOCount
 }
 
 type TaskPerfItem struct {
@@ -41,6 +55,7 @@ type Event struct {
 	EventType EventType
 	QueuePerf *QueuePerfItem
 	TaskPerf  *TaskPerfItem
+	Callback  *func(uint64)
 }
 
 type PerfEventVector struct {

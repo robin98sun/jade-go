@@ -76,7 +76,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 		workerSubtaskCacheItem.SendPackageSize = reqlen
 	}
 
-	j.PerfCache.AppendQueuePerfEvent(pod.NodeKey, float64(queueItem.DispatchTime.Sub(queueItem.Deadline)/time.Millisecond))
+	j.PerfCache.AppendQueueDeadlineViolationEvent(pod.NodeKey, float64(queueItem.DispatchTime.Sub(queueItem.Deadline)/time.Millisecond))
 }
 
 func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *scheduler.TaskDispatchingItem) {

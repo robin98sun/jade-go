@@ -85,7 +85,7 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	}
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, responseClock uint64, cumulativePerfVector *PerfEventVector) {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64,provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *SubtaskPerfVector {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -121,16 +121,19 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchi
 			vector := matrix.GetVector(taskKey)
 			vector.IncarnateSubtasks(subtasks)
 			vector.TailLatency = tail
-			vector.ResponseClock = responseClock
 			vector.UnloadedTailLatency = unloaded_tail_latency
 			vector.QueueingBudget = queueing_budget
+			vector.ProvisionOverhead = provision_overhead
+			vector.AggregationOverhead = aggregation_overhead
 			vector.AdjustedUnloadedTaillatency = adjusted_unloaded_tail_latency
 			vector.InstantOverallArrivalRateAtEnd = instantOverallArrivalRate
 			vector.InstantTaskArrivalRateAtEnd = t.ArrivalRateTracker.GetArrivalRatePerSecond()
 			vector.MostRecentCumulativePerfVectorAtEnd = cumulativePerfVector
-			break
+			
+			return vector
 		}
 	}
 
+	return nil
 }
 

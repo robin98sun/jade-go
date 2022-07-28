@@ -297,13 +297,14 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 	return allSubtasksDone, allWorkersDone
 }
 
-func (c *TaskCache) GetDispatchingItem(taskKey string) (*TaskDispatchingItem, float64, float64) {
+// dispatchItem, unloaded-tail, budget, pre-dispatching-overhead, aggregation-overhead
+func (c *TaskCache) GetDispatchingItem(taskKey string) (*TaskDispatchingItem, float64, float64, float64, float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		return taskItem.task, taskItem.UnloadedTailLatency, taskItem.Budget
+		return taskItem.task, taskItem.UnloadedTailLatency, taskItem.Budget, float64(float64(taskItem.DispatchTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond)), float64(float64(taskItem.FinishTimestamp.Sub(taskItem.LastSubtaskFinishTimestamp)) / float64(time.Millisecond))
 	}
-	return nil, 0, 0
+	return nil, 0, 0, 0, 0
 }
 
 func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
