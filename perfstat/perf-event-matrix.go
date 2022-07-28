@@ -30,32 +30,23 @@ func (m *PerfEventMatrix) GetInstantCumulativePerfVector() *PerfEventVector {
 
 func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 
-	if vector == nil {return nil}
-
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if m.Vectors == nil {
-		m.Vectors = []*PerfEventVector{vector}
-	} else {
-		m.Vectors = append(m.Vectors, vector)
-	}
+	m.Vectors = append(m.Vectors, vector)
 
-	if m.CumulativeVector == nil {
-		m.CumulativeVector = vector
-	} else {
-		m.CumulativeVector.EventClock = vector.EventClock
-		for queueKey, perfItem := range vector.QueueSlice {
-			if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.DeadlineViolationCount += perfItem.DeadlineViolationCount
-				scale.DeadlineViolationTime += perfItem.DeadlineViolationTime
-			} else {
-				m.CumulativeVector.QueueSlice[queueKey] = perfItem
-			}
+	m.CumulativeVector.EventClock = vector.EventClock
+	for queueKey, perfItem := range vector.QueueSlice {
+		if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.DeadlineViolationCount += perfItem.DeadlineViolationCount
+			scale.DeadlineViolationTime += perfItem.DeadlineViolationTime
+			m.CumulativeVector.QueueSlice[queueKey] = scale
+		} else {
+			m.CumulativeVector.QueueSlice[queueKey] = perfItem
 		}
-		m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
-		m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
 	}
+	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
+	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
 
 	if m.Length > 0 && len(m.Vectors) > m.Length {
 		dequeued := m.Vectors[0]

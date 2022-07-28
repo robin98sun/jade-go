@@ -149,7 +149,6 @@ func (m *PerfEventMatrixPipe) daemon() {
 			continue
 		}
 
-
 		currentClock := m.GetEventClock()
 		m.increaseEventClock()
 
@@ -181,10 +180,6 @@ func (m *PerfEventMatrixPipe) daemon() {
 			m.EventBuffer = []*Event{}
 		}
 
-		if m.Pipe == nil {
-			m.Pipe = []*PerfEventMatrix{NewPerfEventMatrix(m.MatrixLength)}
-		}
-
 		for i:=0; i<len(m.Pipe); i++ {
 			vector = m.Pipe[i].Enqueue(vector)
 		}
@@ -196,14 +191,10 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		if len(m.Pipe) > 0 {
 			snapshot := m.Pipe[0].GetInstantCumulativePerfVector()
-			if m.Snapshots == nil {
-				m.Snapshots = []*PerfEventVector{snapshot}
-			} else {
-				m.Snapshots = append(m.Snapshots, snapshot)
-				if m.MatrixLength > 0 && m.PipeLength > 0 {
-					if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
-						m.Snapshots = m.Snapshots[1:]
-					}
+			m.Snapshots = append(m.Snapshots, snapshot)
+			if m.MatrixLength > 0 && m.PipeLength > 0 {
+				if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
+					m.Snapshots = m.Snapshots[1:]
 				}
 			}
 		}
