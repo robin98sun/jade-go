@@ -33,7 +33,7 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
-		PerfEventMatrices: NewPerfEventMatrixPipe(0, 100, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(0, 1000, 0.99),
 	}
 }
 
