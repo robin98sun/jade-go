@@ -214,15 +214,20 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 						ddlVioCountOnNodeAtBeginning := 0
 						ddlVioTimeOnNodeAtBeginning := float64(0)
 						if vector.MostRecentCumulativePerfVectorAtBeginning != nil && len(vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice) > 0 {
-							ddlVioCountOnNodeAtBeginning = vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey].DeadlineViolationCount
-							ddlVioTimeOnNodeAtBeginning = vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey].DeadlineViolationTime
+							if item, e:= vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey]; e {
+								ddlVioCountOnNodeAtBeginning = item.DeadlineViolationCount
+								ddlVioTimeOnNodeAtBeginning = item.DeadlineViolationTime
+							}
 						}
 
 						ddlVioCountOnNodeAtEnd := 0
 						ddlVioTimeOnNodeAtEnd := float64(0)
 						if vector.MostRecentCumulativePerfVectorAtEnd != nil && len(vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice) > 0 {
-							ddlVioCountOnNodeAtEnd = vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey].DeadlineViolationCount
-							ddlVioTimeOnNodeAtEnd = vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey].DeadlineViolationTime
+							if item, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey]; e{
+								ddlVioCountOnNodeAtEnd = item.DeadlineViolationCount
+								ddlVioTimeOnNodeAtEnd = item.DeadlineViolationTime
+							}
+							
 						}
 						
 

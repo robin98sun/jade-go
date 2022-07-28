@@ -115,6 +115,7 @@ func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, 
 				EventType: EventTypeQueuePerformance,
 				QueuePerf: &QueuePerfItem{
 					ExceedingTaskSLOCount: 1,
+					QueueKey: key,
 				},
 			}
 			event_dict[key] = event
@@ -136,6 +137,7 @@ func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, 
 			EventType: EventTypeQueuePerformance,
 			QueuePerf: &QueuePerfItem{
 				MaximumResponseCount: 1,
+				QueueKey: max_key,
 			},
 		}
 		events = append(events, event)

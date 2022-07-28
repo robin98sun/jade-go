@@ -158,7 +158,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 		startTime := time.Now()
 
 		m.mutex.Lock()
-		
+
 		if !m.ListenerStarted {
 			m.mutex.Unlock()
 			continue
@@ -220,7 +220,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 		}
 
 		endTime := time.Now()
-		vector.ProcessingTime = float64(endTime.Sub(startTime)/time.Millisecond)
+		vector.ProcessingTime = float64(endTime.Sub(startTime))/float64(time.Millisecond)
 		snapshot.Interval = vector.Interval
 		snapshot.ProcessingTime = vector.ProcessingTime
 
