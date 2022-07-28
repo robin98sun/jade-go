@@ -155,6 +155,8 @@ func (m *PerfEventMatrixPipe) daemon() {
 	for {
 		time.Sleep(500 * time.Millisecond)
 
+		startTime := time.Now()
+
 		if !m.ListenerStarted {
 			m.mutex.Unlock()
 			continue
@@ -168,6 +170,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		vector := &PerfEventVector{
 			EventClock: currentClock,
+			Interval: float64(500),
 			QueueSlice: map[string]*QueuePerfItem{},
 		}
 
@@ -197,24 +200,28 @@ func (m *PerfEventMatrixPipe) daemon() {
 			m.EventBuffer = []*Event{}
 		}
 
+		dequeued := vector
 		for i:=0; i<len(m.Pipe); i++ {
-			vector = m.Pipe[i].Enqueue(vector)
+			dequeued = m.Pipe[i].Enqueue(dequeued)
 		}
-		if vector != nil && (m.PipeLength <= 0 || len(m.Pipe) < m.PipeLength){
+		if dequeued != nil && (m.PipeLength <= 0 || len(m.Pipe) < m.PipeLength){
 			newMatrix := NewPerfEventMatrix(m.MatrixLength)
-			newMatrix.Enqueue(vector)
+			newMatrix.Enqueue(dequeued)
 			m.Pipe = append(m.Pipe, newMatrix)
 		}
 
-		if len(m.Pipe) > 0 {
-			snapshot := m.Pipe[0].GetInstantCumulativePerfVector()
-			m.Snapshots = append(m.Snapshots, snapshot)
-			if m.MatrixLength > 0 && m.PipeLength > 0 {
-				if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
-					m.Snapshots = m.Snapshots[1:]
-				}
+		snapshot := m.Pipe[0].GetInstantCumulativePerfVector()
+		m.Snapshots = append(m.Snapshots, snapshot)
+		if m.MatrixLength > 0 && m.PipeLength > 0 {
+			if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
+				m.Snapshots = m.Snapshots[1:]
 			}
 		}
+
+		endTime := time.Now()
+		vector.ProcessingTime = float64(endTime.Sub(startTime)/time.Millisecond)
+		snapshot.Interval = vector.Interval
+		snapshot.ProcessingTime = vector.ProcessingTime
 
 		m.mutex.Unlock()
 
@@ -231,6 +238,8 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 
 	headline := []string{
 					"event_clock",
+					"interval",
+					"processing_time",
 					"recent_task_slo_violation_count",
 					"recent_task_slo_violation_normalized_count",
 				}
@@ -257,6 +266,8 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 		snapshot := m.Snapshots[i]
 		line := []string{
 			strconv.FormatUint(snapshot.EventClock, 10),
+			strconv.FormatFloat(snapshot.Interval, 'f', -1, 64),
+			strconv.FormatFloat(snapshot.ProcessingTime, 'f', -1, 64),
 			strconv.Itoa(snapshot.TaskSLOViolationCount),
 			strconv.FormatFloat(snapshot.NormalizedTaskSLOViolationCount, 'f', -1, 64),
 		}

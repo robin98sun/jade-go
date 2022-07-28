@@ -60,6 +60,8 @@ type Event struct {
 
 type PerfEventVector struct {
 	EventClock uint64
+	ProcessingTime float64
+	Interval   float64
 	QueueSlice  map[string]*QueuePerfItem
 	TaskSLOViolationCount int
 	NormalizedTaskSLOViolationCount float64
