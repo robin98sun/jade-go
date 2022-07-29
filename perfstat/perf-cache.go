@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 	"strconv"
+	"sort"
 )
 
 
@@ -137,36 +138,32 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 					"aggregation_overhead",
 				}
 
+    queueSet := p.PerfEventMatrices.GetQueueClocks()
+    sortedQueueKeys := []string{}
+    for queueKey, _ := range queueSet {
+    	sortedQueueKeys = append(sortedQueueKeys, queueKey)
+    }
+    sort.Strings(sortedQueueKeys)
+
 	if traceType == "full" {
-		headline = append(headline, []string{
-			"queue_key",
-			"subtask_deadline_violation_count_on_node", 
-			"subtask_deadline_violation_time_on_node(ms)",
-			"cumulative_deadline_violation_count_on_node_at_beginning",
-			"cumulative_deadline_violation_time_on_node_at_beginning(ms)",
-			"cumulative_deadline_violation_count_on_node_at_end",
-			"cumulative_deadline_violation_time_on_node_at_end(ms)",
-			"avg_service_response_time(ms)",
-			"avg_communication_time(ms)",
-			"avg_queueing_time(ms)",
-	   }...)
+		for _, queueKey := range sortedQueueKeys {
+			headline = append(headline, []string{
+				"|",
+				queueKey + "::subtask_deadline_violation_count_on_node", 
+				queueKey + "::subtask_deadline_violation_time_on_node(ms)",
+				queueKey + "::cumulative_deadline_violation_count_on_node_at_beginning",
+				queueKey + "::cumulative_deadline_violation_time_on_node_at_beginning(ms)",
+				queueKey + "::cumulative_deadline_violation_count_on_node_at_end",
+				queueKey + "::cumulative_deadline_violation_time_on_node_at_end(ms)",
+				queueKey + "::avg_service_response_time(ms)",
+				queueKey + "::avg_communication_time(ms)",
+				queueKey + "::avg_queueing_time(ms)",
+		   }...)
+		}
+		
 	}
 
 	traces = append(traces, headline)
-
-	// prepare nodekeys
-	nodeKeySet := make(map[string]bool)
-
-	if traceType == "full" {
-		for _, taskCategoryItem := range p.TaskCategories {
-			for _, matrix := range taskCategoryItem.MatrixPipeOfSubtaskPerf {
-				validKeys := matrix.GetNodeKeys()
-				for key := range validKeys {
-					nodeKeySet[key] = true
-				}
-			}
-		}
-	}
 
 
 	// generate traces in a flat table
@@ -210,39 +207,41 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 				vector_index_in_matrix++
 
 				if traceType == "full" {
-					for nodeKey, nodePerfItem := range vector.SubtaskPerf {
-						dvc := nodePerfItem.DeadlineViolationCount
-						dvt := nodePerfItem.DeadlineViolationTime
-
+					for _, queueKey := range sortedQueueKeys {
+						dvc := 0
+						dvt := float64(0)
 						ddlVioCountOnNodeAtBeginning := 0
 						ddlVioTimeOnNodeAtBeginning := float64(0)
-						if vector.MostRecentCumulativePerfVectorAtBeginning != nil && len(vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice) > 0 {
-							if item, e:= vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[nodeKey]; e {
-								ddlVioCountOnNodeAtBeginning = item.DeadlineViolationCount
-								ddlVioTimeOnNodeAtBeginning = item.DeadlineViolationTime
-							}
-						}
-
 						ddlVioCountOnNodeAtEnd := 0
 						ddlVioTimeOnNodeAtEnd := float64(0)
 						avgServiceResponseTime := float64(0)
 						avgQueueingTime := float64(0)
 						avgCommunicationTime := float64(0)
 
-						if vector.MostRecentCumulativePerfVectorAtEnd != nil && len(vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice) > 0 {
-							if item, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey]; e{
-								ddlVioCountOnNodeAtEnd = item.DeadlineViolationCount
-								ddlVioTimeOnNodeAtEnd = item.DeadlineViolationTime
-								avgServiceResponseTime = item.ServiceResponseTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
-								avgQueueingTime =item.QueueingTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
-								avgCommunicationTime = item.CommunicationTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
-
+						if nodePerfItem, e := vector.SubtaskPerf[queueKey]; e {
+							dvc = nodePerfItem.DeadlineViolationCount
+							dvt = nodePerfItem.DeadlineViolationTime
+							if vector.MostRecentCumulativePerfVectorAtBeginning != nil && len(vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice) > 0 {
+								if item, e:= vector.MostRecentCumulativePerfVectorAtBeginning.QueueSlice[queueKey]; e {
+									ddlVioCountOnNodeAtBeginning = item.DeadlineViolationCount
+									ddlVioTimeOnNodeAtBeginning = item.DeadlineViolationTime
+								}
 							}
-							
+							if vector.MostRecentCumulativePerfVectorAtEnd != nil && len(vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice) > 0 {
+								if item, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[queueKey]; e{
+									ddlVioCountOnNodeAtEnd = item.DeadlineViolationCount
+									ddlVioTimeOnNodeAtEnd = item.DeadlineViolationTime
+									avgServiceResponseTime = item.ServiceResponseTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+									avgQueueingTime =item.QueueingTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+									avgCommunicationTime = item.CommunicationTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+
+								}
+								
+							}
 						}
 
-						nodeline := append(line, []string{
-							nodeKey,
+						line = append(line, 
+							"|",
 							strconv.Itoa(dvc),
 							strconv.FormatFloat(dvt, 'f', -1, 64),
 							strconv.Itoa(ddlVioCountOnNodeAtBeginning),
@@ -252,13 +251,10 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 							strconv.FormatFloat(avgServiceResponseTime, 'f', -1, 64),
 							strconv.FormatFloat(avgCommunicationTime, 'f', -1, 64),
 							strconv.FormatFloat(avgQueueingTime, 'f', -1, 64),
-						}...)
-						traces = append(traces, nodeline)
+						)
 					}
-				} else {
-					traces = append(traces, line)
 				}
-
+				traces = append(traces, line)
 			}
 		}
 

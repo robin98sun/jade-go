@@ -255,6 +255,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 	sort.Strings(queueKeys)
 
 	for _, queueKey := range queueKeys {
+		headline = append(headline, "|")
 		headline = append(headline, queueKey + "::" + "hits")
 		headline = append(headline, queueKey + "::" + "ddl_violation_count")
 		headline = append(headline, queueKey + "::" + "ddl_violation_time")
@@ -292,6 +293,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 				max_and_exceeding_slo_count = perfItem.MaximumAndExceedingTaskSLOCount
 			}
 
+			line = append(line, "|")
 			line = append(line, strconv.Itoa(hits))
 			line = append(line, strconv.Itoa(ddl_violation_count))
 			line = append(line, strconv.FormatFloat(ddl_violation_time, 'f', -1, 64))
