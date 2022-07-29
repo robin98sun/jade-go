@@ -97,6 +97,7 @@ func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string,
 		QueuePerf: &QueuePerfItem{
 			QueueKey: queueKey,
 			DeadlineViolationTime: deadlineViolationTime,
+			Hits: 1,
 		},
 	}
 	
@@ -254,6 +255,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 	sort.Strings(queueKeys)
 
 	for _, queueKey := range queueKeys {
+		headline = append(headline, queueKey + "::" + "hits")
 		headline = append(headline, queueKey + "::" + "ddl_violation_count")
 		headline = append(headline, queueKey + "::" + "ddl_violation_time")
 		headline = append(headline, queueKey + "::" + "max_response_count")
@@ -279,8 +281,10 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			max_response_count := 0
 			exceeding_slo_count := 0
 			max_and_exceeding_slo_count := 0
+			hits := 0
 
 			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
+				hits = perfItem.Hits
 				ddl_violation_count = perfItem.DeadlineViolationCount
 				ddl_violation_time = perfItem.DeadlineViolationTime
 				max_response_count = perfItem.MaximumResponseCount
@@ -288,6 +292,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 				max_and_exceeding_slo_count = perfItem.MaximumAndExceedingTaskSLOCount
 			}
 
+			line = append(line, strconv.Itoa(hits))
 			line = append(line, strconv.Itoa(ddl_violation_count))
 			line = append(line, strconv.FormatFloat(ddl_violation_time, 'f', -1, 64))
 			line = append(line, strconv.Itoa(max_response_count))

@@ -14,6 +14,7 @@ const (
 )
 
 type QueuePerfItem struct {
+	Hits                   int
 	DeadlineViolationTime  float64
 	DeadlineViolationCount int
 	MaximumResponseCount   int
@@ -26,6 +27,7 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 	if i == nil{return nil}
 
 	return &QueuePerfItem{
+		Hits: i.Hits,
 		DeadlineViolationTime: i.DeadlineViolationTime,
 		DeadlineViolationCount: i.DeadlineViolationCount,
 		MaximumResponseCount: i.MaximumResponseCount,
@@ -36,11 +38,21 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 }
 
 func (i *QueuePerfItem) Add(j *QueuePerfItem) {
+	i.Hits += j.Hits
 	i.DeadlineViolationTime += j.DeadlineViolationTime
 	i.DeadlineViolationCount += j.DeadlineViolationCount
 	i.MaximumResponseCount += j.MaximumResponseCount
 	i.ExceedingTaskSLOCount += j.ExceedingTaskSLOCount
 	i.MaximumAndExceedingTaskSLOCount += j.MaximumAndExceedingTaskSLOCount
+}
+
+func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
+	i.Hits -= j.Hits
+	i.DeadlineViolationTime -= j.DeadlineViolationTime
+	i.DeadlineViolationCount -= j.DeadlineViolationCount
+	i.MaximumResponseCount -= j.MaximumResponseCount
+	i.ExceedingTaskSLOCount -= j.ExceedingTaskSLOCount
+	i.MaximumAndExceedingTaskSLOCount -= j.MaximumAndExceedingTaskSLOCount
 }
 
 type TaskPerfItem struct {

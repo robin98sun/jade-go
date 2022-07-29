@@ -38,8 +38,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	m.CumulativeVector.EventClock = vector.EventClock
 	for queueKey, perfItem := range vector.QueueSlice {
 		if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.DeadlineViolationCount += perfItem.DeadlineViolationCount
-			scale.DeadlineViolationTime += perfItem.DeadlineViolationTime
+			scale.Add(perfItem)
 			m.CumulativeVector.QueueSlice[queueKey] = scale
 		} else {
 			m.CumulativeVector.QueueSlice[queueKey] = perfItem
@@ -54,8 +53,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 
 		for queueKey, perfItem := range dequeued.QueueSlice {
 			if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.DeadlineViolationCount -= perfItem.DeadlineViolationCount
-				scale.DeadlineViolationTime -= perfItem.DeadlineViolationTime
+				scale.Minus(perfItem)
 			} 
 		}
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
