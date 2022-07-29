@@ -33,7 +33,7 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
-		PerfEventMatrices: NewPerfEventMatrixPipe(0, 1000, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(0, 10, 0.99),
 	}
 }
 
@@ -146,6 +146,9 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 			"cumulative_deadline_violation_time_on_node_at_beginning(ms)",
 			"cumulative_deadline_violation_count_on_node_at_end",
 			"cumulative_deadline_violation_time_on_node_at_end(ms)",
+			"avg_service_response_time(ms)",
+			"avg_communication_time(ms)",
+			"avg_queueing_time(ms)",
 	   }...)
 	}
 
@@ -222,14 +225,21 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 
 						ddlVioCountOnNodeAtEnd := 0
 						ddlVioTimeOnNodeAtEnd := float64(0)
+						avgServiceResponseTime := float64(0)
+						avgQueueingTime := float64(0)
+						avgCommunicationTime := float64(0)
+
 						if vector.MostRecentCumulativePerfVectorAtEnd != nil && len(vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice) > 0 {
 							if item, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[nodeKey]; e{
 								ddlVioCountOnNodeAtEnd = item.DeadlineViolationCount
 								ddlVioTimeOnNodeAtEnd = item.DeadlineViolationTime
+								avgServiceResponseTime = item.ServiceResponseTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+								avgQueueingTime =item.QueueingTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+								avgCommunicationTime = item.CommunicationTime / float64(vector.MostRecentCumulativePerfVectorAtEnd.Depth)
+
 							}
 							
 						}
-						
 
 						nodeline := append(line, []string{
 							nodeKey,
@@ -239,6 +249,9 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 							strconv.FormatFloat(ddlVioTimeOnNodeAtBeginning, 'f', -1, 64),
 							strconv.Itoa(ddlVioCountOnNodeAtEnd),
 							strconv.FormatFloat(ddlVioTimeOnNodeAtEnd, 'f', -1, 64),
+							strconv.FormatFloat(avgServiceResponseTime, 'f', -1, 64),
+							strconv.FormatFloat(avgCommunicationTime, 'f', -1, 64),
+							strconv.FormatFloat(avgQueueingTime, 'f', -1, 64),
 						}...)
 						traces = append(traces, nodeline)
 					}

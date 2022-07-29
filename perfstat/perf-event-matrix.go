@@ -46,6 +46,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	}
 	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
 	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
+	m.CumulativeVector.Depth++
 
 	if m.Length > 0 && len(m.Vectors) > m.Length {
 		dequeued := m.Vectors[0]
@@ -58,6 +59,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		}
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount
+		m.CumulativeVector.Depth--
 
 		return dequeued
 	}
