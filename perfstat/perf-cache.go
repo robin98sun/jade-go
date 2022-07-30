@@ -148,7 +148,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 	if traceType == "full" {
 		for _, queueKey := range sortedQueueKeys {
 			headline = append(headline, []string{
-				"|",
 				queueKey + "::subtask_deadline_violation_count_on_node", 
 				queueKey + "::subtask_deadline_violation_time_on_node(ms)",
 				queueKey + "::cumulative_deadline_violation_count_on_node_at_beginning",
@@ -245,7 +244,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 						}
 
 						line = append(line, 
-							"|",
 							strconv.Itoa(dvc),
 							strconv.FormatFloat(dvt, 'f', -1, 64),
 							strconv.Itoa(ddlVioCountOnNodeAtBeginning),
