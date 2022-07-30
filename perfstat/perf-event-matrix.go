@@ -24,7 +24,6 @@ func (m *PerfEventMatrix) GetInstantCumulativePerfVector() *PerfEventVector {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if m.CumulativeVector == nil {return nil}
 	return m.CumulativeVector.Copy()
 }
 
@@ -39,7 +38,44 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	for queueKey, perfItem := range vector.QueueSlice {
 		if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
 			scale.Add(perfItem)
-			m.CumulativeVector.QueueSlice[queueKey] = scale
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
+		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scale.Add(perfItem)
 		} else {
 			m.CumulativeVector.QueueSlice[queueKey] = perfItem
 		}
