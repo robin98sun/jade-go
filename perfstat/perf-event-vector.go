@@ -20,9 +20,6 @@ type QueuePerfItem struct {
 	MaximumResponseCount   int
 	ExceedingTaskSLOCount  int
 	MaximumAndExceedingTaskSLOCount  int
-	ServiceResponseTime    float64
-	QueueingTime           float64
-	CommunicationTime	   float64
 	QueueKey               string
 }
 
@@ -36,9 +33,6 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 		MaximumResponseCount: i.MaximumResponseCount,
 		ExceedingTaskSLOCount: i.ExceedingTaskSLOCount,
 		MaximumAndExceedingTaskSLOCount: i.MaximumAndExceedingTaskSLOCount,
-		ServiceResponseTime: i.ServiceResponseTime,
-		QueueingTime: i.QueueingTime,
-		CommunicationTime: i.CommunicationTime,
 		QueueKey: i.QueueKey,
 	}
 }
@@ -50,9 +44,6 @@ func (i *QueuePerfItem) Add(j *QueuePerfItem) {
 	i.MaximumResponseCount += j.MaximumResponseCount
 	i.ExceedingTaskSLOCount += j.ExceedingTaskSLOCount
 	i.MaximumAndExceedingTaskSLOCount += j.MaximumAndExceedingTaskSLOCount
-	i.ServiceResponseTime += j.ServiceResponseTime
-	i.QueueingTime += j.QueueingTime
-	i.CommunicationTime += j.CommunicationTime
 }
 
 func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
@@ -62,9 +53,6 @@ func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
 	i.MaximumResponseCount -= j.MaximumResponseCount
 	i.ExceedingTaskSLOCount -= j.ExceedingTaskSLOCount
 	i.MaximumAndExceedingTaskSLOCount -= j.MaximumAndExceedingTaskSLOCount
-	i.ServiceResponseTime -= j.ServiceResponseTime
-	i.QueueingTime -= j.QueueingTime
-	i.CommunicationTime -= j.CommunicationTime
 }
 
 type TaskPerfItem struct {

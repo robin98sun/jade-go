@@ -91,7 +91,45 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		for queueKey, perfItem := range dequeued.QueueSlice {
 			if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
 				scale.Minus(perfItem)
-			} 
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scale.Minus(perfItem)
+			}
 		}
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount

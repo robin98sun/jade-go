@@ -159,9 +159,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 				queueKey + "::service_response_time(ms)",
 				queueKey + "::communication_time(ms)",
 				queueKey + "::queueing_time(ms)",
-				queueKey + "::avg_service_response_time(ms)",
-				queueKey + "::avg_communication_time(ms)",
-				queueKey + "::avg_queueing_time(ms)",
 		   }...)
 		}
 		
@@ -221,9 +218,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 						serviceResponseTime := float64(0)
 						queueingTime := float64(0)
 						communicationTime := float64(0)
-						avgServiceResponseTime := float64(0)
-						avgQueueingTime := float64(0)
-						avgCommunicationTime := float64(0)
 						budget := float64(0)
 
 						if nodePerfItem, e := vector.SubtaskPerf[queueKey]; e {
@@ -245,9 +239,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 								if item, e := vector.MostRecentCumulativePerfVectorAtEnd.QueueSlice[queueKey]; e{
 									ddlVioCountOnNodeAtEnd = item.DeadlineViolationCount
 									ddlVioTimeOnNodeAtEnd = item.DeadlineViolationTime
-									avgServiceResponseTime = item.ServiceResponseTime
-									avgCommunicationTime = item.CommunicationTime
-									avgQueueingTime = item.QueueingTime
 								}
 								
 							}
@@ -265,9 +256,6 @@ func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...inter
 							strconv.FormatFloat(serviceResponseTime, 'f', -1, 64),
 							strconv.FormatFloat(communicationTime, 'f', -1, 64),
 							strconv.FormatFloat(queueingTime, 'f', -1, 64),
-							strconv.FormatFloat(avgServiceResponseTime, 'f', -1, 64),
-							strconv.FormatFloat(avgCommunicationTime, 'f', -1, 64),
-							strconv.FormatFloat(avgQueueingTime, 'f', -1, 64),
 						)
 					}
 				}

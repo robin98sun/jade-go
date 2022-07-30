@@ -110,24 +110,22 @@ func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, 
 	max_response_time := float64(0)
 	event_dict := map[string]*Event{}
 	for key, item := range v.SubtaskPerf {
-		event := &Event{
-			EventType: EventTypeQueuePerformance,
-			QueuePerf: &QueuePerfItem{
-				QueueKey: key,
-				QueueingTime: item.QueueingTime,
-				CommunicationTime: item.CommunicationTime,
-				ServiceResponseTime: item.ResponseTime,
-			},
-		}
+		
 		if item.ResponseTime + item.QueueingTime > taskLatencySLO - provisionOverhead - aggregationOverhead {
-			event.QueuePerf.ExceedingTaskSLOCount = 1
+			event := &Event{
+				EventType: EventTypeQueuePerformance,
+				QueuePerf: &QueuePerfItem{
+					QueueKey: key,
+					ExceedingTaskSLOCount: 1,
+				},
+			}
+			event_dict[key] = event
+			events = append(events, event)
 		}
 		if item.ResponseTime > max_response_time {
 			max_response_time = item.ResponseTime
 			max_key = key
 		}
-		event_dict[key] = event
-		events = append(events, event)
 	}
 
 	if item, e := event_dict[max_key]; e {
