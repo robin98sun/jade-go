@@ -43,6 +43,8 @@ func (p *PerfCache) Clear() {
 	defer p.Unlock()
 
 	p.TaskCategories = make(map[string]*TaskCategoryItem)
+	p.ArrivalRateTracker = NewArrivalRateTracker(10)
+	p.PerfEventMatrices = NewPerfEventMatrixPipe(0, 100, 0.99)
 }
 
 func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
