@@ -59,8 +59,21 @@ type TaskPerfItem struct {
 	TailLatencySLO float64
 	Percentile float64
 	ResponseTime float64
-	SLOViolationCount int
+	SLOViolationCount int64
 	NormalizedSLOViolationCount float64
+	Count int64
+}
+
+func (t *TaskPerfItem) Add(i *TaskPerfItem) {
+	t.SLOViolationCount += i.SLOViolationCount
+	t.NormalizedSLOViolationCount += i.NormalizedSLOViolationCount
+	t.Count += i.Count
+}
+
+func (t *TaskPerfItem) Minus(i *TaskPerfItem) {
+	t.SLOViolationCount -= i.SLOViolationCount
+	t.NormalizedSLOViolationCount -= i.NormalizedSLOViolationCount
+	t.Count -= i.Count
 }
 
 type Event struct {
@@ -76,8 +89,10 @@ type PerfEventVector struct {
 	ProcessingTime float64
 	Interval   float64
 	QueueSlice  map[string]*QueuePerfItem
-	TaskSLOViolationCount int
+	TaskClasses map[string]*TaskPerfItem
+	TaskSLOViolationCount int64
 	NormalizedTaskSLOViolationCount float64
+	TaskCount int64
 }
 
 func NewPerfEventVector() *PerfEventVector {
@@ -108,5 +123,23 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 	}
 
 	return newVector
+}
+
+func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
+	if v == nil {
+		return 0
+	}
+
+	bar_R := float64(0)
+	total := int64(0)
+	for _, taskPerf := range v.TaskClasses {
+		total += int64(taskPerf.Count)
+	}
+	for _, taskPerf := range v.TaskClasses {
+		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - taskPerf.TailLatencySLO
+		w := float64(taskPerf.Count) / float64(total)
+		bar_R += r*w
+	}
+	return bar_R
 }
 

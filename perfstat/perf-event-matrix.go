@@ -29,6 +29,10 @@ func (m *PerfEventMatrix) GetInstantCumulativePerfVector() *PerfEventVector {
 
 func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 
+	if vector == nil {
+		return nil
+	}
+
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -36,46 +40,8 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 
 	m.CumulativeVector.EventClock = vector.EventClock
 	for queueKey, perfItem := range vector.QueueSlice {
-		if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
-		} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-			scale.Add(perfItem)
+		if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
 		} else {
 			m.CumulativeVector.QueueSlice[queueKey] = perfItem
 		}
@@ -84,60 +50,39 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
 	m.CumulativeVector.Depth++
 
+	for label, taskPerf := range vector.TaskClasses {
+		if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else {
+			m.CumulativeVector.TaskClasses[label] = taskPerf
+		}
+	}
+
+
+	var dequeued *PerfEventVector
 	if m.Length > 0 && len(m.Vectors) > m.Length {
-		dequeued := m.Vectors[0]
+		dequeued = m.Vectors[0]
 		m.Vectors = m.Vectors[1:]
 
 		for queueKey, perfItem := range dequeued.QueueSlice {
-			if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
-			} else if scale, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scale.Minus(perfItem)
+			if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+				scalar.Minus(perfItem)
 			}
 		}
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount
 		m.CumulativeVector.Depth--
 
-		return dequeued
+		for label, taskPerf := range dequeued.TaskClasses {
+			if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(taskPerf)
+			}
+		}
 	}
-	return nil
+
+
+
+	return dequeued
 }
 
 

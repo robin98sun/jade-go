@@ -123,6 +123,7 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 			TailLatencySLO: tailLatencySLO,
 			Percentile: percentile,
 			ResponseTime: responseTime,
+			Count: 1,
 		},
 		Callback: callback,
 	}
@@ -174,6 +175,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 			EventClock: currentClock,
 			Interval: float64(500),
 			QueueSlice: map[string]*QueuePerfItem{},
+			TaskClasses: map[string]*TaskPerfItem{},
 		}
 
 		if len(m.EventBuffer) > 0 {
@@ -192,6 +194,15 @@ func (m *PerfEventMatrixPipe) daemon() {
 				} else if event.EventType == EventTypeTaskPerformance {
 					vector.TaskSLOViolationCount += event.TaskPerf.SLOViolationCount
 					vector.NormalizedTaskSLOViolationCount += event.TaskPerf.NormalizedSLOViolationCount
+					vector.TaskCount += event.TaskPerf.Count
+
+					label := strconv.FormatFloat(event.TaskPerf.Percentile, 'f', -1, 64)
+					if taskClass, e := vector.TaskClasses[label]; e {
+						taskClass.Add(event.TaskPerf)
+					} else {
+						vector.TaskClasses[label] = event.TaskPerf
+					}
+
 				}
 
 				if event.Callback != nil {
@@ -244,6 +255,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 					"processing_time",
 					"recent_task_slo_violation_count",
 					"recent_task_slo_violation_normalized_count",
+					"recent_average_task_slo_violation_ratio",
 				}
 
 
@@ -271,8 +283,9 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			strconv.FormatUint(snapshot.EventClock, 10),
 			strconv.FormatFloat(snapshot.Interval, 'f', -1, 64),
 			strconv.FormatFloat(snapshot.ProcessingTime, 'f', -1, 64),
-			strconv.Itoa(snapshot.TaskSLOViolationCount),
+			strconv.FormatInt(snapshot.TaskSLOViolationCount, 10),
 			strconv.FormatFloat(snapshot.NormalizedTaskSLOViolationCount, 'f', -1, 64),
+			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationRatio(), 'f', -1, 64),
 		}
 
 		for _, queueKey := range queueKeys {
@@ -304,3 +317,4 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 
 	return traces
 }
+
