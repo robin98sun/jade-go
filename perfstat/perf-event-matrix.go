@@ -48,6 +48,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	}
 	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
 	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
+	m.CumulativeVector.TaskCount += vector.TaskCount
 	m.CumulativeVector.Depth++
 
 	for label, taskPerf := range vector.TaskClasses {
@@ -71,6 +72,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		}
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount
+		m.CumulativeVector.TaskCount -= vector.TaskCount
 		m.CumulativeVector.Depth--
 
 		for label, taskPerf := range dequeued.TaskClasses {

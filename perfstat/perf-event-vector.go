@@ -99,8 +99,10 @@ func NewPerfEventVector() *PerfEventVector {
 	return &PerfEventVector{
 		EventClock: 0,
 		QueueSlice: make(map[string]*QueuePerfItem),
+		TaskClasses: make(map[string]*TaskPerfItem),
 		TaskSLOViolationCount: 0,
 		NormalizedTaskSLOViolationCount: 0,
+		TaskCount: 0,
 	}
 }
 
@@ -131,10 +133,8 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 	}
 
 	bar_R := float64(0)
-	total := int64(0)
-	for _, taskPerf := range v.TaskClasses {
-		total += int64(taskPerf.Count)
-	}
+	total := v.TaskCount
+
 	for _, taskPerf := range v.TaskClasses {
 		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - taskPerf.TailLatencySLO
 		w := float64(taskPerf.Count) / float64(total)
