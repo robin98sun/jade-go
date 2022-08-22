@@ -3,7 +3,7 @@ package perfstat
 import (
 	// "uta.edu/aces/jade-go/histogram"
 	// "uta.edu/aces/jade-go/scheduler"
-	// "sync"
+	"sync"
 	// "time"
 )
 
@@ -76,6 +76,19 @@ func (t *TaskPerfItem) Minus(i *TaskPerfItem) {
 	t.Count -= i.Count
 }
 
+func (t *TaskPerfItem) Copy() *TaskPerfItem {
+	if t == nil {return nil}
+
+	return &TaskPerfItem{
+		TailLatencySLO: t.TailLatencySLO,
+		Percentile: t.Percentile,
+		ResponseTime: t.ResponseTime,
+		SLOViolationCount: t.SLOViolationCount,
+		NormalizedSLOViolationCount: t.NormalizedSLOViolationCount,
+		Count: t.Count,
+	}
+}
+
 type Event struct {
 	EventType EventType
 	QueuePerf *QueuePerfItem
@@ -93,16 +106,21 @@ type PerfEventVector struct {
 	TaskSLOViolationCount int64
 	NormalizedTaskSLOViolationCount float64
 	TaskCount int64
+	mutex *sync.Mutex
 }
 
 func NewPerfEventVector() *PerfEventVector {
 	return &PerfEventVector{
 		EventClock: 0,
+		Depth: 0,
+		ProcessingTime: 0,
+		Interval: 0,
 		QueueSlice: make(map[string]*QueuePerfItem),
 		TaskClasses: make(map[string]*TaskPerfItem),
 		TaskSLOViolationCount: 0,
 		NormalizedTaskSLOViolationCount: 0,
 		TaskCount: 0,
+		mutex: &sync.Mutex{},
 	}
 }
 
@@ -110,17 +128,27 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 	if v == nil {
 		return nil
 	}
-	newVector := &PerfEventVector{
-		EventClock: v.EventClock,
-		Depth: v.Depth,
-		TaskSLOViolationCount: v.TaskSLOViolationCount,
-		NormalizedTaskSLOViolationCount: v.NormalizedTaskSLOViolationCount,
-	}
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	newVector := NewPerfEventVector()
+	newVector.EventClock = v.EventClock
+	newVector.Depth = v.Depth
+	newVector.ProcessingTime = v.ProcessingTime
+	newVector.Interval = v.Interval
+	newVector.TaskSLOViolationCount = v.TaskSLOViolationCount
+	newVector.NormalizedTaskSLOViolationCount = v.NormalizedTaskSLOViolationCount
+	newVector.TaskCount = v.TaskCount
 
 	if v.QueueSlice != nil {
-		newVector.QueueSlice = map[string]*QueuePerfItem{}
 		for queueKey, item := range v.QueueSlice {
 			newVector.QueueSlice[queueKey] = item.Copy()
+		}		
+	}
+
+	if v.TaskClasses != nil {
+		for label, item := range v.TaskClasses {
+			newVector.TaskClasses[label] = item.Copy()
 		}		
 	}
 
@@ -131,6 +159,9 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 	if v == nil {
 		return 0
 	}
+
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 
 	bar_R := float64(0)
 	total := v.TaskCount

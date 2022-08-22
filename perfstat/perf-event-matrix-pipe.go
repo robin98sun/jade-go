@@ -171,12 +171,9 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		m.increaseEventClock()
 
-		vector := &PerfEventVector{
-			EventClock: currentClock,
-			Interval: float64(500),
-			QueueSlice: map[string]*QueuePerfItem{},
-			TaskClasses: map[string]*TaskPerfItem{},
-		}
+		vector := NewPerfEventVector()
+		vector.EventClock = currentClock
+		vector.Interval = float64(500)
 
 		if len(m.EventBuffer) > 0 {
 			for _, event := range m.EventBuffer {

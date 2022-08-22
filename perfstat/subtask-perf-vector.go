@@ -4,7 +4,7 @@ import (
 	// "uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/kernel"
-	// "sync"
+	"sync"
 	"time"
 )
 
@@ -33,6 +33,8 @@ type SubtaskPerfVector struct {
 	MostRecentCumulativePerfVectorAtBeginning *PerfEventVector
 	MostRecentCumulativePerfVectorAtEnd  *PerfEventVector
 
+	mutex *sync.Mutex
+
 }
 
 func NewSubtaskPerfVector(
@@ -41,6 +43,7 @@ func NewSubtaskPerfVector(
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
 		SubtaskPerf: make(map[string]*SubtaskPerfItem),
+		mutex: &sync.Mutex{},
 	}
 
 	return vector
@@ -54,6 +57,9 @@ func (v *SubtaskPerfVector) GetTaskKey() string {
 }
 
 func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
 	for snKey, snItems := range subtasks {
 		if len(snItems) == 0 {
 			continue
@@ -104,6 +110,9 @@ func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.T
 }
 
 func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, provisionOverhead float64, aggregationOverhead float64) []*Event {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
 	events := []*Event{}
 
 	max_key := ""
