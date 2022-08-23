@@ -168,8 +168,10 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 
 	for _, taskPerf := range v.TaskClasses {
 		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - taskPerf.TailLatencySLO
-		w := float64(taskPerf.Count) / float64(total)
-		bar_R += r*w
+		if r > 0 {
+			w := float64(taskPerf.Count) / float64(total)
+			bar_R += r*w
+		}
 	}
 	return bar_R
 }
