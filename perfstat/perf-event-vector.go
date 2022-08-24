@@ -165,11 +165,11 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 	defer v.mutex.Unlock()
 
 	bar_R := float64(0)
-	total := v.TaskCount
-	// total := float64(0)
-	// for _, taskPerf := range v.TaskClasses {
-	// 	total += float64(taskPerf.Count)
-	// }
+	// total := v.TaskCount
+	total := float64(0)
+	for _, taskPerf := range v.TaskClasses {
+		total += float64(taskPerf.Count)
+	}
 	for _, taskPerf := range v.TaskClasses {
 
 		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - 1 + taskPerf.Percentile
