@@ -5,6 +5,7 @@ import (
 	// "uta.edu/aces/jade-go/scheduler"
 	"sync"
 	// "time"
+	"log"
 )
 
 type EventType string
@@ -164,17 +165,23 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 	defer v.mutex.Unlock()
 
 	bar_R := float64(0)
-	// total := v.TaskCount
-	total := float64(0)
+	total := v.TaskCount
+	// total := float64(0)
+	// for _, taskPerf := range v.TaskClasses {
+	// 	total += float64(taskPerf.Count)
+	// }
 	for _, taskPerf := range v.TaskClasses {
-		total += float64(taskPerf.Count)
-	}
-	for _, taskPerf := range v.TaskClasses {
+
 		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - 1 + taskPerf.TailLatencySLO
 		if r > 0 {
 			w := float64(taskPerf.Count) / total
 			bar_R += r*w
 		}
+
+		log.Printf("clock: %v, slo: %v, pct: %v, r: %v, w: %v, barR: %v, cv: %v, ct: %v, total: %v",
+			v.EventClock, taskPerf.TailLatencySLO, taskPerf.Percentile, 
+			r, w, bar_R, taskPerf.SLOViolationCount, taskPerf.Count, total,
+		)
 	}
 	return bar_R
 }
