@@ -5,7 +5,7 @@ import (
 	// "uta.edu/aces/jade-go/scheduler"
 	"sync"
 	// "time"
-	"log"
+	// "log"
 )
 
 type EventType string
@@ -188,11 +188,40 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio(isViolation bool) floa
 		if r > 0 {
 			w := float64(taskPerf.Count) / float64(total)
 			bar_R += r*w
-			log.Printf("clock: %v, slo: %v, pct: %v, r: %v, w: %v, barR: %v, cv: %v, ct: %v, total: %v, total in vector: %v",
-				v.EventClock, taskPerf.TailLatencySLO, taskPerf.Percentile, 
-				r, w, bar_R, taskPerf.SLOViolationCount, taskPerf.Count, total, v.TaskCount,
-			)
+			// log.Printf("clock: %v, slo: %v, pct: %v, r: %v, w: %v, barR: %v, cv: %v, ct: %v, total: %v, total in vector: %v",
+			// 	v.EventClock, taskPerf.TailLatencySLO, taskPerf.Percentile, 
+			// 	r, w, bar_R, taskPerf.SLOViolationCount, taskPerf.Count, total, v.TaskCount,
+			// )
 		}
+
+	}
+	return bar_R
+}
+
+func (v *PerfEventVector) GetAverageTaskSLOViolationThreshold() float64 {
+	if v == nil {
+		return 0
+	}
+
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	bar_R := float64(0)
+	// total := v.TaskCount
+	total := float64(0)
+	for _, taskPerf := range v.TaskClasses {
+		total += float64(taskPerf.Count)
+	}
+	for _, taskPerf := range v.TaskClasses {
+
+		r := 1 - taskPerf.Percentile
+
+		w := float64(taskPerf.Count) / float64(total)
+		bar_R += r*w
+		// log.Printf("clock: %v, slo: %v, pct: %v, r: %v, w: %v, barR: %v, cv: %v, ct: %v, total: %v, total in vector: %v",
+		// 	v.EventClock, taskPerf.TailLatencySLO, taskPerf.Percentile, 
+		// 	r, w, bar_R, taskPerf.SLOViolationCount, taskPerf.Count, total, v.TaskCount,
+		// )
 
 	}
 	return bar_R

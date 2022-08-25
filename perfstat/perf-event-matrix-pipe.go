@@ -274,6 +274,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 					"recent_task_slo_violation_normalized_count",
 					"recent_average_task_slo_violation_ratio",
 					"recent_average_task_slo_exceeding_ratio",
+					"recent_average_task_slo_violation_threshold",
 					"depth",
 				}
 
@@ -310,6 +311,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			strconv.FormatFloat(snapshot.NormalizedTaskSLOViolationCount, 'f', -1, 64),
 			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationRatio(true), 'f', -1, 64),
 			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationRatio(false), 'f', -1, 64),
+			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationThreshold(), 'f', -1, 64),
 			strconv.Itoa(snapshot.Depth),
 		}
 
