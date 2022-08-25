@@ -164,7 +164,7 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 	return newVector
 }
 
-func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
+func (v *PerfEventVector) GetAverageTaskSLOViolationRatio(isViolation bool) float64 {
 	if v == nil {
 		return 0
 	}
@@ -180,7 +180,11 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio() float64 {
 	}
 	for _, taskPerf := range v.TaskClasses {
 
-		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count) - 1 + taskPerf.Percentile
+		r := float64(taskPerf.SLOViolationCount)/float64(taskPerf.Count)
+
+		if isViolation {
+			r -= 1 - taskPerf.Percentile
+		}
 		if r > 0 {
 			w := float64(taskPerf.Count) / float64(total)
 			bar_R += r*w
