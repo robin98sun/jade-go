@@ -286,6 +286,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 
 	for _, queueKey := range queueKeys {
 		headline = append(headline, queueKey + "::" + "hits")
+		headline = append(headline, queueKey + "::" + "success_rate")
 		headline = append(headline, queueKey + "::" + "ddl_violation_count")
 		headline = append(headline, queueKey + "::" + "ddl_violation_time")
 		headline = append(headline, queueKey + "::" + "max_response_count")
@@ -320,9 +321,11 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			avg_deadline_surplus := float64(0)
 			avg_deadline_surplus_ratio := float64(0)
 			hits := 0
+			success_rate := float64(0)
 
 			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
 				hits = perfItem.Hits
+				success_rate =  float64(perfItem.Success)/float64(perfItem.Hits)
 				ddl_violation_count = perfItem.DeadlineViolationCount
 				ddl_violation_time = perfItem.DeadlineViolationTime
 				max_response_count = perfItem.MaximumResponseCount
@@ -337,6 +340,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			}
 
 			line = append(line, strconv.Itoa(hits))
+			line = append(line, strconv.FormatFloat(success_rate, 'f', -1, 64))
 			line = append(line, strconv.Itoa(ddl_violation_count))
 			line = append(line, strconv.FormatFloat(ddl_violation_time, 'f', -1, 64))
 			line = append(line, strconv.Itoa(max_response_count))
@@ -345,6 +349,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.FormatFloat(avg_service_response_time, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus_ratio, 'f', -1, 64))
+			
 		}
 		traces = append(traces, line)
 	}
