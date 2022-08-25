@@ -16,7 +16,9 @@ const (
 
 type QueuePerfItem struct {
 	Hits                   int
+	Success				   int
 	DeadlineViolationTime  float64
+	ServiceResponseTime    float64
 	DeadlineViolationCount int
 	MaximumResponseCount   int
 	ExceedingTaskSLOCount  int
@@ -29,7 +31,9 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 
 	return &QueuePerfItem{
 		Hits: i.Hits,
+		Success: i.Success,
 		DeadlineViolationTime: i.DeadlineViolationTime,
+		ServiceResponseTime: i.ServiceResponseTime,
 		DeadlineViolationCount: i.DeadlineViolationCount,
 		MaximumResponseCount: i.MaximumResponseCount,
 		ExceedingTaskSLOCount: i.ExceedingTaskSLOCount,
@@ -40,7 +44,9 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 
 func (i *QueuePerfItem) Add(j *QueuePerfItem) {
 	i.Hits += j.Hits
+	i.Success += j.Success
 	i.DeadlineViolationTime += j.DeadlineViolationTime
+	i.ServiceResponseTime += j.ServiceResponseTime
 	i.DeadlineViolationCount += j.DeadlineViolationCount
 	i.MaximumResponseCount += j.MaximumResponseCount
 	i.ExceedingTaskSLOCount += j.ExceedingTaskSLOCount
@@ -49,7 +55,9 @@ func (i *QueuePerfItem) Add(j *QueuePerfItem) {
 
 func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
 	i.Hits -= j.Hits
+	i.Success -= j.Success
 	i.DeadlineViolationTime -= j.DeadlineViolationTime
+	i.ServiceResponseTime -= j.ServiceResponseTime
 	i.DeadlineViolationCount -= j.DeadlineViolationCount
 	i.MaximumResponseCount -= j.MaximumResponseCount
 	i.ExceedingTaskSLOCount -= j.ExceedingTaskSLOCount

@@ -88,6 +88,27 @@ func (m *PerfEventMatrixPipe) increaseEventClock() uint64 {
 	return m.EventClock
 }
 
+func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey string, serviceResponseTime float64) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	newEvent := &Event{
+		EventType: EventTypeQueuePerformance,
+		QueuePerf: &QueuePerfItem{
+			QueueKey: queueKey,
+			ServiceResponseTime: serviceResponseTime,
+			Success: 1,
+		},
+	}
+
+	if m.EventBuffer == nil {
+		m.EventBuffer = []*Event{newEvent}
+	} else {
+		m.EventBuffer = append(m.EventBuffer, newEvent)
+	}
+
+}
+
 func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -165,7 +186,6 @@ func (m *PerfEventMatrixPipe) daemon() {
 			m.mutex.Unlock()
 			continue
 		}
-
 
 		currentClock := m.EventClock
 
@@ -271,6 +291,9 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 		headline = append(headline, queueKey + "::" + "max_response_count")
 		headline = append(headline, queueKey + "::" + "exceeding_slo_count")
 		headline = append(headline, queueKey + "::" + "max_and_exceeding_slo_count")
+		headline = append(headline, queueKey + "::" + "avg_service_response_time")
+		headline = append(headline, queueKey + "::" + "avg_deadline_surplus")
+		headline = append(headline, queueKey + "::" + "avg_deadline_surplus_ratio")
 	}
 
 	traces = append(traces, headline)
@@ -293,6 +316,9 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			max_response_count := 0
 			exceeding_slo_count := 0
 			max_and_exceeding_slo_count := 0
+			avg_service_response_time := float64(0)
+			avg_deadline_surplus := float64(0)
+			avg_deadline_surplus_ratio := float64(0)
 			hits := 0
 
 			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
@@ -302,6 +328,12 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 				max_response_count = perfItem.MaximumResponseCount
 				exceeding_slo_count = perfItem.ExceedingTaskSLOCount
 				max_and_exceeding_slo_count = perfItem.MaximumAndExceedingTaskSLOCount
+				avg_service_response_time = perfItem.ServiceResponseTime / float64(snapshot.Depth)
+				avg_deadline_surplus = -perfItem.DeadlineViolationTime / float64(snapshot.Depth)
+				avg_deadline_surplus_ratio = 0
+				if avg_service_response_time > 0 {
+					avg_deadline_surplus_ratio = avg_deadline_surplus / avg_service_response_time
+				}
 			}
 
 			line = append(line, strconv.Itoa(hits))
@@ -310,6 +342,9 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.Itoa(max_response_count))
 			line = append(line, strconv.Itoa(exceeding_slo_count))
 			line = append(line, strconv.Itoa(max_and_exceeding_slo_count))
+			line = append(line, strconv.FormatFloat(avg_service_response_time, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_deadline_surplus, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_deadline_surplus_ratio, 'f', -1, 64))
 		}
 		traces = append(traces, line)
 	}

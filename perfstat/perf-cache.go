@@ -51,6 +51,10 @@ func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineV
 	p.PerfEventMatrices.AppendQueueDeadlineViolationEvent(queueKey, deadlineViolationTime)
 }
 
+func (p *PerfCache) AppendQueueServiceResponseTimeEvent(queueKey string, serviceResponseTime float64) {
+	p.PerfEventMatrices.AppendQueueServiceResponseTimeEvent(queueKey, serviceResponseTime)
+}
+
 func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time) {
 
 	taskTag := dispatchItem.GetUnifiedTag()

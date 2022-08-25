@@ -48,6 +48,8 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				}
 
 				postQueryPerfAnalysis := func() {
+					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.Pod.NodeKey, serviceRequestTime)
+
 					// to see if the task is done
 					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
 
