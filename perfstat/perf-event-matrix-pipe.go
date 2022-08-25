@@ -325,7 +325,9 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 
 			if perfItem, e := snapshot.QueueSlice[queueKey]; e {
 				hits = perfItem.Hits
-				success_rate =  float64(perfItem.Success)/float64(perfItem.Hits)
+				if hits > 0 {
+					success_rate =  float64(perfItem.Success)/float64(hits)
+				}
 				ddl_violation_count = perfItem.DeadlineViolationCount
 				ddl_violation_time = perfItem.DeadlineViolationTime
 				max_response_count = perfItem.MaximumResponseCount
