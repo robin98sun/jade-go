@@ -2,6 +2,7 @@ package perfstat
 
 import (
 	"sync"
+	"log"
 )
 
 type PerfEventMatrix struct {
@@ -63,7 +64,13 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	var dequeued *PerfEventVector
 	if m.Length > 0 && len(m.Vectors) > m.Length {
 		dequeued = m.Vectors[0]
+		
+		log.Printf("dequeueing vector from PerfEventMatrix")
+		log.Printf("the length before dequeuing is %v", len(m.Vectors))
+
 		m.Vectors = m.Vectors[1:]
+
+		log.Printf("the length after dequeuing is %v", len(m.Vectors))
 
 		for queueKey, perfItem := range dequeued.QueueSlice {
 			if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
