@@ -175,8 +175,10 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 
 func (m *PerfEventMatrixPipe) daemon() {
 
+
+	INTERVAL := 100
 	for {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(time.Duration(INTERVAL) * time.Millisecond)
 
 		startTime := time.Now()
 
@@ -193,7 +195,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		vector := NewPerfEventVector()
 		vector.EventClock = currentClock
-		vector.Interval = float64(500)
+		vector.Interval = float64(INTERVAL)
 
 		if len(m.EventBuffer) > 0 {
 			for _, event := range m.EventBuffer {

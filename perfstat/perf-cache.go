@@ -9,6 +9,9 @@ import (
 	"sort"
 )
 
+const(
+	EVENTMatrixPipeLength int = 600
+)
 
 // PerfCache
 type PerfCache struct {
@@ -34,7 +37,7 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
-		PerfEventMatrices: NewPerfEventMatrixPipe(0, 100, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(0, EVENTMatrixPipeLength, 0.99),
 	}
 }
 
@@ -44,7 +47,7 @@ func (p *PerfCache) Clear() {
 
 	p.TaskCategories = make(map[string]*TaskCategoryItem)
 	p.ArrivalRateTracker = NewArrivalRateTracker(10)
-	p.PerfEventMatrices = NewPerfEventMatrixPipe(0, 100, 0.99)
+	p.PerfEventMatrices = NewPerfEventMatrixPipe(0, EVENTMatrixPipeLength, 0.99)
 }
 
 func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {

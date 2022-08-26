@@ -37,9 +37,9 @@ type PodQueue struct {
 }
 
 func NewPodQueue() *PodQueue {
-	h_st := histogram.NewHistogram(1000, float64(0.1), 1)
-	h_wq := histogram.NewHistogram(1000, float64(0.1), 1)
-	h_ad := histogram.NewHistogram(1000, float64(0.1), 1)
+	h_st := histogram.NewHistogram(10000, float64(0.1), 1)
+	h_wq := histogram.NewHistogram(10000, float64(0.1), 1)
+	h_ad := histogram.NewHistogram(10000, float64(0.1), 1)
 	return &PodQueue{
 		MainQueue:        []*PodQueueItem{},
 		ShadowQueue:  	  []*PodQueueItem{},
