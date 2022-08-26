@@ -251,7 +251,9 @@ func (m *PerfEventMatrixPipe) daemon() {
 		}
 
 		if len(m.Pipe) > 0 {
-			log.Printf("the most recent matrix %v equal with No.0 matrix", m.MostRecentMatrix == m.Pipe[0])
+			if m.MostRecentMatrix != m.Pipe[0] {
+				log.Printf("the most recent matrix %v equal with No.0 matrix", m.MostRecentMatrix == m.Pipe[0])
+			}
 			snapshot := m.MostRecentMatrix.GetInstantCumulativePerfVector()
 			m.Snapshots = append(m.Snapshots, snapshot)
 			if m.MatrixLength > 0 && m.PipeLength > 0 {
