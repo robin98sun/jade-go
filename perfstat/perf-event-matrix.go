@@ -2,7 +2,7 @@ package perfstat
 
 import (
 	"sync"
-	"log"
+	// "log"
 )
 
 type PerfEventMatrix struct {
