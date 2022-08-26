@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"log"
 )
 
 type PerfEventMatrixPipe struct {
@@ -19,6 +20,7 @@ type PerfEventMatrixPipe struct {
 	EventClock uint64
 	Snapshots []*PerfEventVector
 	ListenerStarted bool
+	MostRecentMatrix *PerfEventMatrix
 }
 
 func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
@@ -240,20 +242,29 @@ func (m *PerfEventMatrixPipe) daemon() {
 			newMatrix := NewPerfEventMatrix(m.MatrixLength)
 			newMatrix.Enqueue(dequeued)
 			m.Pipe = append(m.Pipe, newMatrix)
-		}
-
-		snapshot := m.Pipe[0].GetInstantCumulativePerfVector()
-		m.Snapshots = append(m.Snapshots, snapshot)
-		if m.MatrixLength > 0 && m.PipeLength > 0 {
-			if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
-				m.Snapshots = m.Snapshots[1:]
+			for i:=0;i<len(m.Pipe);i++{
+				log.Printf("No.%v matrix in pipe have %v vectors", i, m.Pipe[i].GetLength())
 			}
 		}
+		if len(m.Pipe) == 1 {
+			m.MostRecentMatrix = m.Pipe[0]
+		}
 
-		endTime := time.Now()
-		vector.ProcessingTime = float64(endTime.Sub(startTime))/float64(time.Millisecond)
-		snapshot.Interval = vector.Interval
-		snapshot.ProcessingTime = vector.ProcessingTime
+		if len(m.Pipe) > 0 {
+			log.Printf("the most recent matrix %v equal with No.0 matrix", m.MostRecentMatrix == m.Pipe[0])
+			snapshot := m.MostRecentMatrix.GetInstantCumulativePerfVector()
+			m.Snapshots = append(m.Snapshots, snapshot)
+			if m.MatrixLength > 0 && m.PipeLength > 0 {
+				if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
+					m.Snapshots = m.Snapshots[1:]
+				}
+			}
+
+			endTime := time.Now()
+			vector.ProcessingTime = float64(endTime.Sub(startTime))/float64(time.Millisecond)
+			snapshot.Interval = vector.Interval
+			snapshot.ProcessingTime = vector.ProcessingTime
+		}
 
 		m.mutex.Unlock()
 

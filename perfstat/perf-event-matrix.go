@@ -21,6 +21,12 @@ func NewPerfEventMatrix(length int) *PerfEventMatrix {
 	}
 }
 
+func (m *PerfEventMatrix) GetLength() int {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	return len(m.Vectors)
+}
+
 func (m *PerfEventMatrix) GetInstantCumulativePerfVector() *PerfEventVector {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
