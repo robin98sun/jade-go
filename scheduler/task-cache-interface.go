@@ -558,6 +558,9 @@ func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCache
 }
 
 func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string) (map[string][]*TaskCacheSubtaskItem, []*kernel.Pod) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	
 	result := make(map[string][]*TaskCacheSubtaskItem)
 	pods_to_calculate_adjusted_tail := []*kernel.Pod{}
 	if taskItem, e := c.Cache[taskKey]; e {
