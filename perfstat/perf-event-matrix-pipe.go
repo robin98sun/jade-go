@@ -245,7 +245,9 @@ func (m *PerfEventMatrixPipe) daemon() {
 			for i:=0;i<len(m.Pipe);i++{
 				log.Printf("No.%v matrix in pipe have %v vectors", i, m.Pipe[i].GetLength())
 			}
-			log.Printf("the most recent matrix have %v vectors", m.MostRecentMatrix.GetLength())
+			if m.MostRecentMatrix != nil {
+				log.Printf("the most recent matrix have %v vectors", m.MostRecentMatrix.GetLength())
+			}
 		}
 		if len(m.Pipe) == 1 {
 			m.MostRecentMatrix = m.Pipe[0]
