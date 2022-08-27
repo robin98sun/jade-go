@@ -49,23 +49,79 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	for queueKey, perfItem := range vector.QueueSlice {
 		if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
 			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
 		} else {
 			m.CumulativeVector.QueueSlice[queueKey] = perfItem
 		}
 	}
-	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
-	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
-	m.CumulativeVector.TaskCount += vector.TaskCount
-	m.CumulativeVector.Depth++
 
 	for label, taskPerf := range vector.TaskClasses {
 		if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
 			scalar.Add(taskPerf)
 		} else {
 			m.CumulativeVector.TaskClasses[label] = taskPerf
 		}
 	}
 
+	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
+	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
+	m.CumulativeVector.TaskCount += vector.TaskCount
+	m.CumulativeVector.Depth++
 
 	var dequeued *PerfEventVector
 	if m.Length > 0 && len(m.Vectors) > m.Length {
@@ -78,21 +134,92 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 
 		// log.Printf("the length after dequeuing is %v", len(m.Vectors))
 
-		for queueKey, perfItem := range dequeued.QueueSlice {
-			if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
-				scalar.Minus(perfItem)
+		for label, item := range dequeued.QueueSlice {
+			if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} 
+		}
+		for label, item := range dequeued.TaskClasses {
+			if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
+			} else if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
+				scalar.Minus(item)
 			}
 		}
+
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount
 		m.CumulativeVector.TaskCount -= dequeued.TaskCount
 		m.CumulativeVector.Depth--
 
-		for label, taskPerf := range dequeued.TaskClasses {
-			if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
-				scalar.Minus(taskPerf)
-			}
-		}
 	}
 
 
