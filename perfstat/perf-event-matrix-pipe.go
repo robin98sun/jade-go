@@ -290,6 +290,8 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 					"recent_average_task_slo_violation_ratio",
 					"recent_average_task_slo_exceeding_ratio",
 					"recent_average_task_slo_violation_threshold",
+					"cumulative_average_task_slo_violation_ratio",
+					"cumulative_average_task_slo_exceeding_ratio",
 					"depth",
 				}
 
@@ -316,17 +318,27 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 
 	traces = append(traces, headline)
 
+	cumulative_slo_violation_ratio := float64(0)
+	cumulative_slo_exceeding_ratio := float64(0)
+
 	for i := 0; i<len(m.Snapshots); i++ {
 		snapshot := m.Snapshots[i]
+
+		slo_violation_ratio := snapshot.GetAverageTaskSLOViolationRatio(true)
+		slo_exceeding_ratio := snapshot.GetAverageTaskSLOViolationRatio(false)
+		cumulative_slo_violation_ratio += slo_violation_ratio
+		cumulative_slo_exceeding_ratio += slo_exceeding_ratio
 		line := []string{
 			strconv.FormatUint(snapshot.EventClock, 10),
 			strconv.FormatFloat(snapshot.Interval, 'f', -1, 64),
 			strconv.FormatFloat(snapshot.ProcessingTime, 'f', -1, 64),
 			strconv.FormatInt(snapshot.TaskSLOViolationCount, 10),
 			strconv.FormatFloat(snapshot.NormalizedTaskSLOViolationCount, 'f', -1, 64),
-			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationRatio(true), 'f', -1, 64),
-			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationRatio(false), 'f', -1, 64),
+			strconv.FormatFloat(slo_violation_ratio, 'f', -1, 64),
+			strconv.FormatFloat(slo_exceeding_ratio, 'f', -1, 64),
 			strconv.FormatFloat(snapshot.GetAverageTaskSLOViolationThreshold(), 'f', -1, 64),
+			strconv.FormatFloat(cumulative_slo_violation_ratio, 'f', -1, 64),
+			strconv.FormatFloat(cumulative_slo_exceeding_ratio, 'f', -1, 64),
 			strconv.Itoa(snapshot.Depth),
 		}
 
