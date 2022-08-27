@@ -10,7 +10,8 @@ import (
 )
 
 const(
-	EVENTMatrixPipeLength int = 600
+	EVENTMatrixSize int = 600
+	EVENTPipeLength int = 1
 )
 
 // PerfCache
@@ -37,7 +38,7 @@ func NewPerfCache() *PerfCache {
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
 		mutex: &sync.Mutex{},
-		PerfEventMatrices: NewPerfEventMatrixPipe(0, EVENTMatrixPipeLength, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(EVENTPipeLength, EVENTMatrixSize, 0.99),
 	}
 }
 
@@ -47,7 +48,7 @@ func (p *PerfCache) Clear() {
 
 	p.TaskCategories = make(map[string]*TaskCategoryItem)
 	p.ArrivalRateTracker = NewArrivalRateTracker(10)
-	p.PerfEventMatrices = NewPerfEventMatrixPipe(0, EVENTMatrixPipeLength, 0.99)
+	p.PerfEventMatrices = NewPerfEventMatrixPipe(EVENTPipeLength, EVENTMatrixSize, 0.99)
 }
 
 func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
