@@ -175,7 +175,7 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 
 }
 
-func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(envMetrics *jadesdk.MetricsEnv) {
+func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(queueKey string, envMetrics *jadesdk.MetricsEnv) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -188,6 +188,7 @@ func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(envMetrics *jadesdk.MetricsEnv)
 			SystemContextSwitches: float64(envMetrics.System.ContextSwitches),
 			VoltageCore: envMetrics.Voltage.Core,
 			Count: 1,
+			QueueKey: queueKey,
 		},
 	}
 
@@ -244,9 +245,12 @@ func (m *PerfEventMatrixPipe) daemon() {
 					} else {
 						vector.TaskClasses[label] = event.TaskPerf.Copy()
 					}
-
 				} else if event.EventType == EventTypeEnvPerformance {
-					vector.EnvPerf.Add(event.EnvPerf)
+					if envPerf, e := vector.EnvPerf[event.EnvPerf.QueueKey]; e {
+						envPerf.Add(event.EnvPerf)
+					} else {
+						vector.EnvPerf[event.EnvPerf.QueueKey] = event.EnvPerf.Copy()
+					}
 				}
 
 				if event.Callback != nil {
@@ -408,12 +412,13 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus_ratio, 'f', -1, 64))
 
-			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUFrequence, 'f', -1, 64))
-			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUTemperature, 'f', -1, 64))
-			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUIdle, 'f', -1, 64))
-			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.SystemContextSwitches, 'f', -1, 64))
-			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.VoltageCore, 'f', -1, 64))
-
+			if envPerf, e := snapshot.EnvPerf[queueKey]; e {
+				line = append(line, strconv.FormatFloat(envPerf.CPUFrequence, 'f', -1, 64))
+				line = append(line, strconv.FormatFloat(envPerf.CPUTemperature, 'f', -1, 64))
+				line = append(line, strconv.FormatFloat(envPerf.CPUIdle, 'f', -1, 64))
+				line = append(line, strconv.FormatFloat(envPerf.SystemContextSwitches, 'f', -1, 64))
+				line = append(line, strconv.FormatFloat(envPerf.VoltageCore, 'f', -1, 64))
+			}
 			
 		}
 		traces = append(traces, line)

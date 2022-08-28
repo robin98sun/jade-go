@@ -112,6 +112,7 @@ type EnvPerfItem struct {
 	SystemContextSwitches float64
 	VoltageCore float64
 	Count int64
+	QueueKey string
 }
 
 func (i *EnvPerfItem) Add(j *EnvPerfItem) {
@@ -164,6 +165,7 @@ func (i *EnvPerfItem) Copy() *EnvPerfItem {
 		SystemContextSwitches: i.SystemContextSwitches,
 		VoltageCore: i.VoltageCore,
 		Count: i.Count,
+		QueueKey: i.QueueKey,
 	}
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -185,7 +187,7 @@ type PerfEventVector struct {
 	Interval   float64
 	QueueSlice  map[string]*QueuePerfItem
 	TaskClasses map[string]*TaskPerfItem
-	EnvPerf *EnvPerfItem
+	EnvPerf map[string]*EnvPerfItem
 	TaskSLOViolationCount int64
 	NormalizedTaskSLOViolationCount float64
 	TaskCount int64
@@ -200,7 +202,7 @@ func NewPerfEventVector() *PerfEventVector {
 		Interval: 0,
 		QueueSlice: make(map[string]*QueuePerfItem),
 		TaskClasses: make(map[string]*TaskPerfItem),
-		EnvPerf: &EnvPerfItem{},
+		EnvPerf: make(map[string]*EnvPerfItem), 
 		TaskSLOViolationCount: 0,
 		NormalizedTaskSLOViolationCount: 0,
 		TaskCount: 0,
@@ -237,7 +239,9 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 	}
 
 	if v.EnvPerf != nil {
-		newVector.EnvPerf = v.EnvPerf.Copy()
+		for label, item := range v.EnvPerf {
+			newVector.EnvPerf[label] = item.Copy()
+		}	
 	}
 
 	return newVector

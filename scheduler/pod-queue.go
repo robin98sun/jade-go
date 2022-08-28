@@ -34,6 +34,8 @@ type PodQueue struct {
 	// HistogramInQueueTime *histogram.Histogram
 	// HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
+
+	
 }
 
 func NewPodQueue() *PodQueue {

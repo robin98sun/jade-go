@@ -51,7 +51,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.Pod.NodeKey, serviceRequestTime)
 
 					metricsEnv := msg.MetricsEnv
-					j.PerfCache.EnqueueEnvMetrics(metricsEnv)
+					j.PerfCache.EnqueueEnvMetrics(subtask.Pod.NodeKey, metricsEnv)
 
 					// to see if the task is done
 					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)

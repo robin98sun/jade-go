@@ -115,8 +115,8 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 
 }
 
-func (p *PerfCache) EnqueueEnvMetrics(metrics *jadesdk.MetricsEnv) {
-
+func (p *PerfCache) EnqueueEnvMetrics(queueKey string, metrics *jadesdk.MetricsEnv) {
+	p.PerfEventMatrices.AppendEnvPerfEvent(queueKey, metrics)
 }
 
 func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...interface{})) [][]string {
