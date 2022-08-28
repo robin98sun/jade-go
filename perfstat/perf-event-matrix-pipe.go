@@ -210,7 +210,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 					if scale, e := vector.QueueSlice[event.QueuePerf.QueueKey]; e {
 						scale.Add(event.QueuePerf)
 					} else {
-						vector.QueueSlice[event.QueuePerf.QueueKey] = event.QueuePerf
+						vector.QueueSlice[event.QueuePerf.QueueKey] = event.QueuePerf.Copy()
 					}
 				} else if event.EventType == EventTypeTaskPerformance {
 					vector.TaskSLOViolationCount += event.TaskPerf.SLOViolationCount
@@ -221,7 +221,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 					if taskClass, e := vector.TaskClasses[label]; e {
 						taskClass.Add(event.TaskPerf)
 					} else {
-						vector.TaskClasses[label] = event.TaskPerf
+						vector.TaskClasses[label] = event.TaskPerf.Copy()
 					}
 
 				}
@@ -361,8 +361,8 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 				max_response_count = perfItem.MaximumResponseCount
 				exceeding_slo_count = perfItem.ExceedingTaskSLOCount
 				max_and_exceeding_slo_count = perfItem.MaximumAndExceedingTaskSLOCount
-				avg_service_response_time = perfItem.ServiceResponseTime / float64(snapshot.Depth)
-				avg_deadline_surplus = -perfItem.DeadlineViolationTime / float64(snapshot.Depth)
+				avg_service_response_time = perfItem.ServiceResponseTime / float64(hits)
+				avg_deadline_surplus = -perfItem.DeadlineViolationTime / float64(hits)
 				avg_deadline_surplus_ratio = 0
 				if avg_service_response_time > 0 {
 					avg_deadline_surplus_ratio = avg_deadline_surplus / avg_service_response_time
