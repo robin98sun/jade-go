@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	// "log"
+	"uta.edu/aces/jadesdk"
 )
 
 type PerfEventMatrixPipe struct {
@@ -94,7 +95,7 @@ func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey strin
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	newEvent := &Event{
+	event := &Event{
 		EventType: EventTypeQueuePerformance,
 		QueuePerf: &QueuePerfItem{
 			QueueKey: queueKey,
@@ -104,9 +105,9 @@ func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey strin
 	}
 
 	if m.EventBuffer == nil {
-		m.EventBuffer = []*Event{newEvent}
+		m.EventBuffer = []*Event{event}
 	} else {
-		m.EventBuffer = append(m.EventBuffer, newEvent)
+		m.EventBuffer = append(m.EventBuffer, event)
 	}
 
 }
@@ -115,7 +116,7 @@ func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string,
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	newEvent := &Event{
+	event := &Event{
 		EventType: EventTypeQueuePerformance,
 		QueuePerf: &QueuePerfItem{
 			QueueKey: queueKey,
@@ -125,13 +126,13 @@ func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string,
 	}
 	
 	if deadlineViolationTime > 0 {
-		newEvent.QueuePerf.DeadlineViolationCount = 1
+		event.QueuePerf.DeadlineViolationCount = 1
 	}
 
 	if m.EventBuffer == nil {
-		m.EventBuffer = []*Event{newEvent}
+		m.EventBuffer = []*Event{event}
 	} else {
-		m.EventBuffer = append(m.EventBuffer, newEvent)
+		m.EventBuffer = append(m.EventBuffer, event)
 	}
 
 }
@@ -140,7 +141,7 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	newEvent := &Event{
+	event := &Event{
 		EventType: EventTypeTaskPerformance,
 		TaskPerf: &TaskPerfItem{
 			TailLatencySLO: tailLatencySLO,
@@ -156,21 +157,41 @@ func (m *PerfEventMatrixPipe) AppendTaskPerfEvent(tailLatencySLO float64, percen
 		basePercentile = m.BasePercentile
 	}
 	if responseTime > tailLatencySLO {
-		newEvent.TaskPerf.SLOViolationCount = 1
+		event.TaskPerf.SLOViolationCount = 1
 		if percentile > 0 && percentile < 1 {
-			newEvent.TaskPerf.NormalizedSLOViolationCount = math.Log(basePercentile) / math.Log(percentile)
+			event.TaskPerf.NormalizedSLOViolationCount = math.Log(basePercentile) / math.Log(percentile)
 		} else {
-			newEvent.TaskPerf.NormalizedSLOViolationCount = 1
+			event.TaskPerf.NormalizedSLOViolationCount = 1
 		}
 	}
 
-	m.EventBuffer = append(m.EventBuffer, newEvent)
+	m.EventBuffer = append(m.EventBuffer, event)
 
 	if relevantQueueEvents != nil {
 		for _, e := range relevantQueueEvents {
 			m.EventBuffer = append(m.EventBuffer, e)
 		}
 	}
+
+}
+
+func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(envMetrics *jadesdk.MetricsEnv) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	event := &Event{
+		EventType: EventTypeEnvPerformance,
+		EnvPerf: &EnvPerfItem{
+			CPUFrequence: envMetrics.CPU.Frequency,
+			CPUTemperature: envMetrics.Temperature.Cpu,
+			CPUIdle: float64(envMetrics.CPU.Idle),
+			SystemContextSwitches: float64(envMetrics.System.ContextSwitches),
+			VoltageCore: envMetrics.Voltage.Core,
+			Count: 1,
+		},
+	}
+
+	m.EventBuffer = append(m.EventBuffer, event)
 
 }
 
@@ -224,6 +245,8 @@ func (m *PerfEventMatrixPipe) daemon() {
 						vector.TaskClasses[label] = event.TaskPerf.Copy()
 					}
 
+				} else if event.EventType == EventTypeEnvPerformance {
+					vector.EnvPerf.Add(event.EnvPerf)
 				}
 
 				if event.Callback != nil {
@@ -311,6 +334,11 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 		headline = append(headline, queueKey + "::" + "avg_service_response_time")
 		headline = append(headline, queueKey + "::" + "avg_deadline_surplus")
 		headline = append(headline, queueKey + "::" + "avg_deadline_surplus_ratio")
+		headline = append(headline, queueKey + "::" + "cpu_frequency")
+		headline = append(headline, queueKey + "::" + "cpu_temperature")
+		headline = append(headline, queueKey + "::" + "cpu_idle")
+		headline = append(headline, queueKey + "::" + "system_context_switches")
+		headline = append(headline, queueKey + "::" + "voltage_core")
 	}
 
 	traces = append(traces, headline)
@@ -379,6 +407,13 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.FormatFloat(avg_service_response_time, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus_ratio, 'f', -1, 64))
+
+			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUFrequence, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUTemperature, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.CPUIdle, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.SystemContextSwitches, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(snapshot.EnvPerf.VoltageCore, 'f', -1, 64))
+
 			
 		}
 		traces = append(traces, line)

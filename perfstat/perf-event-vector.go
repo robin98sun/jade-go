@@ -5,15 +5,18 @@ import (
 	// "uta.edu/aces/jade-go/scheduler"
 	"sync"
 	// "time"
-	// "log"
+	"log"
 )
 
 type EventType string
 const (
 	EventTypeQueuePerformance EventType = "queue-perf"	
 	EventTypeTaskPerformance EventType = "task-perf"
+	EventTypeEnvPerformance EventType = "env-perf"
 )
 
+///////////////////////////////////////////////////////////////////////////
+// Queue performance item
 type QueuePerfItem struct {
 	Hits                   int
 	Success				   int
@@ -64,6 +67,8 @@ func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
 	i.MaximumAndExceedingTaskSLOCount -= j.MaximumAndExceedingTaskSLOCount
 }
 
+///////////////////////////////////////////////////////////////////////////
+// task performance item
 type TaskPerfItem struct {
 	TailLatencySLO float64
 	Percentile float64
@@ -98,10 +103,78 @@ func (t *TaskPerfItem) Copy() *TaskPerfItem {
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////
+// environment performance item
+type EnvPerfItem struct {
+	CPUFrequence float64
+	CPUTemperature float64
+	CPUIdle float64
+	SystemContextSwitches float64
+	VoltageCore float64
+	Count int64
+}
+
+func (i *EnvPerfItem) Add(j *EnvPerfItem) {
+	i.Count += j.Count
+	
+	if i.Count <= 0 {
+		i.Count = 1
+	}
+
+	total := float64(i.Count)
+
+	i.CPUFrequence = (i.CPUFrequence * float64(i.Count) + j.CPUFrequence * float64(j.Count)) / total
+	i.CPUTemperature = (i.CPUTemperature * float64(i.Count) + j.CPUTemperature * float64(j.Count)) / total
+	i.CPUIdle = (i.CPUIdle * float64(i.Count) + j.CPUIdle * float64(j.Count)) / total
+	i.SystemContextSwitches = (i.SystemContextSwitches * float64(i.Count) + j.SystemContextSwitches * float64(j.Count)) / total
+	i.VoltageCore = (i.VoltageCore * float64(i.Count) + j.VoltageCore * float64(j.Count)) / total
+
+}
+
+func (i *EnvPerfItem) Minus(j *EnvPerfItem) {
+	total := float64(i.Count)
+	i.Count -= j.Count
+	
+	if i.Count < 0 {
+		i.Count = 0
+	}
+
+	if i.Count > 0 {
+		i.CPUFrequence = (i.CPUFrequence * total - j.CPUFrequence * float64(j.Count)) / float64(i.Count)
+		i.CPUTemperature = (i.CPUTemperature * total - j.CPUTemperature * float64(j.Count)) / float64(i.Count)
+		i.CPUIdle = (i.CPUIdle * total - j.CPUIdle * float64(j.Count)) / float64(i.Count)
+		i.SystemContextSwitches = (i.SystemContextSwitches * total - j.SystemContextSwitches * float64(j.Count)) / float64(i.Count)
+		i.VoltageCore = (i.VoltageCore * total - j.VoltageCore * float64(j.Count)) / float64(i.Count)
+	} else {
+		i.CPUFrequence = 0
+		i.CPUTemperature = 0
+		i.CPUIdle = 0
+		i.SystemContextSwitches = 0
+		i.VoltageCore = 0
+	}
+
+}
+
+func (i *EnvPerfItem) Copy() *EnvPerfItem {
+	if i == nil {return nil}
+	return &EnvPerfItem{
+		CPUFrequence: i.CPUFrequence,
+		CPUTemperature: i.CPUTemperature,
+		CPUIdle: i.CPUIdle,
+		SystemContextSwitches: i.SystemContextSwitches,
+		VoltageCore: i.VoltageCore,
+		Count: i.Count,
+	}
+}
+///////////////////////////////////////////////////////////////////////////
+
+
+
 type Event struct {
 	EventType EventType
 	QueuePerf *QueuePerfItem
 	TaskPerf  *TaskPerfItem
+	EnvPerf *EnvPerfItem
 	Callback  *func(uint64)
 }
 
@@ -112,6 +185,7 @@ type PerfEventVector struct {
 	Interval   float64
 	QueueSlice  map[string]*QueuePerfItem
 	TaskClasses map[string]*TaskPerfItem
+	EnvPerf *EnvPerfItem
 	TaskSLOViolationCount int64
 	NormalizedTaskSLOViolationCount float64
 	TaskCount int64
@@ -126,6 +200,7 @@ func NewPerfEventVector() *PerfEventVector {
 		Interval: 0,
 		QueueSlice: make(map[string]*QueuePerfItem),
 		TaskClasses: make(map[string]*TaskPerfItem),
+		EnvPerf: &EnvPerfItem{},
 		TaskSLOViolationCount: 0,
 		NormalizedTaskSLOViolationCount: 0,
 		TaskCount: 0,
@@ -161,6 +236,10 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 		}		
 	}
 
+	if v.EnvPerf != nil {
+		newVector.EnvPerf = v.EnvPerf.Copy()
+	}
+
 	return newVector
 }
 
@@ -174,9 +253,12 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationRatio(isViolation bool) floa
 
 	bar_R := float64(0)
 	// total := v.TaskCount
-	total := float64(0)
+	total := int64(0)
 	for _, taskPerf := range v.TaskClasses {
-		total += float64(taskPerf.Count)
+		total += taskPerf.Count
+		if total != v.TaskCount {
+			log.Printf("WARNING: task count in the PerfEventVector does NOT equal with the sum of the tasks, real total: %v, task count: %v", total, v.TaskCount)
+		}
 	}
 	for _, taskPerf := range v.TaskClasses {
 

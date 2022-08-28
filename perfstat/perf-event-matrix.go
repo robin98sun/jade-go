@@ -62,6 +62,10 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		}
 	}
 
+	// m.CumulativeVector.EnvPerf.Add(vector.EnvPerf)
+	m.CumulativeVector.EnvPerf = vector.EnvPerf.Copy()
+
+
 	m.CumulativeVector.TaskSLOViolationCount += vector.TaskSLOViolationCount
 	m.CumulativeVector.NormalizedTaskSLOViolationCount += vector.NormalizedTaskSLOViolationCount
 	m.CumulativeVector.TaskCount += vector.TaskCount
@@ -83,6 +87,8 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 				scalar.Minus(item)
 			}
 		}
+
+		// m.CumulativeVector.EnvPerf.Minus(dequeued.EnvPerf)
 
 		m.CumulativeVector.TaskSLOViolationCount -= dequeued.TaskSLOViolationCount
 		m.CumulativeVector.NormalizedTaskSLOViolationCount -= dequeued.NormalizedTaskSLOViolationCount

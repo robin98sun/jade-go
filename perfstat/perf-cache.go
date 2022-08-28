@@ -7,6 +7,7 @@ import (
 	"time"
 	"strconv"
 	"sort"
+	"uta.edu/aces/jadesdk"
 )
 
 const(
@@ -111,6 +112,10 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,
 			&callback,
 		)
 	}
+
+}
+
+func (p *PerfCache) EnqueueEnvMetrics(metrics *jadesdk.MetricsEnv) {
 
 }
 
