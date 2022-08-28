@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"log"
+	// "log"
 )
 
 type PerfEventMatrixPipe struct {
@@ -236,27 +236,21 @@ func (m *PerfEventMatrixPipe) daemon() {
 
 		dequeued := vector
 		for i:=0; i<len(m.Pipe); i++ {
+			if dequeued == nil {
+				break
+			}
 			dequeued = m.Pipe[i].Enqueue(dequeued)
 		}
 		if dequeued != nil && (m.PipeLength <= 0 || len(m.Pipe) < m.PipeLength){
 			newMatrix := NewPerfEventMatrix(m.MatrixLength)
 			newMatrix.Enqueue(dequeued)
 			m.Pipe = append(m.Pipe, newMatrix)
-			for i:=0;i<len(m.Pipe);i++{
-				log.Printf("No.%v matrix in pipe have %v vectors", i, m.Pipe[i].GetLength())
-			}
-			if m.MostRecentMatrix != nil {
-				log.Printf("the most recent matrix have %v vectors", m.MostRecentMatrix.GetLength())
-			}
 		}
 		if len(m.Pipe) == 1 {
 			m.MostRecentMatrix = m.Pipe[0]
 		}
 
-		if len(m.Pipe) > 0 {
-			if m.MostRecentMatrix != m.Pipe[0] {
-				log.Printf("the most recent matrix %v equal with No.0 matrix", m.MostRecentMatrix == m.Pipe[0])
-			}
+		if m.MostRecentMatrix != nil {
 			snapshot := m.MostRecentMatrix.GetInstantCumulativePerfVector()
 			m.Snapshots = append(m.Snapshots, snapshot)
 			if m.MatrixLength > 0 && m.PipeLength > 0 {

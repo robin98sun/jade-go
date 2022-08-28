@@ -50,7 +50,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		if scalar, e := m.CumulativeVector.QueueSlice[queueKey]; e{
 			scalar.Add(perfItem)
 		} else {
-			m.CumulativeVector.QueueSlice[queueKey] = perfItem
+			m.CumulativeVector.QueueSlice[queueKey] = perfItem.Copy()
 		}
 	}
 
@@ -58,7 +58,7 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		if scalar, e := m.CumulativeVector.TaskClasses[label]; e{
 			scalar.Add(taskPerf)
 		} else {
-			m.CumulativeVector.TaskClasses[label] = taskPerf
+			m.CumulativeVector.TaskClasses[label] = taskPerf.Copy()
 		}
 	}
 
@@ -67,16 +67,11 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 	m.CumulativeVector.TaskCount += vector.TaskCount
 	m.CumulativeVector.Depth++
 
-	var dequeued *PerfEventVector
+	var dequeued *PerfEventVector = nil
 	if m.Length > 0 && len(m.Vectors) > m.Length {
 		dequeued = m.Vectors[0]
 		
-		// log.Printf("dequeueing vector from PerfEventMatrix")
-		// log.Printf("the length before dequeuing is %v", len(m.Vectors))
-
 		m.Vectors = m.Vectors[1:]
-
-		// log.Printf("the length after dequeuing is %v", len(m.Vectors))
 
 		for label, item := range dequeued.QueueSlice {
 			if scalar, e := m.CumulativeVector.QueueSlice[label]; e{
@@ -95,8 +90,6 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		m.CumulativeVector.Depth--
 
 	}
-
-
 
 	return dequeued
 }

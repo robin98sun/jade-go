@@ -11,7 +11,7 @@ import (
 
 const(
 	EVENTMatrixSize int = 600
-	EVENTPipeLength int = 1
+	EVENTPipeLength int = 0
 )
 
 // PerfCache
