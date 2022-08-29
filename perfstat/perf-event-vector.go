@@ -116,19 +116,18 @@ type EnvPerfItem struct {
 }
 
 func (i *EnvPerfItem) Add(j *EnvPerfItem) {
-	i.Count += j.Count
-	
-	if i.Count <= 0 {
-		i.Count = 1
-	}
 
-	total := float64(i.Count)
+	if j.Count <= 0 {return}
+	
+	total := float64(i.Count + j.Count)
 
 	i.CPUFrequence = (i.CPUFrequence * float64(i.Count) + j.CPUFrequence * float64(j.Count)) / total
 	i.CPUTemperature = (i.CPUTemperature * float64(i.Count) + j.CPUTemperature * float64(j.Count)) / total
 	i.CPUIdle = (i.CPUIdle * float64(i.Count) + j.CPUIdle * float64(j.Count)) / total
 	i.SystemContextSwitches = (i.SystemContextSwitches * float64(i.Count) + j.SystemContextSwitches * float64(j.Count)) / total
 	i.VoltageCore = (i.VoltageCore * float64(i.Count) + j.VoltageCore * float64(j.Count)) / total
+
+	i.Count += j.Count
 
 }
 
