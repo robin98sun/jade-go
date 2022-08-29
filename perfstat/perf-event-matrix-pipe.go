@@ -179,20 +179,22 @@ func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(queueKey string, envMetrics *ja
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	event := &Event{
-		EventType: EventTypeEnvPerformance,
-		EnvPerf: &EnvPerfItem{
-			CPUFrequence: envMetrics.CPU.Frequency,
-			CPUTemperature: envMetrics.Temperature.Cpu,
-			CPUIdle: float64(envMetrics.CPU.Idle),
-			SystemContextSwitches: float64(envMetrics.System.ContextSwitches),
-			VoltageCore: envMetrics.Voltage.Core,
-			Count: 1,
-			QueueKey: queueKey,
-		},
-	}
+	if envMetrics != nil && envMetrics.CPU != nil && envMetrics.Temperature != nil && envMetrics.System != nil && envMetrics.Voltage != nil {
+		event := &Event{
+			EventType: EventTypeEnvPerformance,
+			EnvPerf: &EnvPerfItem{
+				CPUFrequence: envMetrics.CPU.Frequency,
+				CPUTemperature: envMetrics.Temperature.Cpu,
+				CPUIdle: float64(envMetrics.CPU.Idle),
+				SystemContextSwitches: float64(envMetrics.System.ContextSwitches),
+				VoltageCore: envMetrics.Voltage.Core,
+				Count: 1,
+				QueueKey: queueKey,
+			},
+		}
 
-	m.EventBuffer = append(m.EventBuffer, event)
+		m.EventBuffer = append(m.EventBuffer, event)
+	}
 
 }
 
