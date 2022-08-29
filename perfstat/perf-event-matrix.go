@@ -62,13 +62,13 @@ func (m *PerfEventMatrix) Enqueue(vector *PerfEventVector) *PerfEventVector {
 		}
 	}
 
-	for label, envPerf := range vector.EnvPerf {
-		// if scalar, e := m.CumulativeVector.EnvPerf[label]; e{
-		// 	scalar.Add(envPerf)
-		// } else {
-		// 	m.CumulativeVector.EnvPerf[label] = envPerf.Copy()
-		// }
-		m.CumulativeVector.EnvPerf[label] = envPerf.Copy()
+	for label, envPerf := range vector.InstantEnvPerf {
+		if scalar, e := m.CumulativeVector.AvgEnvPerf[label]; e{
+			scalar.Add(envPerf)
+		} else {
+			m.CumulativeVector.AvgEnvPerf[label] = envPerf.Copy()
+		}
+		m.CumulativeVector.InstantEnvPerf[label] = envPerf.Copy()
 	}
 
 

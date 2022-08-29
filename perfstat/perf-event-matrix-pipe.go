@@ -246,10 +246,10 @@ func (m *PerfEventMatrixPipe) daemon() {
 						vector.TaskClasses[label] = event.TaskPerf.Copy()
 					}
 				} else if event.EventType == EventTypeEnvPerformance {
-					if envPerf, e := vector.EnvPerf[event.EnvPerf.QueueKey]; e {
+					if envPerf, e := vector.InstantEnvPerf[event.EnvPerf.QueueKey]; e {
 						envPerf.Add(event.EnvPerf)
 					} else {
-						vector.EnvPerf[event.EnvPerf.QueueKey] = event.EnvPerf.Copy()
+						vector.InstantEnvPerf[event.EnvPerf.QueueKey] = event.EnvPerf.Copy()
 					}
 				}
 
@@ -343,6 +343,11 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 		headline = append(headline, queueKey + "::" + "cpu_idle")
 		headline = append(headline, queueKey + "::" + "system_context_switches")
 		headline = append(headline, queueKey + "::" + "voltage_core")
+		headline = append(headline, queueKey + "::" + "avg_cpu_frequency")
+		headline = append(headline, queueKey + "::" + "avg_cpu_temperature")
+		headline = append(headline, queueKey + "::" + "avg_cpu_idle")
+		headline = append(headline, queueKey + "::" + "avg_system_context_switches")
+		headline = append(headline, queueKey + "::" + "avg_voltage_core")
 	}
 
 	traces = append(traces, headline)
@@ -419,7 +424,7 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			system_context_switches := float64(0)
 			Voltage_core := float64(0)
 
-			if envPerf, e := snapshot.EnvPerf[queueKey]; e {
+			if envPerf, e := snapshot.InstantEnvPerf[queueKey]; e {
 				cpu_frequency = envPerf.CPUFrequence
 				cpu_temperature = envPerf.CPUTemperature
 				cpu_idle = envPerf.CPUIdle
@@ -431,6 +436,26 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.FormatFloat(cpu_idle, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(system_context_switches, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(Voltage_core, 'f', -1, 64))
+
+
+			avg_cpu_frequency := float64(0)
+			avg_cpu_temperature := float64(0)
+			avg_cpu_idle := float64(0)
+			avg_system_context_switches := float64(0)
+			avg_Voltage_core := float64(0)
+
+			if envPerf, e := snapshot.AvgEnvPerf[queueKey]; e {
+				avg_cpu_frequency = envPerf.CPUFrequence
+				avg_cpu_temperature = envPerf.CPUTemperature
+				avg_cpu_idle = envPerf.CPUIdle
+				avg_system_context_switches = envPerf.SystemContextSwitches
+				avg_Voltage_core = envPerf.VoltageCore
+			}
+			line = append(line, strconv.FormatFloat(avg_cpu_frequency, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_cpu_temperature, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_cpu_idle, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_system_context_switches, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(avg_Voltage_core, 'f', -1, 64))
 			
 		}
 		traces = append(traces, line)

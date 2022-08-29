@@ -186,7 +186,8 @@ type PerfEventVector struct {
 	Interval   float64
 	QueueSlice  map[string]*QueuePerfItem
 	TaskClasses map[string]*TaskPerfItem
-	EnvPerf map[string]*EnvPerfItem
+	InstantEnvPerf map[string]*EnvPerfItem
+	AvgEnvPerf map[string]*EnvPerfItem
 	TaskSLOViolationCount int64
 	NormalizedTaskSLOViolationCount float64
 	TaskCount int64
@@ -201,7 +202,8 @@ func NewPerfEventVector() *PerfEventVector {
 		Interval: 0,
 		QueueSlice: make(map[string]*QueuePerfItem),
 		TaskClasses: make(map[string]*TaskPerfItem),
-		EnvPerf: make(map[string]*EnvPerfItem), 
+		InstantEnvPerf: make(map[string]*EnvPerfItem), 
+		AvgEnvPerf: make(map[string]*EnvPerfItem), 
 		TaskSLOViolationCount: 0,
 		NormalizedTaskSLOViolationCount: 0,
 		TaskCount: 0,
@@ -237,9 +239,15 @@ func (v *PerfEventVector) Copy() *PerfEventVector {
 		}		
 	}
 
-	if v.EnvPerf != nil {
-		for label, item := range v.EnvPerf {
-			newVector.EnvPerf[label] = item.Copy()
+	if v.InstantEnvPerf != nil {
+		for label, item := range v.InstantEnvPerf {
+			newVector.InstantEnvPerf[label] = item.Copy()
+		}	
+	}
+
+	if v.AvgEnvPerf != nil {
+		for label, item := range v.AvgEnvPerf {
+			newVector.AvgEnvPerf[label] = item.Copy()
 		}	
 	}
 
