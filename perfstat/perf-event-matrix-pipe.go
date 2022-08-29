@@ -412,13 +412,25 @@ func (m *PerfEventMatrixPipe) CollectTraces(printf func(string, ...interface{}))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus, 'f', -1, 64))
 			line = append(line, strconv.FormatFloat(avg_deadline_surplus_ratio, 'f', -1, 64))
 
+
+			cpu_frequency := float64(0)
+			cpu_temperature := float64(0)
+			cpu_idle := float64(0)
+			system_context_switches := float64(0)
+			Voltage_core := float64(0)
+
 			if envPerf, e := snapshot.EnvPerf[queueKey]; e {
-				line = append(line, strconv.FormatFloat(envPerf.CPUFrequence, 'f', -1, 64))
-				line = append(line, strconv.FormatFloat(envPerf.CPUTemperature, 'f', -1, 64))
-				line = append(line, strconv.FormatFloat(envPerf.CPUIdle, 'f', -1, 64))
-				line = append(line, strconv.FormatFloat(envPerf.SystemContextSwitches, 'f', -1, 64))
-				line = append(line, strconv.FormatFloat(envPerf.VoltageCore, 'f', -1, 64))
+				cpu_frequency = envPerf.CPUFrequence
+				cpu_temperature = envPerf.CPUTemperature
+				cpu_idle = envPerf.CPUIdle
+				system_context_switches = envPerf.SystemContextSwitches
+				Voltage_core = envPerf.VoltageCore
 			}
+			line = append(line, strconv.FormatFloat(cpu_frequency, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(cpu_temperature, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(cpu_idle, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(system_context_switches, 'f', -1, 64))
+			line = append(line, strconv.FormatFloat(Voltage_core, 'f', -1, 64))
 			
 		}
 		traces = append(traces, line)
