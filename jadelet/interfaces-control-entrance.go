@@ -3,7 +3,7 @@ package jadelet
 import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"uta.edu/aces/jade-go/kernel"
 )
 
@@ -16,7 +16,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 	}
 	// re-decode
 	reqInst := &struct {
-		Payload []*scheduler.TaskDispatchingItem `json:"payload,omitempty"`
+		Payload []*task.TaskDispatchingItem `json:"payload,omitempty"`
 	}{}
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
@@ -28,7 +28,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
-		validTasks := make(map[string]*scheduler.TaskDispatchingItem)
+		validTasks := make(map[string]*task.TaskDispatchingItem)
 		res := &struct {
 			ValidTasksCount int      `json:"validTasksCount,omitempty"`
 			TaskIDList      []string `json:"taskIDList,omitempty"`
@@ -55,9 +55,9 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
-	collaborativeTasks := map[string]*scheduler.TaskDispatchingItem{}
-	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
+func (j *JADE) ClassifyTasks(tasklist map[string]*task.TaskDispatchingItem) {
+	collaborativeTasks := map[string]*task.TaskDispatchingItem{}
+	aggregativeTasks := map[string]*task.TaskDispatchingItem{}
 	for taskKey, dispatchItem := range tasklist {
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)

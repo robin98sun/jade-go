@@ -4,7 +4,7 @@ import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"uta.edu/aces/jade-go/scheduler/histogram"
 	"encoding/json"
 )
@@ -77,7 +77,7 @@ func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *scheduler.BudgetNegotiationResponse
+		Payload *task.BudgetNegotiationResponse
 	}{}
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
@@ -108,7 +108,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *scheduler.TaskDispatchingItem
+		Payload *task.TaskDispatchingItem
 	}{}
 	err = json.Unmarshal(content, reqInst)
 
@@ -128,7 +128,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 
 	availableNodes := j.selectAvaiableNodes(JadeNodeTypeSubnode, dispatchItem.Task.Requirements)
 
-	// response := &scheduler.BudgetNegotiationResponse{
+	// response := &task.BudgetNegotiationResponse{
 	// 	AvailableNodes: int64(0),
 	// }
 
@@ -170,8 +170,8 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem) *scheduler.BudgetNegotiationResponse {
-	response := &scheduler.BudgetNegotiationResponse{
+func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *task.TaskDispatchingItem) *task.BudgetNegotiationResponse {
+	response := &task.BudgetNegotiationResponse{
 		AvailableNodes: int64(len(pods)),
 		TaskKey: dispatchItem.Task.GetKey(),
 		Node: j.Config.SelfNode.MiniNode(),

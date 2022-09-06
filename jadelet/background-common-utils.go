@@ -3,12 +3,12 @@ package jadelet
 import (
 	"strconv"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"uta.edu/aces/jadesdk"
 )
 
 
-func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDispatchingItem) {
+func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*task.TaskDispatchingItem) {
 	j.registryMutex.Lock()
 	node := j.GetNodeInControl(nodeID)
 	j.registryMutex.Unlock()
@@ -19,11 +19,11 @@ func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*scheduler.TaskDis
 }
 
 
-func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *scheduler.TaskDispatchingItem) {
+func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *task.TaskDispatchingItem) {
 
 	payload := j.GeneratePayloadOfRequest(
 		neighborNode, 
-		[]*scheduler.TaskDispatchingItem{dispatchItem},
+		[]*task.TaskDispatchingItem{dispatchItem},
 		nil, nil,
 	)
 	j.log.Debug.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())

@@ -6,7 +6,7 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/scheduler/perfstat"
+	// "uta.edu/aces/jade-go/scheduler/perfstat"
 	"uta.edu/aces/jadesdk"
 )
 
@@ -27,11 +27,15 @@ func (j *JADE) Init() {
 	j.neighborCapacityCache = kernel.NewCapacityCache()
 	j.eligibleNeighborCache = kernel.NewEligibleNeighborCache()
 	j.CapacityStatus = &kernel.CapacityStatus{}
-	j.TaskCache = scheduler.NewTaskCache()
-	j.PodCache = scheduler.NewPodCache()
-	j.PerfCache = perfstat.NewPerfCache()
-	j.dist = scheduler.NewDist()
+
+	// j.TaskCache = scheduler.NewTaskCache()
+	// j.PodCache = scheduler.NewPodCache()
+	// j.PerfCache = perfstat.NewPerfCache()
+	// j.dist = scheduler.NewDist()
 	// read environment variables into config
+
+	j.Scheduler = scheduler.NewScheduler()
+
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()

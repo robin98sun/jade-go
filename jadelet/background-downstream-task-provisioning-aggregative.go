@@ -3,13 +3,13 @@ package jadelet
 import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"uta.edu/aces/jadesdk"
 )
 
 type DispatchItemWithAggregator struct {
-	DispatchingItem *scheduler.TaskDispatchingItem
-	OriginalDispatchItem *scheduler.TaskDispatchingItem
+	DispatchingItem *task.TaskDispatchingItem
+	OriginalDispatchItem *task.TaskDispatchingItem
 	AggregatorPod *kernel.Pod
 	AggregatorSubtask *kernel.SubTask
 }
@@ -21,8 +21,8 @@ type SubtasksForAggregator struct {
 }
 
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
-func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
-	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*task.TaskDispatchingItem) {
+	rejectTaskCache := make(map[string]*task.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
 	ackAggregatorPods := make(map[string]*kernel.Pod) // taskKey: *kernel.Pod
 	ackAggregatorSubtasks := make(map[string]string) // taskKey: subtaskKey
 	// first, check or allocate itself's pod
@@ -206,7 +206,7 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggregator) {
 	tasksGoingToDispatch := make(map[string][]*DispatchItemWithAggregator) // nodekey: []*TaskDispatchingItem
 	readyTaskCache := make(map[string]*kernel.Pod)                            // taskkey: *Pod
-	rejectTaskCache := make(map[string]*scheduler.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
+	rejectTaskCache := make(map[string]*task.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, disptachItem := range tasklist {
 		taskItem := disptachItem.DispatchingItem
 		originalDispatchItem := disptachItem.OriginalDispatchItem
@@ -372,9 +372,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 	}
 
 	// dispatch sub-tasks
-	nodesToDispatch := make(map[string][]*scheduler.TaskDispatchingItem)
+	nodesToDispatch := make(map[string][]*task.TaskDispatchingItem)
 	for nodekey, subTasklist := range tasksGoingToDispatch {
-		dispatchingList := []*scheduler.TaskDispatchingItem{}
+		dispatchingList := []*task.TaskDispatchingItem{}
 		for _, dispatchItem := range subTasklist {
 			originalTaskItem := dispatchItem.DispatchingItem
 			dispatchingList = append(dispatchingList, originalTaskItem)
