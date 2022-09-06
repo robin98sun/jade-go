@@ -57,6 +57,8 @@ func main() {
 		rest.Post("/taskReceiver", j.TaskReceiver),
 		// for administration
 		rest.Put("/configurations", j.UpdateConfigurations),
+		// Provisioning pods
+		rest.Post("/podProvisioner", j.PodProvisioner),
 		// for data path
 		rest.Put("/app/listener", j.CollectAppMsg),
 		rest.Get("/taskResults", j.GetAggregativeTaskResults),

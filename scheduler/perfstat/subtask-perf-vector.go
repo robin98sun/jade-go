@@ -2,7 +2,7 @@ package perfstat
 
 import (
 	// "uta.edu/aces/jade-go/histogram"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"uta.edu/aces/jade-go/kernel"
 	"sync"
 	"time"
@@ -12,7 +12,7 @@ import (
 type SubtaskPerfVector struct {
 	ArrivalClock                    uint64
 	ResponseClock					uint64
-	DispatchItem 			 		*scheduler.TaskDispatchingItem
+	DispatchItem 			 		*task.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
 	TailLatency  			 		float64
 	Fanout       			 		int
@@ -38,7 +38,7 @@ type SubtaskPerfVector struct {
 }
 
 func NewSubtaskPerfVector(
-	dispatchItem *scheduler.TaskDispatchingItem,
+	dispatchItem *task.TaskDispatchingItem,
 ) *SubtaskPerfVector {
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
@@ -56,7 +56,7 @@ func (v *SubtaskPerfVector) GetTaskKey() string {
 	return "N/A"
 }
 
-func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*task.TaskCacheSubtaskItem) {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 

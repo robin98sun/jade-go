@@ -1,9 +1,9 @@
-package scheduler
+package task
 
 import (
 	"sync"
 	"time"
-	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler/histogram"
 	"uta.edu/aces/jade-go/kernel"
 )
 

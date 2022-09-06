@@ -6,7 +6,7 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/perfstat"
+	"uta.edu/aces/jade-go/scheduler/perfstat"
 	"uta.edu/aces/jadesdk"
 )
 

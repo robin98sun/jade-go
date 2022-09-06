@@ -199,14 +199,27 @@ func PrintJSONasEnv(jsonfile string) {
 	fmt.Println(ConfToString(c))
 }
 
+
+
 // Get a random string
 func RandomString() string {
 	ts := time.Now().UnixNano()
 	s := rand.NewSource(ts)
 	r := rand.New(s)
+
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	strlen := 6
+	str := ""
+	for i:=0; i<strlen; i++ {
+		idx := r.Intn(len(charset))
+		ch := charset[idx:idx+1]
+		str += ch
+	}
+
 	ts = time.Now().UnixNano()
 	rn := r.Int63n(ts)
-	result := strconv.FormatInt(rn, 16) 
+	result := str + strconv.FormatInt(rn, 16) 
 
 	return result
 }

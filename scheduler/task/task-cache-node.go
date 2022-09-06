@@ -1,4 +1,4 @@
-package scheduler
+package task
 
 import (
 	"uta.edu/aces/jade-go/kernel"

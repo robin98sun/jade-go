@@ -11,7 +11,9 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/perfstat"
+	"uta.edu/aces/jade-go/scheduler/resource"
+	"uta.edu/aces/jade-go/scheduler/perfstat"
+	"uta.edu/aces/jade-go/scheduler/chef"
 	"uta.edu/aces/jadesdk"
 	"fmt"
 )
@@ -41,8 +43,10 @@ type JADE struct {
 	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
 	TaskCache       *scheduler.TaskCache `json:"taskCache"`
-	PodCache        *scheduler.PodCache  `json:"podCache"`
+	// PodCache        *scheduler.PodCache  `json:"podCache"`
+	ResourceCache   *resource.ResourceCache `json:"resourceCache"`
 	PerfCache 		*perfstat.PerfCache `json:"perfCache"`
+	Chef            *chef.TakoyakiChef `json:"chef"`
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
 	dist            *scheduler.Dist

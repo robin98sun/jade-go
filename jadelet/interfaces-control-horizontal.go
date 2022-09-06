@@ -5,7 +5,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler/histogram"
 	"encoding/json"
 )
 

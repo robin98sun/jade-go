@@ -1,9 +1,10 @@
-package scheduler
+package task
 
 import (
 	// "strconv"
 	"time"
 	"uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/scheduler/chef"
 	"uta.edu/aces/jadesdk"
 )
 
@@ -499,7 +500,7 @@ func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName str
 	return nil
 }
 
-func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, timestampSending time.Time) float64 {
+func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *chef.QueueItem, timestampSending time.Time) float64 {
 	if c == nil || len(c.Cache) == 0 {
 		return float64(-1)
 	}

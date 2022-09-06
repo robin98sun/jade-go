@@ -6,7 +6,7 @@ import (
 	"math"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler/histogram"
 )
 
 func (j *JADE) routineForPodQueues(intervalNanoseconds int) {

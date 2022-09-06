@@ -1,8 +1,7 @@
 package perfstat
 
 import (
-	// "uta.edu/aces/jade-go/histogram"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"sync"
 	"time"
 	"strconv"
@@ -60,7 +59,7 @@ func (p *PerfCache) AppendQueueServiceResponseTimeEvent(queueKey string, service
 	p.PerfEventMatrices.AppendQueueServiceResponseTimeEvent(queueKey, serviceResponseTime)
 }
 
-func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time) {
+func (p *PerfCache) EnqueueArrivalTime(dispatchItem *task.TaskDispatchingItem, arrivalTime time.Time) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
 
@@ -81,7 +80,7 @@ func (p *PerfCache) EnqueueArrivalTime(dispatchItem *scheduler.TaskDispatchingIt
 }
 
 
-func (p *PerfCache) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem, unloaded_tail_latency float64, queueing_budget float64, provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (p *PerfCache) EnqueueResponse(dispatchItem *task.TaskDispatchingItem, unloaded_tail_latency float64, queueing_budget float64, provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64, finishTimestamp time.Time, subtasks map[string][]*task.TaskCacheSubtaskItem) {
 
 	taskTag := dispatchItem.GetUnifiedTag()
 

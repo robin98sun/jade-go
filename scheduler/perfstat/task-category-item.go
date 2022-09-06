@@ -1,8 +1,8 @@
 package perfstat
 
 import (
-	"uta.edu/aces/jade-go/histogram"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler/histogram"
+	"uta.edu/aces/jade-go/scheduler/task"
 	"sync"
 	"time"
 )
@@ -51,7 +51,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	return tci
 }
 
-func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *scheduler.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) {
+func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *task.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) {
 	vector := NewSubtaskPerfVector(dispatchItem)
 	vector.ArrivalClock = currentClock
 
@@ -85,7 +85,7 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	}
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *scheduler.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64,provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *SubtaskPerfVector {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *task.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64,provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*task.TaskCacheSubtaskItem, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *SubtaskPerfVector {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()

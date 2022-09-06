@@ -4,6 +4,12 @@ import (
 	"sync"
 )
 
+type CapacityStatus struct {
+	MaximumCapacity   *Capacity
+	RemainingCapacity *Capacity
+	ReservedCapacity  *Capacity
+}
+
 type CapacityCache struct {
 	cache map[string]capacityCacheItem
 	mutex *sync.Mutex

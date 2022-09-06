@@ -2,15 +2,11 @@ package jadelet
 
 import (
 	"time"
-	// "sort"
 	"encoding/json"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler/histogram"
 	"uta.edu/aces/jade-go/scheduler"
-	// "uta.edu/aces/jade-go/histogram"
-	// "uta.edu/aces/jadesdk"
 	"math"
-	// "sync"
 )
 
 func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
