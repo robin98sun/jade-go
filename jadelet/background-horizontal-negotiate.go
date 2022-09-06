@@ -4,12 +4,13 @@ import (
 	"time"
 	"encoding/json"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler/histogram"
-	"uta.edu/aces/jade-go/scheduler/task"
+	"uta.edu/aces/scheduler/histogram"
+	"uta.edu/aces/scheduler/task"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"math"
 )
 
-func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*task.TaskDispatchingItem) {
+func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 	for _, dispatchItem := range tasklist {
 		if dispatchItem.Task == nil || dispatchItem.Task.Requirements == nil {
 			continue
@@ -136,7 +137,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*task.TaskDispatch
 	}
 }
 
-func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache, dispatchItem *task.TaskDispatchingItem) {
+func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache, dispatchItem *ds.TaskDispatchingItem) {
 	
 	dispatchItem.TTL--
 	budgetNegotiation := task.BudgetNegotiationTypeNone
@@ -226,7 +227,7 @@ func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache,
 
 }
 
-func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *task.TaskDispatchingItem) {
+func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *ds.TaskDispatchingItem) {
 	tailLatencySLO := float64(1000)
 	if dispatchItem.SLO != nil {
 		tailLatencySLO = dispatchItem.SLO.TailLatencyInMilliseconds
@@ -272,7 +273,7 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *task.Ta
 }
 
 
-func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *task.TaskDispatchingItem, cache *task.BudgetNegotiationResponseCache) *task.BudgetNegotiationResponse {
+func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingItem, cache *task.BudgetNegotiationResponseCache) *task.BudgetNegotiationResponse {
 	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
 
 	j.log.Debug.Printf("[budget negotiation] inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
@@ -298,7 +299,7 @@ func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *task.TaskDispatc
 	return nil
 }
 
-func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
+func (j *JADE) fetchEligibleAutonomyServiceDomains(query *ds.Requirements) []*ds.Node {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 

@@ -5,8 +5,9 @@ import (
 	"sort"
 	"math"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler/task"
-	"uta.edu/aces/jade-go/scheduler/histogram"
+	"uta.edu/aces/scheduler/task"
+	"uta.edu/aces/scheduler/histogram"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
@@ -35,7 +36,7 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 	}
 }
 
-func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
+func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 	j.PodCache.Lock()
 
 	if !j.PodCache.IsPodIdle(pod) {
@@ -66,7 +67,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
 	_, reqlen, _, _ := j.HTTPCommunicate(
-		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
+		"dispatch subtask "+string(ds.AppModuleWorker), "POST", "/"+string(ds.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
@@ -79,7 +80,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	j.PerfCache.AppendQueueDeadlineViolationEvent(pod.NodeKey, float64(queueItem.DispatchTime.Sub(queueItem.Deadline)/time.Millisecond))
 }
 
-func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *task.TaskDispatchingItem) {
+func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *ds.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
 	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, task.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
@@ -499,7 +500,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 	}
 }
 
-func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *task.BudgetNegotiationResponseCache, pods []*kernel.Pod, dispatchItem *task.TaskDispatchingItem) {
+func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *task.BudgetNegotiationResponseCache, pods []*ds.Pod, dispatchItem *ds.TaskDispatchingItem) {
 	localResponse := j.MultiplyCDFs(pods, dispatchItem)
 
 	for {
@@ -554,7 +555,7 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *task.BudgetNego
 
 }
 
-func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *task.TaskDispatchingItem, initiator *kernel.Node) {
+func (j *JADE) ReportCDFtoInitiator(pods []*ds.Pod, dispatchItem *ds.TaskDispatchingItem, initiator *ds.Node) {
 	localResponse := j.MultiplyCDFs(pods, dispatchItem)
 	j.log.Debug.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
 	payload := j.GeneratePayloadOfRequest(initiator, localResponse, nil, nil)
@@ -573,7 +574,7 @@ type AggregatorEnqueuingMessage struct {
 	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
 }
 
-func NewAggregatorEnqueuingMessage(taskItem *task.TaskDispatchingItem, subtasks []*task.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {
+func NewAggregatorEnqueuingMessage(taskItem *ds.TaskDispatchingItem, subtasks []*task.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {
 	inst := &AggregatorEnqueuingMessage{
 		TaskKey:  taskItem.Task.GetKey(),
 		Subtasks: []string{},
@@ -598,7 +599,7 @@ func NewAggregatorEnqueuingMessage(taskItem *task.TaskDispatchingItem, subtasks 
 }
 
 func NewAggregativeWorkerTask(
-	taskItem *task.TaskDispatchingItem,
+	taskItem *ds.TaskDispatchingItem,
 	worker *task.SubtaskOnNode,
 	protocol string, input interface{}, estimatedServiceTime float64,
 ) *Request {

@@ -4,7 +4,7 @@ import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/scheduler"
 	"uta.edu/aces/jadesdk"
 	"strconv"
 	"time"

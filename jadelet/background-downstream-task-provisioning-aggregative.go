@@ -3,27 +3,28 @@ package jadelet
 import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler/task"
+	"uta.edu/aces/scheduler/task"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type DispatchItemWithAggregator struct {
-	DispatchingItem *task.TaskDispatchingItem
-	OriginalDispatchItem *task.TaskDispatchingItem
-	AggregatorPod *kernel.Pod
-	AggregatorSubtask *kernel.SubTask
+	DispatchingItem *ds.TaskDispatchingItem
+	OriginalDispatchItem *ds.TaskDispatchingItem
+	AggregatorPod *ds.Pod
+	AggregatorSubtask *ds.SubTask
 }
 
 type SubtasksForAggregator struct {
 	TaskKey string
-	AggregatorPod *kernel.Pod
+	AggregatorPod *ds.Pod
 	SubtaskList []string
 }
 
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
-func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*task.TaskDispatchingItem) {
-	rejectTaskCache := make(map[string]*task.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
-	ackAggregatorPods := make(map[string]*kernel.Pod) // taskKey: *kernel.Pod
+func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingItem) {
+	rejectTaskCache := make(map[string]*ds.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
+	ackAggregatorPods := make(map[string]*ds.Pod) // taskKey: *kernel.Pod
 	ackAggregatorSubtasks := make(map[string]string) // taskKey: subtaskKey
 	// first, check or allocate itself's pod
 	// 1. if the node itself is a coordinator, then allocate an aggregator pod for it
@@ -38,12 +39,12 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*task.TaskDispatchin
 			j.log.Debug.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)
 			if j.IsCoordinator() {
 				// allocate an aggregator pod if needed
-				aggregatorAllocation := task.Requirements.Allocations[string(kernel.AppModuleAggregator)]
-				aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(kernel.AppModuleAggregator), aggregatorAllocation)
+				aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
+				aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(ds.AppModuleAggregator), aggregatorAllocation)
 				if aggregatorPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					j.log.Debug.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
 					// provision an aggregator pod
-					containerSettings := task.Application.GetModule(string(kernel.AppModuleAggregator))
+					containerSettings := task.Application.GetModule(string(ds.AppModuleAggregator))
 					containerSettings.SetISAInImage(j.Config.ISA)
 					podName, nodePort, err := j.Provisioner.ProvisionTask(
 						j.Kube, j.Config.SelfNode,
@@ -51,12 +52,12 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*task.TaskDispatchin
 							j.Config.SelfNode.GetSDKNode(),
 							task.Application.Name,
 							task.Application.Version,
-							string(kernel.AppModuleAggregator),
+							string(ds.AppModuleAggregator),
 							task.GetKey(),
 						),
-						task.Application, string(kernel.AppModuleAggregator),
+						task.Application, string(ds.AppModuleAggregator),
 						containerSettings,
-						task.Requirements.GetModule(string(kernel.AppModuleAggregator)),
+						task.Requirements.GetModule(string(ds.AppModuleAggregator)),
 						1,
 					)
 					//

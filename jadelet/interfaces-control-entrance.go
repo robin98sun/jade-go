@@ -3,8 +3,9 @@ package jadelet
 import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/scheduler/task"
+	"uta.edu/aces/scheduler/task"
 	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // TaskReceiver task receiver
@@ -55,9 +56,9 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-func (j *JADE) ClassifyTasks(tasklist map[string]*task.TaskDispatchingItem) {
-	collaborativeTasks := map[string]*task.TaskDispatchingItem{}
-	aggregativeTasks := map[string]*task.TaskDispatchingItem{}
+func (j *JADE) ClassifyTasks(tasklist map[string]*ds.TaskDispatchingItem) {
+	collaborativeTasks := map[string]*ds.TaskDispatchingItem{}
+	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
 	for taskKey, dispatchItem := range tasklist {
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)

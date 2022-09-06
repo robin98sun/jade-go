@@ -2,18 +2,17 @@ package kernel
 // if talking about "registry", it actually means kernel in the implementation
 
 import (
-	// "uta.edu/aces/jade-go/kernel"
 	"sync"
-	// "log"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type EligibleNeighborCacheItem struct {
-	Nodes 	map[string]*Node // nodeKey: node
+	Nodes 	map[string]*ds.Node // nodeKey: node
 }
 
-func NewEligibleNeighborCacheItem(neighborNodes []*Node) *EligibleNeighborCacheItem {
+func NewEligibleNeighborCacheItem(neighborNodes []*ds.Node) *EligibleNeighborCacheItem {
 	cacheItem := &EligibleNeighborCacheItem{
-		Nodes: make(map[string]*Node),
+		Nodes: make(map[string]*ds.Node),
 	}
 
 	for _, node := range neighborNodes {
@@ -23,11 +22,11 @@ func NewEligibleNeighborCacheItem(neighborNodes []*Node) *EligibleNeighborCacheI
 	return cacheItem
 }
 
-func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*Node {
+func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*ds.Node {
 	if item.Nodes == nil || len(item.Nodes) == 0 {
 		return nil
 	}
-	node_list := make([]*Node, len(item.Nodes))
+	node_list := make([]*ds.Node, len(item.Nodes))
 	idx := 0
 	for _, node := range item.Nodes {
 		node_list[idx] = node
@@ -49,14 +48,14 @@ func NewEligibleNeighborCache() *EligibleNeighborCache {
 	}
 }
 
-func (c *EligibleNeighborCache) StoreEligibleNeighbors(requirementKey string, neighborNodes []*Node) {
+func (c *EligibleNeighborCache) StoreEligibleNeighbors(requirementKey string, neighborNodes []*ds.Node) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	c.cache[requirementKey] = NewEligibleNeighborCacheItem(neighborNodes)
 }
 
-func (c *EligibleNeighborCache) GetEligibleNeighbors(requirementKey string) []*Node {
+func (c *EligibleNeighborCache) GetEligibleNeighbors(requirementKey string) []*ds.Node {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 

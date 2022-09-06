@@ -8,14 +8,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
 	"strings"
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	appname string, appversion string, moduleName string,
 	deploymentBaseName string, hostnameKey string, hostname string,
 	namespace string, image string, port int,
-	allocation *kernel.AllocationUnit,
+	allocation *ds.AllocationUnit,
 	envVars []map[string]string,
 	replicas int) (string, int, error) {
 	environmentVariables := []map[string]string{}
@@ -28,7 +28,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if len(deploymentName) > 36 {
 		deploymentName = deploymentName[0:36]
 	}
-	deploymentName =  deploymentName + "-" + kernel.RandomString()
+	deploymentName =  deploymentName + "-" + ds.RandomString()
 
 	labels := map[string]string{
 		"jade-env":         envName,

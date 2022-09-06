@@ -4,9 +4,10 @@ import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler/task"
-	"uta.edu/aces/jade-go/scheduler/histogram"
+	"uta.edu/aces/scheduler/task"
+	"uta.edu/aces/scheduler/histogram"
 	"encoding/json"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
@@ -170,7 +171,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *task.TaskDispatchingItem) *task.BudgetNegotiationResponse {
+func (j *JADE) MultiplyCDFs(pods []*ds.Pod, dispatchItem *ds.TaskDispatchingItem) *task.BudgetNegotiationResponse {
 	response := &task.BudgetNegotiationResponse{
 		AvailableNodes: int64(len(pods)),
 		TaskKey: dispatchItem.Task.GetKey(),

@@ -3,12 +3,13 @@ package jadelet
 import (
 	"strconv"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jade-go/scheduler/task"
+	"uta.edu/aces/scheduler/task"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 
-func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*task.TaskDispatchingItem) {
+func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*ds.TaskDispatchingItem) {
 	j.registryMutex.Lock()
 	node := j.GetNodeInControl(nodeID)
 	j.registryMutex.Unlock()
@@ -19,11 +20,11 @@ func (j *JADE) dispatchTasks(nodeID string, tasksToDispatch []*task.TaskDispatch
 }
 
 
-func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *task.TaskDispatchingItem) {
+func (j *JADE) dispatchNeighborTask(neighborNode *ds.Node, dispatchItem *ds.TaskDispatchingItem) {
 
 	payload := j.GeneratePayloadOfRequest(
 		neighborNode, 
-		[]*task.TaskDispatchingItem{dispatchItem},
+		[]*ds.TaskDispatchingItem{dispatchItem},
 		nil, nil,
 	)
 	j.log.Debug.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())
@@ -31,7 +32,7 @@ func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *tas
 }
 
 
-func (j *JADE) newEnv(masterNode *jadesdk.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
+func (j *JADE) newEnv(masterNode *ds.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
 	envVars := []map[string]string{
 		{
 			"name":  "JADE_APP_NAME",
@@ -80,7 +81,7 @@ func (j *JADE) newEnv(masterNode *jadesdk.Node, appName string, appVersion strin
 	return envVars
 }
 
-func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *kernel.Requirements) []string {
+func (j *JADE) selectAvaiableNodes(nodeType JadeNodeType, requirements *ds.Requirements) []string {
 	j.log.Debug.Printf("Searching %v nodes", nodeType)
 	var capableNodes []string
 	capabilityCache := j.subnodeCapabilityCache

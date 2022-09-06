@@ -10,12 +10,10 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
-	"uta.edu/aces/jade-go/scheduler"
-	// "uta.edu/aces/jade-go/scheduler/resource"
-	// "uta.edu/aces/jade-go/scheduler/perfstat"
-	// "uta.edu/aces/jade-go/scheduler/chef"
+	"uta.edu/aces/scheduler"
 	"uta.edu/aces/jadesdk"
 	"fmt"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type JadeNodeType string
@@ -29,11 +27,11 @@ const (
 
 // JADE to instantiate JADE memory structure
 type JADE struct {
-	Config          *kernel.Conf             `json:"config"`
+	Config          *ds.Conf             `json:"config"`
 	Provisioner     *provisioner.Provisioner `json:"provisioner"`
 	Kube            *kube.KubeClient         `json:"kube"`
-	Subnodes        map[string]*kernel.Node  `json:"subnodes"`
-	Neighbors       map[string]*kernel.Node  `json:"neighbors"`
+	Subnodes        map[string]*ds.Node  `json:"subnodes"`
+	Neighbors       map[string]*ds.Node  `json:"neighbors"`
 	RegisterStatus  string                   `json:"registerStatus"`
 	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	subnodeCapabilityCache *kernel.CapabilityCache
@@ -42,12 +40,6 @@ type JADE struct {
 	neighborCapacityCache   *kernel.CapacityCache
 	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
-
-	// TaskCache       *scheduler.TaskCache `json:"taskCache"`
-	// PodCache        *scheduler.PodCache  `json:"podCache"`
-	// ResourceCache   *resource.ResourceCache `json:"resourceCache"`
-	// PerfCache 		*perfstat.PerfCache `json:"perfCache"`
-	// dist            *scheduler.Dist
 
 	Scheduler    	*scheduler.Buffet
 
@@ -102,7 +94,7 @@ func (j *JADE) HasRegistry() bool {
 	return j.Config != nil && j.Config.RegistryNode != nil && !j.Config.RegistryNode.IsAddrEmpty()
 }
 
-func (j *JADE) GetNodeInControl(nodeID string) *kernel.Node {
+func (j *JADE) GetNodeInControl(nodeID string) *ds.Node {
 
 	if nodeID == "" || j == nil || len(j.Subnodes) == 0 {
 		return nil
@@ -155,7 +147,7 @@ func (j *JADE) IsLeaf() bool {
 }
 
 // MakeUpAddressForNode to make up empty address for a node
-func (j *JADE) MakeUpAddressForNode(n *kernel.Node) {
+func (j *JADE) MakeUpAddressForNode(n *ds.Node) {
 	if n.Address != "" && n.Port != 0 {
 		return
 	}
@@ -177,10 +169,10 @@ func (j *JADE) IsRegistered() bool {
 type RequestPayload struct {
 	Payload      interface{}           `json:"payload,omitempty"`
 	Token        string                `json:"token,omitempty"`
-	Node         *kernel.Node          `json:"node,omitempty"`
+	Node         *ds.Node          `json:"node,omitempty"`
 	NodeID       string                `json:"nodeId,omitempty"`
-	Capabilities []*jadesdk.Capability `json:"capabilities,omitempty"`
-	Capacity     *kernel.Capacity      `json:"capability,omitempty"`
+	Capabilities []*ds.Capability `json:"capabilities,omitempty"`
+	Capacity     *ds.Capacity      `json:"capability,omitempty"`
 }
 
 // ResponsePayload for all requests
@@ -268,7 +260,7 @@ func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg 
 }
 
 // GeneratePayloadOfRequest generate payload of request
-func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*jadesdk.Capability, capacity *kernel.Capacity) *RequestPayload {
+func (j *JADE) GeneratePayloadOfRequest(targetNode *ds.Node, thePayload interface{}, capabilities []*ds.Capability, capacity *ds.Capacity) *RequestPayload {
 	payload := RequestPayload{
 		Token:  j.Config.UpperNode.Token,
 		NodeID: j.Config.SelfNode.Key(),

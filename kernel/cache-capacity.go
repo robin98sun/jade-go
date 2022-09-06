@@ -2,12 +2,13 @@ package kernel
 
 import (
 	"sync"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type CapacityStatus struct {
-	MaximumCapacity   *Capacity
-	RemainingCapacity *Capacity
-	ReservedCapacity  *Capacity
+	MaximumCapacity   *ds.Capacity
+	RemainingCapacity *ds.Capacity
+	ReservedCapacity  *ds.Capacity
 }
 
 type CapacityCache struct {
@@ -16,7 +17,7 @@ type CapacityCache struct {
 }
 
 type capacityCacheItem struct {
-	node   Node
+	node   ds.Node
 	status *CapacityStatus
 }
 
@@ -27,7 +28,7 @@ func NewCapacityCache() *CapacityCache {
 	}
 }
 
-func (c *CapacityCache) Set(nodeId string, maxcap *Capacity, remcap *Capacity) {
+func (c *CapacityCache) Set(nodeId string, maxcap *ds.Capacity, remcap *ds.Capacity) {
 	if nodeId == "" || (maxcap == nil && remcap == nil) {
 		return
 	}
@@ -62,7 +63,7 @@ func (c *CapacityCache) Set(nodeId string, maxcap *Capacity, remcap *Capacity) {
 	}
 }
 
-func (c *CapacityCache) GetMaximumCapacity(nodeId string) *Capacity {
+func (c *CapacityCache) GetMaximumCapacity(nodeId string) *ds.Capacity {
 	if nodeId == "" {
 		return nil
 	}
@@ -76,7 +77,7 @@ func (c *CapacityCache) GetMaximumCapacity(nodeId string) *Capacity {
 	return nil
 }
 
-func (c *CapacityCache) GetRemainingCapacity(nodeId string) *Capacity {
+func (c *CapacityCache) GetRemainingCapacity(nodeId string) *ds.Capacity {
 	if nodeId == "" {
 		return nil
 	}
@@ -91,7 +92,7 @@ func (c *CapacityCache) GetRemainingCapacity(nodeId string) *Capacity {
 }
 
 // SelectAvailableNodes select available nodes from all cache subnodes
-func (c *CapacityCache) SelectAvailableNodes(cap *Capacity) []string {
+func (c *CapacityCache) SelectAvailableNodes(cap *ds.Capacity) []string {
 	if cap == nil || c.cache == nil {
 		return nil
 	}
@@ -111,7 +112,7 @@ func (c *CapacityCache) SelectAvailableNodes(cap *Capacity) []string {
 }
 
 // FilterAvailableNodes filter available nodes out of capable nodes
-func (c *CapacityCache) FilterAvailableNodes(capableNodes []string, au *AllocationUnit) []string {
+func (c *CapacityCache) FilterAvailableNodes(capableNodes []string, au *ds.AllocationUnit) []string {
 	if au == nil || c.cache == nil || len(capableNodes) == 0 {
 		return nil
 	}
