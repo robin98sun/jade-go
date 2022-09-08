@@ -33,7 +33,45 @@ func (j *JADE) Init() {
 	// j.dist = scheduler.NewDist()
 	// read environment variables into config
 
-	j.Scheduler = scheduler.NewScheduler()
+	var subtaskDispatcher scheduler.SubtaskDispatcher = func(
+		appId string, 
+		moduleName string, 
+		addr *ds.Node, 
+		payload interface{},
+	) int {
+		_, reqlen, _, _ := j.HTTPCommunicate(
+			"dispatch subtask "+moduleName, "POST", "/"+moduleName,
+			addr,
+			payload,
+			0, 10,
+		)
+		return reqlen
+	}
+
+	var aggregatorTaskDispatcher scheduler.AggregativeTaskDispatcher = func(
+		moduleName string, queueKey string, addr *ds.Node, msg interface{},
+	) int {
+		_, reqlen, _, _ := j.HTTPCommunicate(
+			"dispatch subtask "+moduleName, "PUT", "/$jade$/enqueueAggregativeTask",
+			addr, msg,
+			0, 10,
+		)
+		return reqlen
+	}
+
+	var neighborTaskDispatcher scheduler.NeighborTaskDispatcher = func(
+		neighborNode *ds.Node, dispatchItem *ds.TaskDispatchingItem,
+	) {
+		j.dispatchNeighborTask(neighborNode, dispatchItem)
+	}
+
+	j.Scheduler = scheduler.NewScheduler(
+		j.Config.SelfNode, 50000, 
+		subtaskDispatcher, 
+		aggregatorTaskDispatcher,
+		neighborTaskDispatcher,
+		j.log.Op.Printf,
+	)
 
 	j.Config = kernel.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
