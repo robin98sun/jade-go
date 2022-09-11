@@ -5,6 +5,7 @@ go 1.19
 require (
 	uta.edu/aces/jadesdk v0.0.0
 	uta.edu/aces/scheduler v0.0.0
+	uta.edu/aces/resource_manager v0.0.0
 )
 
 require (
@@ -57,4 +58,5 @@ require (
 replace (
 	uta.edu/aces/jadesdk => ../jadesdk
 	uta.edu/aces/scheduler => ../scheduler
+	uta.edu/aces/resource_manager => ../resource-manager
 )

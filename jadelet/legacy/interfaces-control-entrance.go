@@ -17,7 +17,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 	}
 	// re-decode
 	reqInst := &struct {
-		Payload []*task.TaskDispatchingItem `json:"payload,omitempty"`
+		Payload []*ds.TaskDispatchingItem `json:"payload,omitempty"`
 	}{}
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
@@ -29,7 +29,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
-		validTasks := make(map[string]*task.TaskDispatchingItem)
+		validTasks := make(map[string]*ds.TaskDispatchingItem)
 		res := &struct {
 			ValidTasksCount int      `json:"validTasksCount,omitempty"`
 			TaskIDList      []string `json:"taskIDList,omitempty"`
@@ -66,18 +66,18 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 		} else {
 			j.log.Op.Printf("received an autonomous task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			task := dispatchItem.Task
-			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
-				if _, workerExists := task.Application.Modules[string(kernel.AppModuleWorker)]; workerExists {
+			if _, aggregatorExists := task.Application.Modules[string(ds.AppModuleAggregator)]; aggregatorExists {
+				if _, workerExists := task.Application.Modules[string(ds.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
-					j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
+					// j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
 				}
 			}
 		}
 	}
-	if len(aggregativeTasks) > 0 {
-		go j.evaluateAggregativeTasks(aggregativeTasks)
-	}
-	if len(collaborativeTasks) > 0 {
-		go j.evaluateCollaborativeTasks(collaborativeTasks)
-	}
+	// if len(aggregativeTasks) > 0 {
+	// 	go j.evaluateAggregativeTasks(aggregativeTasks)
+	// }
+	// if len(collaborativeTasks) > 0 {
+	// 	go j.evaluateCollaborativeTasks(collaborativeTasks)
+	// }
 }

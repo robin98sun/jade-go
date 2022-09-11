@@ -35,7 +35,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *kernel.Requirements
+		Payload *ds.Requirements
 	}{}
 	err = json.Unmarshal(content, reqInst)
 
@@ -49,7 +49,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
 
-	var nodes []*kernel.Node
+	var nodes []*ds.Node
 	if len(nodekeys) > 0 {
 		j.registryMutex.Lock()
 		defer j.registryMutex.Unlock()

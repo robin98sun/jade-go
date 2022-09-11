@@ -11,6 +11,7 @@ import (
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/scheduler"
+	rm "uta.edu/aces/resource_manager"
 	"uta.edu/aces/jadesdk"
 	"fmt"
 	ds "uta.edu/aces/jadesdk/data_structure"
@@ -35,13 +36,14 @@ type JADE struct {
 	RegisterStatus  string                   `json:"registerStatus"`
 	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	subnodeCapabilityCache *kernel.CapabilityCache
-	subnodeCapacityCache   *kernel.CapacityCache
+	// subnodeCapacityCache   *kernel.CapacityCache
 	neighborCapabilityCache *kernel.CapabilityCache
-	neighborCapacityCache   *kernel.CapacityCache
+	// neighborCapacityCache   *kernel.CapacityCache
 	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
 
 	Scheduler    	*scheduler.Buffet
+	ResourceManager *rm.ResourceManager
 
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
@@ -148,14 +150,14 @@ func (j *JADE) IsLeaf() bool {
 
 // MakeUpAddressForNode to make up empty address for a node
 func (j *JADE) MakeUpAddressForNode(n *ds.Node) {
-	if n.Address != "" && n.Port != 0 {
+	if n.Addr != "" && n.Port != 0 {
 		return
 	}
 	if n.Port == 0 && n.Namespace != "" && n.ServiceExternal != "" {
 		n.Port = j.Kube.FindExternalPort(n.Namespace, n.ServiceExternal)
 	}
-	if n.Address == "" && n.Hostname != "" {
-		n.Address = j.Kube.FindExternalIP(n.Hostname)
+	if n.Addr == "" && n.Hostname != "" {
+		n.Addr = j.Kube.FindExternalIP(n.Hostname)
 	}
 
 }

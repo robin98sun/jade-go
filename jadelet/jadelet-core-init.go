@@ -5,8 +5,10 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
-	"uta.edu/aces/scheduler"
+	// "uta.edu/aces/scheduler"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
+	rm "uta.edu/aces/resource_manager"
 )
 
 // Init to do initializing work
@@ -18,12 +20,12 @@ func (j *JADE) Init() {
 	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
 	j.sdk = jadesdk.NewJadeSDK()
-	j.Subnodes = make(map[string]*kernel.Node)
-	j.Neighbors = make(map[string]*kernel.Node)
+	j.Subnodes = make(map[string]*ds.Node)
+	j.Neighbors = make(map[string]*ds.Node)
 	j.subnodeCapabilityCache = kernel.NewCapabilityCache()
-	j.subnodeCapacityCache = kernel.NewCapacityCache()
+	// j.subnodeCapacityCache = ds.NewCapacityCache()
 	j.neighborCapabilityCache = kernel.NewCapabilityCache()
-	j.neighborCapacityCache = kernel.NewCapacityCache()
+	// j.neighborCapacityCache = ds.NewCapacityCache()
 	j.eligibleNeighborCache = kernel.NewEligibleNeighborCache()
 	j.CapacityStatus = &kernel.CapacityStatus{}
 
@@ -31,49 +33,53 @@ func (j *JADE) Init() {
 	// j.PodCache = scheduler.NewPodCache()
 	// j.PerfCache = perfstat.NewPerfCache()
 	// j.dist = scheduler.NewDist()
+
+	// resource manager
+	j.ResourceManager = rm.NewResourceManager()
+
+	// scheduler
+	// var subtaskDispatcher scheduler.SubtaskDispatcher = func(
+	// 	appId string, 
+	// 	moduleName string, 
+	// 	addr *ds.Node, 
+	// 	payload interface{},
+	// ) int {
+	// 	_, reqlen, _, _ := j.HTTPCommunicate(
+	// 		"dispatch subtask "+moduleName, "POST", "/"+moduleName,
+	// 		addr,
+	// 		payload,
+	// 		0, 10,
+	// 	)
+	// 	return reqlen
+	// }
+
+	// var aggregatorTaskDispatcher scheduler.AggregativeTaskDispatcher = func(
+	// 	moduleName string, queueKey string, addr *ds.Node, msg interface{},
+	// ) int {
+	// 	_, reqlen, _, _ := j.HTTPCommunicate(
+	// 		"dispatch subtask "+moduleName, "PUT", "/$jade$/enqueueAggregativeTask",
+	// 		addr, msg,
+	// 		0, 10,
+	// 	)
+	// 	return reqlen
+	// }
+
+	// var neighborTaskDispatcher scheduler.NeighborTaskDispatcher = func(
+	// 	neighborNode *ds.Node, dispatchItem *ds.TaskDispatchingItem,
+	// ) {
+	// 	j.dispatchNeighborTask(neighborNode, dispatchItem)
+	// }
+
+	// j.Scheduler = scheduler.NewScheduler(
+	// 	j.Config.SelfNode, 50000, 
+	// 	subtaskDispatcher, 
+	// 	aggregatorTaskDispatcher,
+	// 	neighborTaskDispatcher,
+	// 	j.log.Op.Printf,
+	// )
+
 	// read environment variables into config
-
-	var subtaskDispatcher scheduler.SubtaskDispatcher = func(
-		appId string, 
-		moduleName string, 
-		addr *ds.Node, 
-		payload interface{},
-	) int {
-		_, reqlen, _, _ := j.HTTPCommunicate(
-			"dispatch subtask "+moduleName, "POST", "/"+moduleName,
-			addr,
-			payload,
-			0, 10,
-		)
-		return reqlen
-	}
-
-	var aggregatorTaskDispatcher scheduler.AggregativeTaskDispatcher = func(
-		moduleName string, queueKey string, addr *ds.Node, msg interface{},
-	) int {
-		_, reqlen, _, _ := j.HTTPCommunicate(
-			"dispatch subtask "+moduleName, "PUT", "/$jade$/enqueueAggregativeTask",
-			addr, msg,
-			0, 10,
-		)
-		return reqlen
-	}
-
-	var neighborTaskDispatcher scheduler.NeighborTaskDispatcher = func(
-		neighborNode *ds.Node, dispatchItem *ds.TaskDispatchingItem,
-	) {
-		j.dispatchNeighborTask(neighborNode, dispatchItem)
-	}
-
-	j.Scheduler = scheduler.NewScheduler(
-		j.Config.SelfNode, 50000, 
-		subtaskDispatcher, 
-		aggregatorTaskDispatcher,
-		neighborTaskDispatcher,
-		j.log.Op.Printf,
-	)
-
-	j.Config = kernel.ReadConfFromEnv()
+	j.Config = ds.ReadConfFromEnv()
 	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
 	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 
