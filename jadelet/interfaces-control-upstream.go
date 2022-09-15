@@ -37,6 +37,9 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	nodekey := payload.Node.Key()
+	if payload.NodeID != "" {
+		nodekey = payload.NodeID
+	}
 
 	j.registryMutex.Lock()
 	defer j.registryMutex.Unlock()
