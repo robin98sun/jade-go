@@ -73,9 +73,7 @@ func (n *Node) GetSDKNode() *jadesdk.Node {
 
 // Key is used to store node in cache
 func (n *Node) Key() string {
-	if n.Hostname != "" {
-		return n.Hostname
-	} else if !n.IsAddrEmpty() {
+	if !n.IsAddrEmpty() {
 		return n.URL()
 	} else if n.Hostname != "" && n.Namespace != "" && n.PodName != "" {
 		return n.Hostname + ":" + n.Namespace + ":" + n.PodName
