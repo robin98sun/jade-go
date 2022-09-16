@@ -44,16 +44,18 @@ func (j *JADE) dispatchControlPlaneTask(node *kernel.Node, dispatchItem *schedul
 	)
 }
 
-func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (float64, float64) {
+func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64) {
 
 	start_time := time.Now()
 	discovery_time := float64(0)
+	neighborCount := 0
 	if dispatchItem.TTL > 0 {
 		eligibleNeighbors := j.discoverNeighbors(dispatchItem)
 		discovery_time = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 		if len(eligibleNeighbors) == 0 {
-			return discovery_time, discovery_time
+			return neighborCount, discovery_time, discovery_time
 		}
+		neighborCount = len(eligibleNeighbors)
 		dispatchItem.TTL -= 1
 		inParallel := false
 		if dispatchItem.Options != nil && dispatchItem.Options.ControlPlaneOptions != nil {
@@ -98,6 +100,6 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 		}
 
 	}
-	return float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time
+	return neighborCount, float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time
 
 }
