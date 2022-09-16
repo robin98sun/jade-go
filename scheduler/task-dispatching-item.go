@@ -45,8 +45,6 @@ type TaskDispatchingOptions struct {
 }
 
 type ControlPlaneOptions struct {
-	IsForNegotiation			bool `json:"isForNegotiation,omitempty"`
-	NegotiationPhase            BudgetNegotiationPhase `json:"negotiationPhase,omitempty"`
 	InParallel					bool `json:"inParallel,omitempty"`
 	WaitMillisecondsBeforeAnswer int `json:"waitMillisecondsBeforeAnswer,omitempty`
 }
