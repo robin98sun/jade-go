@@ -40,6 +40,15 @@ type TaskDispatchingOptions struct {
 	TaskCategories				[]string  `json:"taskCategories,omitempty"`
 	ProvisionPodsIfNotExist     bool    `json:"provisionPodsIfNotExist,omitempty"`
 	DispatchingRatePerSecond    float64 `json:"dispatchingRatePerSecond,omitempty"`
+	IsControlPlaneTask          bool `json:"isControlPlaneTask,omitempty"`
+	ControlPlaneOptions			*ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
+}
+
+type ControlPlaneOptions struct {
+	IsForNegotiation			bool `json:"isForNegotiation,omitempty"`
+	NegotiationPhase            BudgetNegotiationPhase `json:"negotiationPhase,omitempty"`
+	InParallel					bool `json:"inParallel,omitempty"`
+	WaitMillisecondsBeforeAnswer int `json:"waitMillisecondsBeforeAnswer,omitempty`
 }
 
 const TaskDefaultPriority = 1000

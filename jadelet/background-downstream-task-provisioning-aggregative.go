@@ -31,6 +31,16 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 	goodTaskCache := make(map[string]*DispatchItemWithAggregator) // taskKey: *TaskDispatchingItem
 	for _, taskItem := range tasklist {
 		task := taskItem.Task
+		if taskItem.InquiryStartTimestamp.IsZero() {
+			taskItem.InquiryStartTimestamp = time.Now()
+		}
+		if taskItem.InquiryDoneTimestamp.IsZero() {
+			taskItem.InquiryDoneTimestamp = time.Now()
+		}
+		if taskItem.BudgetEstimationDoneTimestamp.IsZero() {
+			taskItem.BudgetEstimationDoneTimestamp = time.Now()
+		}
+
 		existingItemInCache := j.TaskCache.GetTask(task.GetKey(), true)
 		if existingItemInCache != nil {
 			j.log.Debug.Printf("[task provision] the incoming task already exists, typically is to confirm the negotiated budget, the task involves %v neighbors", len(task.NeighborNodes))

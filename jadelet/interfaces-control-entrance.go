@@ -28,37 +28,69 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
-		validTasks := make(map[string]*scheduler.TaskDispatchingItem)
+
+		dataPlaneTasks := make(map[string]*scheduler.TaskDispatchingItem)
+		controlPlaneTasks := map[string]*scheduler.TaskDispatchingItem{}
+
 		res := &struct {
-			ValidTasksCount int      `json:"validTasksCount,omitempty"`
+			DataPlaneTasksCount int  `json:"dataPlaneTasks,omitempty"`
+			ControlPlaneTasksCount int  `json:"controlPlaneTasks,omitempty"`
 			TaskIDList      []string `json:"taskIDList,omitempty"`
+			DiscoveryTime   float64 `json:"discoveryTime,omitempty`
+			NegotiationTime float64 `json:"negotiationTime,omitempty`
 		}{}
+		
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
 				taskItem.Arrived()
 				taskItem.GenTag()
-				validTasks[taskItem.Task.GetKey()] = taskItem
+				if taskItem.Options != nil && taskItem.Options.IsControlPlaneTask && taskItem.Options.ControlPlaneOptions != nil {
+
+					controlPlaneTasks[taskItem.Task.GetKey()] = taskItem					
+				} else {
+
+					dataPlaneTasks[taskItem.Task.GetKey()] = taskItem
+				}
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
 				j.log.Op.Println("WARN: received an invalid task")
 				res.TaskIDList = append(res.TaskIDList, "")
 			}
 		}
-		if len(validTasks) > 0 {
-			j.ClassifyTasks(validTasks)
+		if len(dataPlaneTasks) > 0 {
+			j.ClassifyDataPlaneTasks(dataPlaneTasks)
 		}
 
-		res.ValidTasksCount = len(validTasks)
+		if len(controlPlaneTasks) > 0 {
+			avg_discovery_time := float64(0)
+			avg_negotiation_time := float64(0)
+			for _, taskItem := range controlPlaneTasks {
+				total_time, discovery_time := j.processControlPlaneTask(taskItem)
+				negotiation_time := total_time - discovery_time
+				avg_discovery_time += discovery_time
+				avg_negotiation_time += negotiation_time
+			}
+			avg_discovery_time /= float64(len(controlPlaneTasks))
+			avg_negotiation_time /= float64(len(controlPlaneTasks))
+			res.DiscoveryTime = avg_discovery_time
+			res.NegotiationTime = avg_negotiation_time
+		}
+
+		res.DataPlaneTasksCount = len(dataPlaneTasks)
+		res.ControlPlaneTasksCount = len(controlPlaneTasks)
 		j.DoneRequest(w, r, res)
 	}
 
 }
 
 
-func (j *JADE) ClassifyTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
+func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
 	collaborativeTasks := map[string]*scheduler.TaskDispatchingItem{}
 	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
+
+
 	for taskKey, dispatchItem := range tasklist {
+
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem

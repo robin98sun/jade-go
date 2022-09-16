@@ -24,21 +24,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			continue
 		}
 
-		eligibleNeighbors := j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
-
-		if len(eligibleNeighbors) == 0 {
-			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
-			j.log.Debug.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
-			if eligibleNeighbors == nil {
-				eligibleNeighbors = []*kernel.Node{}
-			}
-			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
-		}
+		eligibleNeighbors := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
+
+			// data plane
 			j.log.Debug.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
