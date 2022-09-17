@@ -60,6 +60,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 				res.TaskIDList = append(res.TaskIDList, "")
 			}
 		}
+		j.log.Op.Printf("received %v data plane tasks, %v control plane tasks", len(dataPlaneTasks), len(controlPlaneTasks))
 		if len(dataPlaneTasks) > 0 {
 			j.ClassifyDataPlaneTasks(dataPlaneTasks)
 		}

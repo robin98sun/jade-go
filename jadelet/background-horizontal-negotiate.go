@@ -299,24 +299,24 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) [
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 
-	j.log.Debug.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
+	j.log.Debug.Printf("[control plane] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
 	if j.Config.RegistryNode.IsAddrEmpty() {
-		j.log.Debug.Printf("[budget negotiation] ERROR: registry node is empty")
+		j.log.Debug.Printf("[control plane] ERROR: registry node is empty")
 
 	}
 	apiPath := "/$jade$/eligibleNeighbors"
 	_, _, content, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {
-		j.log.Debug.Println("[budget negotiation] ERROR when fetching eligible neighbors:", err.Error())
+		j.log.Debug.Println("[control plane] ERROR when fetching eligible neighbors:", err.Error())
 	} else {
 		resInst :=  &struct{
 			Payload []*kernel.Node `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Debug.Println("[budget negotiation] ERROR of fetching eligible neighbors: can not decode response, ", err)
+			j.log.Debug.Println("[control plane] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Debug.Println("[budget negotiation] response of fetching eligible neighbors:", resInst.Payload)
+			j.log.Debug.Println("[control plane] response of fetching eligible neighbors:", resInst.Payload)
 			return resInst.Payload
 		}
 	}

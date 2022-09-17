@@ -33,19 +33,6 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []
 	return eligibleNeighbors
 }
 
-
-func (j *JADE) dispatchControlPlaneTask(node *kernel.Node, dispatchItem *scheduler.TaskDispatchingItem) {
-	req := j.GeneratePayloadOfRequest(
-		node, []*scheduler.TaskDispatchingItem{dispatchItem}, nil, nil,
-	)
-	j.HTTPCommunicate(
-		"dispatch control plane task to neighbor", 
-		"POST", "/taskReceiver",
-		node, req,
-		0, 10,
-	)
-}
-
 func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64) {
 
 	start_time := time.Now()
@@ -73,7 +60,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				returnlist: []bool{},
 			}
 			routine := func(node *kernel.Node) {
-				j.dispatchControlPlaneTask(node, dispatchItem)
+				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
 				defer cache.mutex.Unlock()
 				cache.returnlist = append(cache.returnlist, true)
@@ -90,7 +77,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			}
 		} else {
 			for _, node := range eligibleNeighbors {
-				j.dispatchControlPlaneTask(node, dispatchItem)
+				j.dispatchNeighborTask(node, dispatchItem)
 			}
 		}
 
