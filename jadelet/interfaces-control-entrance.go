@@ -16,6 +16,7 @@ type TaskReceiverResponse struct {
 	MatchTime       float64 `json:"matchTime,omitempty"`
 	NeighborCount   int     `json:"neighbors,omitempty"`
 	PackageSize     int     `json:"packageSize,omitempty"`
+	StrugglingNodes float64     `json:"struggling_nodes,omitempty"`
 }
 
 // TaskReceiver task receiver
@@ -73,25 +74,29 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			avg_neighbor_count := 0
 			avg_match_time := float64(0)
 			avg_package_size := 0
+			avg_struggling_nodes := float64(0)
 			for _, taskItem := range controlPlaneTasks {
-				neighborCount, total_time, discovery_time, matching_time, package_size := j.processControlPlaneTask(taskItem)
+				neighborCount, total_time, discovery_time, matching_time, package_size, struggling_nodes := j.processControlPlaneTask(taskItem)
 				negotiation_time := total_time - discovery_time
 				avg_discovery_time += discovery_time
 				avg_negotiation_time += negotiation_time
 				avg_neighbor_count += neighborCount
 				avg_match_time += matching_time
 				avg_package_size += package_size
+				avg_struggling_nodes += float64(struggling_nodes)
 			}
 			avg_discovery_time /= float64(len(controlPlaneTasks))
 			avg_negotiation_time /= float64(len(controlPlaneTasks))
 			avg_neighbor_count /= len(controlPlaneTasks)
 			avg_match_time /= float64(len(controlPlaneTasks))
 			avg_package_size /= len(controlPlaneTasks)
+			avg_struggling_nodes /= float64(len(controlPlaneTasks))
 			res.DiscoveryTime = avg_discovery_time
 			res.NegotiationTime = avg_negotiation_time
 			res.NeighborCount = avg_neighbor_count
 			res.MatchTime = avg_match_time
 			res.PackageSize = avg_package_size
+			res.StrugglingNodes = avg_struggling_nodes
 		}
 
 		res.DataPlaneTasksCount = len(dataPlaneTasks)
