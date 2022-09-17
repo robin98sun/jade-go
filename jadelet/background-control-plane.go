@@ -92,7 +92,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				go routine(node, i)
 			}
 
-			iteration = 0
+			iteration := 0
 			for {
 				time.Sleep(time.Duration(500)*time.Microsecond)
 				cache.mutex.Lock()
