@@ -83,6 +83,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
 				cache.returnlist = append(cache.returnlist, true)
+				j.log.Op.Printf("[control plane][parallel negotiation] %v nodes done", len(cache.returnlist))
 				cache.mutex.Unlock()
 			}
 			for _, node := range eligibleNeighbors {
@@ -93,6 +94,8 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				if len(cache.returnlist) == len(eligibleNeighbors) {
 					cache.mutex.Unlock()
 					break
+				} else {
+					j.log.Op.Printf("[control plane][parallel negotiation] still waiting for %v nodes", len(eligibleNeighbors)-len(cache.returnlist))
 				}
 				cache.mutex.Unlock()
 			}
