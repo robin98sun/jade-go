@@ -35,11 +35,13 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []
 
 
 func (j *JADE) dispatchControlPlaneTask(node *kernel.Node, dispatchItem *scheduler.TaskDispatchingItem) {
+	req := j.GeneratePayloadOfRequest(
+		node, []*scheduler.TaskDispatchingItem{dispatchItem}, nil, nil,
+	)
 	j.HTTPCommunicate(
 		"dispatch control plane task to neighbor", 
 		"POST", "/taskReceiver",
-		node,
-		[]*scheduler.TaskDispatchingItem{dispatchItem},
+		node, req,
 		0, 10,
 	)
 }

@@ -7,6 +7,15 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 )
 
+type TaskReceiverResponse struct {
+	DataPlaneTasksCount int  `json:"dataPlaneTasks,omitempty"`
+	ControlPlaneTasksCount int  `json:"controlPlaneTasks,omitempty"`
+	TaskIDList      []string `json:"taskIDList,omitempty"`
+	DiscoveryTime   float64 `json:"discoveryTime,omitempty`
+	NegotiationTime float64 `json:"negotiationTime,omitempty`
+	NeighborCount   int     `json:"neighbors,omitempty"`
+}
+
 // TaskReceiver task receiver
 func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 	content, _, err := j.ValidateRequest(w, r)
@@ -32,14 +41,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		dataPlaneTasks := make(map[string]*scheduler.TaskDispatchingItem)
 		controlPlaneTasks := map[string]*scheduler.TaskDispatchingItem{}
 
-		res := &struct {
-			DataPlaneTasksCount int  `json:"dataPlaneTasks,omitempty"`
-			ControlPlaneTasksCount int  `json:"controlPlaneTasks,omitempty"`
-			TaskIDList      []string `json:"taskIDList,omitempty"`
-			DiscoveryTime   float64 `json:"discoveryTime,omitempty`
-			NegotiationTime float64 `json:"negotiationTime,omitempty`
-			NeighborCount   int     `json:"neighbors,omitempty"`
-		}{}
+		res := &TaskReceiverResponse{}
 		
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {

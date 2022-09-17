@@ -283,3 +283,5 @@ func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload inte
 	}
 	return &payload
 }
+
+
