@@ -74,17 +74,17 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 		if inParallel {
 			cache := &struct {
 				mutex *sync.Mutex
-				returnlist []bool
+				returnlist map[string]bool
 			}{
 				mutex: &sync.Mutex{},
-				returnlist: []bool{},
+				returnlist: map[string]bool{},
 			}
 			routine := func(node *kernel.Node, i int) {
 				time.Sleep(time.Duration(500+i*100)*time.Microsecond)
 				j.log.Op.Printf("[control plane][parallel negotiation] dispatching to No.%v node", i)
 				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
-				cache.returnlist = append(cache.returnlist, true)
+				cache.returnlist[node.Key()]=true
 				j.log.Op.Printf("[control plane][parallel negotiation] %v nodes done", len(cache.returnlist))
 				cache.mutex.Unlock()
 			}
@@ -95,15 +95,28 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			iteration := 0
 			for {
 				time.Sleep(time.Duration(500)*time.Microsecond)
+				struggling_nodes := 0
 				cache.mutex.Lock()
 				if len(cache.returnlist) == len(eligibleNeighbors) {
 					cache.mutex.Unlock()
 					break
 				} else if iteration % 1000 == 0 {
-					j.log.Op.Printf("[control plane][parallel negotiation] still waiting for %v nodes", len(eligibleNeighbors)-len(cache.returnlist))
+					struggling_nodes = len(eligibleNeighbors)-len(cache.returnlist)
+					j.log.Op.Printf("[control plane][parallel negotiation] still waiting for %v nodes", struggling_nodes)
+					for _, node := range eligibleNeighbors {
+						if _, e := cache.returnlist[node.Key()]; !e {
+							j.log.Op.Printf("[control plane][parallel negotiation] waiting for node[%v], hostname: %v, port: %v", 
+								node.Key(), node.Hostname, node.Port,
+							)
+						}
+					}
 				}
 				cache.mutex.Unlock()
 				iteration += 1
+				if iteration > 20000 && struggling_nodes < len(eligibleNeighbors) / 10 {
+					j.log.Op.Printf("[control plane][parallel negotiation] stop waiting for %v nodes among %v", struggling_nodes, len(eligibleNeighbors))
+					break
+				}
 			}
 		} else {
 			for _, node := range eligibleNeighbors {
