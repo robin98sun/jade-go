@@ -27,7 +27,7 @@ func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *sch
 		nil, nil,
 	)
 	j.log.Debug.Println("dispatching tasks to neighbor node", neighborNode.GetKey())
-	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 10)
+	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 1)
 }
 
 
