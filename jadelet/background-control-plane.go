@@ -80,7 +80,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				returnlist: []bool{},
 			}
 			routine := func(node *kernel.Node, i int) {
-				time.Sleep(time.Duration(5000+i*1000)*time.Nanosecond)
+				time.Sleep(time.Duration(500+i*100)*time.Microsecond)
 				j.log.Op.Printf("[control plane][parallel negotiation] dispatching to No.%v node", i)
 				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
@@ -92,6 +92,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				go routine(node, i)
 			}
 			for {
+				time.Sleep(time.Duration(500)*time.Microsecond)
 				cache.mutex.Lock()
 				if len(cache.returnlist) == len(eligibleNeighbors) {
 					cache.mutex.Unlock()
