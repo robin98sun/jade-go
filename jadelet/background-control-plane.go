@@ -82,18 +82,19 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			routine := func(node *kernel.Node) {
 				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
-				defer cache.mutex.Unlock()
 				cache.returnlist = append(cache.returnlist, true)
+				cache.mutex.Unlock()
 			}
 			for _, node := range eligibleNeighbors {
 				go routine(node)
 			}
 			for {
 				cache.mutex.Lock()
-				defer cache.mutex.Unlock()
 				if len(cache.returnlist) == len(eligibleNeighbors) {
+					cache.mutex.Unlock()
 					break
 				}
+				cache.mutex.Unlock()
 			}
 		} else {
 			for _, node := range eligibleNeighbors {
