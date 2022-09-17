@@ -317,7 +317,7 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) *
 		if err != nil {
 			j.log.Debug.Println("[control plane] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Debug.Println("[control plane] response of fetching eligible neighbors, package size: %v, nodes %v", packageSize, len(resInst.Payload.Nodes))
+			j.log.Debug.Printf("[control plane] response of fetching eligible neighbors, package size: %v, nodes %v", packageSize, len(resInst.Payload.Nodes))
 			resInst.Payload.PackageSize = packageSize
 			return resInst.Payload
 		}

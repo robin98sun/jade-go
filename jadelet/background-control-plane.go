@@ -7,6 +7,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"time"
 	"sync"
+	"math"
 )
 
 
@@ -85,7 +86,6 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				j.dispatchNeighborTask(node, dispatchItem)
 				cache.mutex.Lock()
 				cache.returnlist[node.Key()]=true
-				j.log.Op.Printf("[control plane][parallel negotiation] %v nodes done", len(cache.returnlist))
 				cache.mutex.Unlock()
 			}
 			for i, node := range eligibleNeighbors {
@@ -97,6 +97,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				time.Sleep(time.Duration(500)*time.Microsecond)
 				struggling_nodes := 0
 				cache.mutex.Lock()
+				j.log.Op.Printf("[control plane][parallel negotiation] %v nodes done", len(cache.returnlist))
 				if len(cache.returnlist) == len(eligibleNeighbors) {
 					cache.mutex.Unlock()
 					break
@@ -113,8 +114,9 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				}
 				cache.mutex.Unlock()
 				iteration += 1
-				if iteration > 20000 && struggling_nodes < len(eligibleNeighbors) / 10 {
-					j.log.Op.Printf("[control plane][parallel negotiation] stop waiting for %v nodes among %v", struggling_nodes, len(eligibleNeighbors))
+				if iteration > 20000 && struggling_nodes < len(eligibleNeighbors) / 10 || iteration > 60000 {
+					j.log.Op.Printf("[control plane][parallel negotiation] stop waiting for %v nodes among %v after %v seconds", struggling_nodes, len(eligibleNeighbors), math.Round(float64(iteration)*0.5/100)/10,
+					)
 					break
 				}
 			}
