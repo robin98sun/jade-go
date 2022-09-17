@@ -91,16 +91,19 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			for i, node := range eligibleNeighbors {
 				go routine(node, i)
 			}
+
+			iteration = 0
 			for {
 				time.Sleep(time.Duration(500)*time.Microsecond)
 				cache.mutex.Lock()
 				if len(cache.returnlist) == len(eligibleNeighbors) {
 					cache.mutex.Unlock()
 					break
-				} else {
+				} else if iteration % 1000 == 0 {
 					j.log.Op.Printf("[control plane][parallel negotiation] still waiting for %v nodes", len(eligibleNeighbors)-len(cache.returnlist))
 				}
 				cache.mutex.Unlock()
+				iteration += 1
 			}
 		} else {
 			for _, node := range eligibleNeighbors {
