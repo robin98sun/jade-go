@@ -17,7 +17,16 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []
 		return nil
 	}
 
-	eligibleNeighbors := j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
+	var eligibleNeighbors []*kernel.Node 
+	overwriteCache := false
+
+	if dispatchItem.Options!=nil && dispatchItem.Options.ControlPlaneOptions!=nil && dispatchItem.Options.ControlPlaneOptions.OverwriteCache {
+		overwriteCache = true
+	}
+
+	if !overwriteCache {
+		eligibleNeighbors = j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
+	}
 
 	if len(eligibleNeighbors) == 0 {
 		eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
