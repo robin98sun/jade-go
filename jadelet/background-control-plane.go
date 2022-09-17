@@ -10,11 +10,12 @@ import (
 )
 
 
-func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []*kernel.Node {
+func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([]*kernel.Node, float64) {
+	dur := float64(0)
 	query := dispatchItem.Task.Requirements
 	query_key := query.GetQueryKey()
 	if query_key == "" {
-		return nil
+		return nil, dur
 	}
 
 	var eligibleNeighbors []*kernel.Node 
@@ -25,11 +26,15 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []
 	}
 
 	if !overwriteCache {
+		start_time := time.Now()
 		eligibleNeighbors = j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
+		dur = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 	}
 
 	if len(eligibleNeighbors) == 0 {
-		eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
+		res := j.fetchEligibleAutonomyServiceDomains(query)
+		eligibleNeighbors = res.Nodes
+		dur = res.Duration
 		j.log.Debug.Printf("[control plane] got %v eligible neighbors from registry", len(eligibleNeighbors))
 		if eligibleNeighbors == nil {
 			eligibleNeighbors = []*kernel.Node{}
@@ -39,19 +44,21 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) []
 		j.log.Debug.Printf("[control plane] got %v eligible neighbors from cache", len(eligibleNeighbors))
 	}
 
-	return eligibleNeighbors
+	return eligibleNeighbors, dur
 }
 
-func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64) {
+func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64, float64) {
 
 	start_time := time.Now()
 	discovery_time := float64(0)
+	matching_time := float64(0)
 	neighborCount := 0
 	if dispatchItem.TTL > 0 {
-		eligibleNeighbors := j.discoverNeighbors(dispatchItem)
+		eligibleNeighbors, dur := j.discoverNeighbors(dispatchItem)
+		matching_time = dur
 		discovery_time = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 		if len(eligibleNeighbors) == 0 {
-			return neighborCount, discovery_time, discovery_time
+			return neighborCount, discovery_time, discovery_time, matching_time
 		}
 		neighborCount = len(eligibleNeighbors)
 		dispatchItem.TTL -= 1
@@ -98,6 +105,6 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 		}
 
 	}
-	return neighborCount, float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time
+	return neighborCount, float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time, matching_time
 
 }

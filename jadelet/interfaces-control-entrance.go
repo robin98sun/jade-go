@@ -11,8 +11,9 @@ type TaskReceiverResponse struct {
 	DataPlaneTasksCount int  `json:"dataPlaneTasks,omitempty"`
 	ControlPlaneTasksCount int  `json:"controlPlaneTasks,omitempty"`
 	TaskIDList      []string `json:"taskIDList,omitempty"`
-	DiscoveryTime   float64 `json:"discoveryTime,omitempty`
-	NegotiationTime float64 `json:"negotiationTime,omitempty`
+	DiscoveryTime   float64 `json:"discoveryTime,omitempty"`
+	NegotiationTime float64 `json:"negotiationTime,omitempty"`
+	MatchTime       float64 `json:"matchTime,omitempty"`
 	NeighborCount   int     `json:"neighbors,omitempty"`
 }
 
@@ -69,19 +70,23 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			avg_discovery_time := float64(0)
 			avg_negotiation_time := float64(0)
 			avg_neighbor_count := 0
+			avg_match_time := float64(0)
 			for _, taskItem := range controlPlaneTasks {
-				neighborCount, total_time, discovery_time := j.processControlPlaneTask(taskItem)
+				neighborCount, total_time, discovery_time, matching_time := j.processControlPlaneTask(taskItem)
 				negotiation_time := total_time - discovery_time
 				avg_discovery_time += discovery_time
 				avg_negotiation_time += negotiation_time
 				avg_neighbor_count += neighborCount
+				avg_match_time += matching_time
 			}
 			avg_discovery_time /= float64(len(controlPlaneTasks))
 			avg_negotiation_time /= float64(len(controlPlaneTasks))
 			avg_neighbor_count /= len(controlPlaneTasks)
+			avg_match_time /= float64(len(controlPlaneTasks))
 			res.DiscoveryTime = avg_discovery_time
 			res.NegotiationTime = avg_negotiation_time
 			res.NeighborCount = avg_neighbor_count
+			res.MatchTime = avg_match_time
 		}
 
 		res.DataPlaneTasksCount = len(dataPlaneTasks)

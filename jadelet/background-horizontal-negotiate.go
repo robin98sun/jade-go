@@ -24,7 +24,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			continue
 		}
 
-		eligibleNeighbors := j.discoverNeighbors(dispatchItem)
+		eligibleNeighbors, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
@@ -295,7 +295,7 @@ func (j *JADE) inquiryBudget(neighbor *kernel.Node, sampleTask *scheduler.TaskDi
 	return nil
 }
 
-func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) []*kernel.Node {
+func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) *InqueryNeighborResponse {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 
@@ -310,7 +310,7 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) [
 		j.log.Debug.Println("[control plane] ERROR when fetching eligible neighbors:", err.Error())
 	} else {
 		resInst :=  &struct{
-			Payload []*kernel.Node `json:"payload,omitempty"`
+			Payload *InqueryNeighborResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {

@@ -7,6 +7,7 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/histogram"
 	"encoding/json"
+	"time"
 )
 
 func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
@@ -22,6 +23,11 @@ func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
 	
 	// finish the request
 	j.DoneRequest(w, r, nil)
+}
+
+type InqueryNeighborResponse struct {
+	Duration float64 `json:"duration,omitempty"`
+	Nodes []*kernel.Node `json:"nodes,omitempty"`
 }
 
 func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
@@ -46,7 +52,9 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	requirements := reqInst.Payload
 
+	start_time := time.Now()
 	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
+	dur := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 
 	var nodes []*kernel.Node
 	if len(nodekeys) > 0 {
@@ -64,7 +72,11 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 	}
 	j.log.Op.Printf("[fetch neighbors] selected %v eligible neighbors", len(nodes))
 	// finish the request
-	j.DoneRequest(w, r, nodes)
+	res := &InqueryNeighborResponse{
+		Duration: dur,
+		Nodes: nodes,
+	}
+	j.DoneRequest(w, r, res)
 }
 
 func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {
