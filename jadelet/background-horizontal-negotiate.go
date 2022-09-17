@@ -24,7 +24,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			continue
 		}
 
-		eligibleNeighbors, _ := j.discoverNeighbors(dispatchItem)
+		eligibleNeighbors, _, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
@@ -312,11 +312,13 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *kernel.Requirements) *
 		resInst :=  &struct{
 			Payload *InqueryNeighborResponse `json:"payload,omitempty"`
 		}{}
+		packageSize := len(content)
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
 			j.log.Debug.Println("[control plane] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
 			j.log.Debug.Println("[control plane] response of fetching eligible neighbors:", resInst.Payload)
+			resInst.Payload.PackageSize = packageSize
 			return resInst.Payload
 		}
 	}

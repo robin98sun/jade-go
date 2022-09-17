@@ -27,6 +27,7 @@ func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
 
 type InqueryNeighborResponse struct {
 	Duration float64 `json:"duration,omitempty"`
+	PackageSize int `json:packageSize,omitempty"`
 	Nodes []*kernel.Node `json:"nodes,omitempty"`
 }
 
