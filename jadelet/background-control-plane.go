@@ -98,6 +98,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				struggling_nodes := 0
 				cache.mutex.Lock()
 				if len(cache.returnlist) == len(eligibleNeighbors) {
+					j.log.Op.Printf("[control plane][parallel negotiation] %v nodes all done", len(eligibleNeighbors))
 					cache.mutex.Unlock()
 					break
 				} else if iteration % 1000 == 0 {
