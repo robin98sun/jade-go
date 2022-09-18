@@ -11,13 +11,14 @@ import (
 )
 
 
-func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([]*kernel.Node, int, float64) {
-	dur := float64(0)
+func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([]*kernel.Node, int, float64, float64) {
+	matching := float64(0)
+	populating := float64(0)
 	packageSize := 0
 	query := dispatchItem.Task.Requirements
 	query_key := query.GetQueryKey()
 	if query_key == "" {
-		return nil, packageSize, dur
+		return nil, packageSize, matching, populating
 	}
 
 	var eligibleNeighbors []*kernel.Node 
@@ -30,13 +31,15 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 	if !overwriteCache {
 		start_time := time.Now()
 		eligibleNeighbors = j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
-		dur = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
+		matching = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 	}
 
 	if len(eligibleNeighbors) == 0 {
 		res := j.fetchEligibleAutonomyServiceDomains(query)
 		eligibleNeighbors = res.Nodes
-		dur = res.Duration
+		populating = res.Duration - res.Matching
+		matching = res.Matching
+
 		packageSize = res.PackageSize
 		j.log.Debug.Printf("[control plane] got %v eligible neighbors from registry", len(eligibleNeighbors))
 		if eligibleNeighbors == nil {
@@ -47,30 +50,34 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 		j.log.Debug.Printf("[control plane] got %v eligible neighbors from cache", len(eligibleNeighbors))
 	}
 
-	return eligibleNeighbors, packageSize, dur
+	return eligibleNeighbors, packageSize, matching, populating
 }
 
-func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64, float64, int, int) {
+func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64, float64, float64, int, int) {
 
 	start_time := time.Now()
 	discovery_time := float64(0)
 	matching_time := float64(0)
+	populating_time := float64(0)
 	neighborCount := 0
 	packageSize := 0
 	struggling_nodes := 0
 	if dispatchItem.TTL > 0 {
-		eligibleNeighbors, ps, dur := j.discoverNeighbors(dispatchItem)
-		matching_time = dur
+		eligibleNeighbors, ps, t1, t2 := j.discoverNeighbors(dispatchItem)
+		matching_time = t1
+		populating_time = t2
 		packageSize = ps
 		discovery_time = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 		if len(eligibleNeighbors) == 0 {
-			return neighborCount, discovery_time, discovery_time, matching_time, packageSize, struggling_nodes
+			return neighborCount, discovery_time, discovery_time, matching_time, populating_time, packageSize, struggling_nodes
 		}
 		neighborCount = len(eligibleNeighbors)
 		dispatchItem.TTL -= 1
 		inParallel := false
+		doNotDispatch := false
 		if dispatchItem.Options != nil && dispatchItem.Options.ControlPlaneOptions != nil {
 			inParallel = dispatchItem.Options.ControlPlaneOptions.InParallel
+			doNotDispatch = dispatchItem.Options.ControlPlaneOptions.DoNotDispatch
 		}
 
 		if inParallel {
@@ -84,7 +91,9 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			routine := func(node *kernel.Node, i int) {
 				time.Sleep(time.Duration(500+i*100)*time.Microsecond)
 				j.log.Op.Printf("[control plane][parallel negotiation] dispatching to No.%v node", i)
-				j.dispatchNeighborTask(node, dispatchItem)
+				if ! doNotDispatch {
+					j.dispatchNeighborTask(node, dispatchItem)
+				}
 				cache.mutex.Lock()
 				cache.returnlist[node.Key()]=true
 				cache.mutex.Unlock()
@@ -122,7 +131,9 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			}
 		} else {
 			for _, node := range eligibleNeighbors {
-				j.dispatchNeighborTask(node, dispatchItem)
+				if ! doNotDispatch {
+					j.dispatchNeighborTask(node, dispatchItem)
+				}
 			}
 		}
 
@@ -134,6 +145,6 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 		}
 
 	}
-	return neighborCount, float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time, matching_time, packageSize, struggling_nodes
+	return neighborCount, float64(time.Now().Sub(start_time)) / float64(time.Millisecond), discovery_time, matching_time, populating_time, packageSize, struggling_nodes
 
 }

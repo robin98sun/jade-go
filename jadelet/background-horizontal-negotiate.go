@@ -24,7 +24,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*scheduler.TaskDis
 			continue
 		}
 
-		eligibleNeighbors, _, _ := j.discoverNeighbors(dispatchItem)
+		eligibleNeighbors, _, _, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache

@@ -48,6 +48,7 @@ type ControlPlaneOptions struct {
 	InParallel					bool `json:"inParallel,omitempty"`
 	WaitMillisecondsBeforeAnswer int `json:"waitMillisecondsBeforeAnswer,omitempty`
 	OverwriteCache              bool `json:"overwriteCache,omitempty"`
+	DoNotDispatch               bool `json:"doNotDispatch,omitempty"`
 }
 
 const TaskDefaultPriority = 1000

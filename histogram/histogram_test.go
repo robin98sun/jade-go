@@ -12,7 +12,7 @@ import (
 	// "sort"
 )
 
-var verbose bool = true
+var verbose bool = false
 
 func TestScheduler_CreateHistogram(t *testing.T) {
 
@@ -100,7 +100,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 		assert.Equal(t, histogram.MaxItem, max_node, "max node should be identical")
 
 		for _, v := range percentile_list {
-			p := histogram.GetPercentile(v)
+			p := histogram.GetPercentileItem(v)
 			cc := p.Item.CumulativeCount()
 			// log.Printf("%v percentile(%v), real percentage: %v(%v), count: %v, total: %v, min: %v(%v), max: %v(%v), p-node: %v, cumulativeCount: %v, real: %v", 
 			// 	v*float64(100), p.Percentile, 
@@ -144,7 +144,7 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 		for _, p := range percentile_list {
 			pstr = fmt.Sprintf("%s%v%%: %v, ", pstr,
 				p*float64(100),
-				histogram.GetPercentile(p).Item.Value,
+				histogram.GetPercentileForValue(p),
 			)
 		}
 		if verbose {
@@ -157,7 +157,9 @@ func TestScheduler_CreateHistogram(t *testing.T) {
 }
 
 // to do the benchmark:
-// go test -run=MultiplyHistograms -bench=MultiplyHistograms -count=3
+// ref: https://blog.logrocket.com/benchmarking-golang-improve-function-performance/
+// GOMAXPROCS=1 go test -run=MultiplyHistograms -bench=MultiplyHistograms -count=10 -timeout 99999s
+
 func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 	sample_size := 10000
 	window_size := 10000
@@ -167,57 +169,64 @@ func BenchmarkTestScheduler_MultiplyHistograms(t *testing.B) {
 	subhisto_size := 0.1
 	accuracy := 1
 	// buckets_in_subhisto := int(float64(subhisto_size) * math.Pow(float64(10), float64(accuracy)))
+	// percentile_list := []float64{
+	// 	float64(0.95), float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
+	// }
+
 	percentile_list := []float64{
-		float64(0.95), float64(0.99), float64(0.995), float64(0.999), float64(0.9995), float64(0.9999),
+		float64(0.99),
 	}
 
 	var histogram_list []*Histogram = []*Histogram{}
 
-	t.Run(fmt.Sprintf("create %v histograms each window size: %v", histogram_count, window_size), func(b *testing.B) {
-		for h:=0; h<histogram_count; h++ {
-			list := gen_random_list_float(sample_size, sample_mean, float64(10))
-			assert.Equal(t, len(list), sample_size, "random util should work")
+	for h:=0; h<histogram_count; h++ {
+		list := gen_random_list_float(sample_size, sample_mean, float64(10))
+		assert.Equal(t, len(list), sample_size, "random util should work")
 
-			histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
-			assert.NotNil(t, histogram, "histogram should not be nil")
+		histogram := NewHistogram(int64(window_size), float64(subhisto_size), accuracy)
+		assert.NotNil(t, histogram, "histogram should not be nil")
 
-			for _, p := range percentile_list {
-				histogram.AddPercentilePoint(p)
-			}
-
-			for i:=0; i<len(list); i++ {
-				v := list[i]
-				// log.Printf("original %v value: %v", i, v)
-				histogram.Enqueue(v, 1)
-			}
-			histogram_list = append(histogram_list, histogram)
+		for _, p := range percentile_list {
+			histogram.AddPercentilePoint(p)
 		}
-	})
 
+		for i:=0; i<len(list); i++ {
+			v := list[i]
+			// log.Printf("original %v value: %v", i, v)
+			histogram.Enqueue(v, 1)
+		}
+		histogram_list = append(histogram_list, histogram)
 
-	title := fmt.Sprintf("multiply %v histograms each window size %v to search:", len(histogram_list), window_size)
-	for _, p := range percentile_list {
-		title = fmt.Sprintf("%v %v",title, p*float64(100))
+		// real test
+		if h % 10 != 9 {
+			continue
+		}
+		title := fmt.Sprintf("multiply %v histograms each window size %v to search:", len(histogram_list), window_size)
+		for _, p := range percentile_list {
+			title = fmt.Sprintf("%v %v",title, p*float64(100))
+		}
+		t.Run(title, func(b *testing.B) {
+
+			for pi := 0; pi < len(percentile_list); pi++ {
+				p := percentile_list[pi]
+
+				tail := CalcPercentileOfProduct(p, histogram_list, verbose)
+
+				if verbose && p == float64(0.99) {
+					log.Printf("searching the percentile for the tail: %v", tail)
+					for i, hist := range histogram_list {
+						hp := hist.GetPercentileForValue(tail)
+						log.Printf("%v: %v", i, hp)
+					}	
+				}
+				
+			}
+
+		})
 	}
-	t.Run(title, func(b *testing.B) {
-
-		for pi := 0; pi < len(percentile_list); pi++ {
-			p := percentile_list[pi]
-
-			tail := CalcPercentileOfProduct(p, histogram_list, verbose)
 
 
-			if verbose && p == float64(0.99) {
-				log.Printf("searching the percentile for the tail: %v", tail)
-				for i, hist := range histogram_list {
-					hp := hist.GetPercentileForValue(tail)
-					log.Printf("%v: %v", i, hp)
-				}	
-			}
-			
-		}
 
-	})
 
 	
 }
