@@ -13,7 +13,7 @@ import (
 // Init to do initializing work
 func (j *JADE) Init() {
 	j.log = kernel.NewLogger()
-	j.log.Op.Enabled = true
+	j.log.Op.Enabled = false
 	
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
