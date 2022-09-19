@@ -24,14 +24,16 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 	var eligibleNeighbors []*kernel.Node 
 	overwriteCache := false
 
-	if dispatchItem.Options!=nil && dispatchItem.Options.ControlPlaneOptions!=nil && dispatchItem.Options.ControlPlaneOptions.OverwriteCache {
-		overwriteCache = true
+	if dispatchItem.Options!=nil && dispatchItem.Options.ControlPlaneOptions!=nil {
+		overwriteCache = dispatchItem.Options.ControlPlaneOptions.OverwriteCache
 	}
 
 	if !overwriteCache {
 		start_time := time.Now()
 		eligibleNeighbors = j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
 		matching = float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
+	} else {
+		j.log.Debug.Printf("[control plane] overwriting neighbor cache for query: %v", query_key)
 	}
 
 	if len(eligibleNeighbors) == 0 {
@@ -93,6 +95,8 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				j.log.Op.Printf("[control plane][parallel negotiation] dispatching to No.%v node", i)
 				if ! doNotDispatch {
 					j.dispatchNeighborTask(node, dispatchItem)
+				} else {
+					j.log.Op.Printf("[control plane][parallel negotiation] did not dispatch task to No.%v node due to emulation", i)
 				}
 				cache.mutex.Lock()
 				cache.returnlist[node.Key()]=true
@@ -105,6 +109,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 			iteration := 0
 			for {
 				time.Sleep(time.Duration(500)*time.Microsecond)
+				count_waiting_nodes := 0
 				cache.mutex.Lock()
 				struggling_nodes = len(eligibleNeighbors)-len(cache.returnlist)
 				if len(cache.returnlist) == len(eligibleNeighbors) {
@@ -113,15 +118,24 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 					break
 				} else if iteration % 1000 == 0 {
 					j.log.Op.Printf("[control plane][parallel negotiation] still waiting for %v nodes", struggling_nodes)
-					for _, node := range eligibleNeighbors {
-						if _, e := cache.returnlist[node.Key()]; !e {
+				}
+				for _, node := range eligibleNeighbors {
+					if _, e := cache.returnlist[node.Key()]; !e {
+						if iteration % 1000 == 0 {
 							j.log.Op.Printf("[control plane][parallel negotiation] waiting for node[%v], hostname: %v, port: %v", 
 								node.Key(), node.Hostname, node.Port,
 							)
 						}
+						count_waiting_nodes += 1
 					}
 				}
 				cache.mutex.Unlock()
+				if count_waiting_nodes == 0 {
+					j.log.Op.Printf("[control plane][parallel negotiation] stop waiting for %v nodes among %v due to emulation", 
+						struggling_nodes, len(eligibleNeighbors),
+					)
+					break
+				}
 				iteration += 1
 				if iteration > 40000 && struggling_nodes < len(eligibleNeighbors) / 10 || iteration > 80000 {
 					j.log.Op.Printf("[control plane][parallel negotiation] stop waiting for %v nodes among %v after %v seconds", struggling_nodes, len(eligibleNeighbors), math.Round(float64(iteration)*0.5/100)/10,
