@@ -26,7 +26,7 @@ func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
 }
 
 type InqueryNeighborResponse struct {
-	Duration float64 `json:"duration,omitempty"`
+	Populating float64 `json:"populating,omitempty"`
 	Matching float64 `json:"matching,omitempty"`
 	PackageSize int `json:packageSize,omitempty"`
 	Nodes []*kernel.Node `json:"nodes,omitempty"`
@@ -58,6 +58,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
 	matching := float64(time.Now().Sub(start_time)) / float64(time.Nanosecond)
 
+	start_time = time.Now()
 	var nodes []*kernel.Node
 	if len(nodekeys) > 0 {
 		j.registryMutex.Lock()
@@ -72,11 +73,11 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 			// j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[len(nodes)-1])
 		}
 	}
-	dur := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
+	populating := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 	j.log.Op.Printf("[fetch neighbors] selected %v eligible neighbors", len(nodes))
 	// finish the request
 	res := &InqueryNeighborResponse{
-		Duration: dur,
+		Populating: populating,
 		Matching: matching,
 		Nodes: nodes,
 	}

@@ -39,7 +39,7 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 	if len(eligibleNeighbors) == 0 {
 		res := j.fetchEligibleAutonomyServiceDomains(query)
 		eligibleNeighbors = res.Nodes
-		populating = res.Duration - res.Matching
+		populating = res.Populating
 		matching = res.Matching
 
 		packageSize = res.PackageSize
