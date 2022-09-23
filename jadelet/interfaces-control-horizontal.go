@@ -56,7 +56,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	start_time := time.Now()
 	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
-	matching := float64(time.Now().Sub(start_time)) / float64(time.Nanosecond)
+	matching := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 
 	start_time = time.Now()
 	var nodes []*kernel.Node
