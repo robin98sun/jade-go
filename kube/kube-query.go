@@ -28,7 +28,8 @@ func (k *KubeClient) FindPod(nodeName string, namespace string, podName string) 
 func (k *KubeClient) PodInfo(nodeName string, namespace string, podName string) (interface{}, error) {
 	pod, err := k.FindPod(nodeName, namespace, podName)
 	if err == nil {
-		return pod.Status, nil
+		// return pod.Status, nil
+		return pod, nil
 	}
 	return nil, err
 }
