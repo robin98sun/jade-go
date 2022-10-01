@@ -7,31 +7,35 @@ import (
 )
 
 type EligibleNeighborCacheItem struct {
-	Nodes 	map[string]*ds.Node // nodeKey: node
+	// Nodes 	map[string]*ds.Node // nodeKey: node
+	NodeList []*ds.Node
 }
 
 func NewEligibleNeighborCacheItem(neighborNodes []*ds.Node) *EligibleNeighborCacheItem {
 	cacheItem := &EligibleNeighborCacheItem{
-		Nodes: make(map[string]*ds.Node),
+		// Nodes: make(map[string]*ds.Node),
 	}
 
-	for _, node := range neighborNodes {
-		cacheItem.Nodes[node.Key()] = node
-	}
+	// for _, node := range neighborNodes {
+	// 	cacheItem.Nodes[node.Key()] = node
+	// }
+	cacheItem.NodeList = neighborNodes
 
 	return cacheItem
 }
 
+
 func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*ds.Node {
-	if item.Nodes == nil || len(item.Nodes) == 0 {
+	if item.NodeList == nil || len(item.NodeList) == 0 {
 		return nil
 	}
-	node_list := make([]*ds.Node, len(item.Nodes))
-	idx := 0
-	for _, node := range item.Nodes {
-		node_list[idx] = node
-		idx++
-	}
+	// node_list := make([]*Node, len(item.Nodes))
+	// idx := 0
+	// for _, node := range item.Nodes {
+	// 	node_list[idx] = node
+	// 	idx++
+	// }
+	node_list := item.NodeList
 	return node_list
 }
 

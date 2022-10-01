@@ -8,6 +8,7 @@ import (
 	"uta.edu/aces/scheduler/histogram"
 	"encoding/json"
 	ds "uta.edu/aces/jadesdk/data_structure"
+	"time"
 )
 
 func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
@@ -23,6 +24,13 @@ func (j *JADE) RegisterNeighbor(w rest.ResponseWriter, r *rest.Request) {
 	
 	// finish the request
 	j.DoneRequest(w, r, nil)
+}
+
+type InqueryNeighborResponse struct {
+	Populating float64 `json:"populating,omitempty"`
+	Matching float64 `json:"matching,omitempty"`
+	PackageSize int `json:packageSize,omitempty"`
+	Nodes []*kernel.Node `json:"nodes,omitempty"`
 }
 
 func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
@@ -47,9 +55,12 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 	requirements := reqInst.Payload
 
+	start_time := time.Now()
 	nodekeys := j.selectAvaiableNodes(JadeNodeTypeNeighbor, requirements)
+	matching := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 
 	var nodes []*ds.Node
+	start_time = time.Now()
 	if len(nodekeys) > 0 {
 		j.registryMutex.Lock()
 		defer j.registryMutex.Unlock()
@@ -63,9 +74,15 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 			// j.log.Printf("got eligible neighbor [%v]: %v", nodeKey, nodes[len(nodes)-1])
 		}
 	}
+	populating := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 	j.log.Op.Printf("[fetch neighbors] selected %v eligible neighbors", len(nodes))
 	// finish the request
-	j.DoneRequest(w, r, nodes)
+	res := &InqueryNeighborResponse{
+		Populating: populating,
+		Matching: matching,
+		Nodes: nodes,
+	}
+	j.DoneRequest(w, r, res)
 }
 
 func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {

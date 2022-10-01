@@ -21,21 +21,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 			continue
 		}
 
-		eligibleNeighbors := j.eligibleNeighborCache.GetEligibleNeighbors(query_key)
-
-		if len(eligibleNeighbors) == 0 {
-			eligibleNeighbors = j.fetchEligibleAutonomyServiceDomains(query)
-			j.log.Debug.Printf("[budget negotiation] got %v eligible neighbors from registry: %v", len(eligibleNeighbors), eligibleNeighbors)
-			if eligibleNeighbors == nil {
-				eligibleNeighbors = []*kernel.Node{}
-			}
-			j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
-		}
+		eligibleNeighbors, _, _, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
 		var budgetnegotationCache *task.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
+
+			// data plane
 			j.log.Debug.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
@@ -303,24 +296,26 @@ func (j *JADE) fetchEligibleAutonomyServiceDomains(query *ds.Requirements) []*ds
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 
-	j.log.Debug.Printf("[budget negotiation] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
+	j.log.Debug.Printf("[control plane] fetching eligible neighbors from registry node [%v]", j.Config.RegistryNode)
 	if j.Config.RegistryNode.IsAddrEmpty() {
-		j.log.Debug.Printf("[budget negotiation] ERROR: registry node is empty")
+		j.log.Debug.Printf("[control plane] ERROR: registry node is empty")
 
 	}
 	apiPath := "/$jade$/eligibleNeighbors"
 	_, _, content, err := j.HTTPCommunicate("fetch eligible neighbors", "POST", apiPath, j.Config.RegistryNode, payload, 0, 10)
 	if err != nil {
-		j.log.Debug.Println("[budget negotiation] ERROR when fetching eligible neighbors:", err.Error())
+		j.log.Debug.Println("[control plane] ERROR when fetching eligible neighbors:", err.Error())
 	} else {
 		resInst :=  &struct{
-			Payload []*kernel.Node `json:"payload,omitempty"`
+			Payload *InqueryNeighborResponse `json:"payload,omitempty"`
 		}{}
+		packageSize := len(content)
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
-			j.log.Debug.Println("[budget negotiation] ERROR of fetching eligible neighbors: can not decode response, ", err)
+			j.log.Debug.Println("[control plane] ERROR of fetching eligible neighbors: can not decode response, ", err)
 		} else {
-			j.log.Debug.Println("[budget negotiation] response of fetching eligible neighbors:", resInst.Payload)
+			j.log.Debug.Printf("[control plane] response of fetching eligible neighbors, package size: %v, nodes %v", packageSize, len(resInst.Payload.Nodes))
+			resInst.Payload.PackageSize = packageSize
 			return resInst.Payload
 		}
 	}
