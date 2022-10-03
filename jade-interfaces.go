@@ -33,7 +33,7 @@ func main() {
 	// construt JADE RESTful API server
 	j := jadelet.NewJadelet()
 	j.Init()
-	DEV_DEBUGGING := false
+	DEV_DEBUGGING := true
 	j.Verbose(DEV_DEBUGGING)
 
 	// APIs
