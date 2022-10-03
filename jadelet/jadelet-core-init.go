@@ -14,6 +14,7 @@ import (
 func (j *JADE) Init() {
 	j.log = kernel.NewLogger()
 	j.log.Op.Enabled = true
+	j.log.Debug.Enabled = true
 	
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
