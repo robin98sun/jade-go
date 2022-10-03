@@ -1,14 +1,13 @@
 package kernel
 
 import (
-	// "strings"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // Requirements the capabilities and resources requirements
 type Requirements struct {
-	Collective  []*jadesdk.Capability      `json:"collective,omitempty"`
-	Exclusive   []*jadesdk.Capability      `json:"exclusive,omitempty"`
+	Collective  []*ds.Capability      `json:"collective,omitempty"`
+	Exclusive   []*ds.Capability      `json:"exclusive,omitempty"`
 	Allocations map[string]*AllocationUnit `json:"allocations,omitempty"`
 }
 

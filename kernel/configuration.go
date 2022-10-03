@@ -1,7 +1,7 @@
 package kernel
 
 import (
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 
@@ -25,7 +25,7 @@ type Conf struct {
 	UpperNode    *Node                 `json:"upperNode"`
 	SelfNode     *Node                 `json:"selfNode"`
 	RegistryNode *Node                 `json:"registryNode"`
-	Capabilities map[string][]*jadesdk.Capability `json:"capabilities"`
+	Capabilities map[string][]*ds.Capability `json:"capabilities"`
 	Capacity     *Capacity             `json:"capacity"`
 	Options      *JadeletOptions 	   `json:"options,omitempty"`
 }
@@ -36,14 +36,14 @@ func NewConfiguration() *Conf {
 	c.UpperNode = NewNode()
 	c.SelfNode = NewNode()
 	c.RegistryNode = NewNode()
-	c.Capabilities = make(map[string][]*jadesdk.Capability)
+	c.Capabilities = make(map[string][]*ds.Capability)
 	c.Capacity = NewCapacity()
 	c.Options = NewJadeletOptions()
 	return c
 }
 
-func (c *Conf) GetAllCapabilities() []*jadesdk.Capability {
-	all_capabilities := []*jadesdk.Capability{}
+func (c *Conf) GetAllCapabilities() []*ds.Capability {
+	all_capabilities := []*ds.Capability{}
 	for _, list := range c.Capabilities {
 		all_capabilities = append(all_capabilities, list...)
 	}
@@ -51,7 +51,7 @@ func (c *Conf) GetAllCapabilities() []*jadesdk.Capability {
 }
 
 // FindCapability search a capability by name
-func (c *Conf) FindCapability(capability_type string, name string) (string, int, *jadesdk.Capability) {
+func (c *Conf) FindCapability(capability_type string, name string) (string, int, *ds.Capability) {
 	if c.Capabilities == nil || len(c.Capabilities) == 0 || name == "" {
 		return "", -1, nil
 	}
@@ -69,7 +69,7 @@ func (c *Conf) FindCapability(capability_type string, name string) (string, int,
 }
 
 // AddOrUpdateCapability add or update a capability
-func (c *Conf) AddOrUpdateCapability(capability_type string, nc *jadesdk.Capability) *jadesdk.Capability {
+func (c *Conf) AddOrUpdateCapability(capability_type string, nc *ds.Capability) *ds.Capability {
 	if nc == nil || nc.Name == "" {
 		return nil
 	}
@@ -79,7 +79,7 @@ func (c *Conf) AddOrUpdateCapability(capability_type string, nc *jadesdk.Capabil
 		c.Capabilities[cap_type][i] = nc
 	} else {
 		if _, e := c.Capabilities[capability_type]; !e {
-			c.Capabilities[capability_type] = []*jadesdk.Capability{}
+			c.Capabilities[capability_type] = []*ds.Capability{}
 		}
 		c.Capabilities[capability_type] = append(c.Capabilities[capability_type], nc)
 	}
@@ -87,7 +87,7 @@ func (c *Conf) AddOrUpdateCapability(capability_type string, nc *jadesdk.Capabil
 }
 
 // DeleteCapability delete a capability
-func (c *Conf) DeleteCapability(capability_type string, name string) *jadesdk.Capability {
+func (c *Conf) DeleteCapability(capability_type string, name string) *ds.Capability {
 	if name == "" {
 		return nil
 	}

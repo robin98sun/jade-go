@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 
@@ -35,7 +35,7 @@ func (j *JADE) dispatchNeighborTask(neighborNode *kernel.Node, dispatchItem *sch
 }
 
 
-func (j *JADE) newEnv(masterNode *jadesdk.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
+func (j *JADE) newEnv(masterNode *ds.Node, appName string, appVersion string, moduleName string, taskKey string) []map[string]string {
 	envVars := []map[string]string{
 		{
 			"name":  "JADE_APP_NAME",

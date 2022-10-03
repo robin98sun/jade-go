@@ -13,6 +13,7 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
 )
 
@@ -172,7 +173,7 @@ type RequestPayload struct {
 	Token        string                `json:"token,omitempty"`
 	Node         *kernel.Node          `json:"node,omitempty"`
 	NodeID       string                `json:"nodeId,omitempty"`
-	Capabilities []*jadesdk.Capability `json:"capabilities,omitempty"`
+	Capabilities []*ds.Capability `json:"capabilities,omitempty"`
 	Capacity     *kernel.Capacity      `json:"capability,omitempty"`
 }
 
@@ -261,7 +262,7 @@ func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg 
 }
 
 // GeneratePayloadOfRequest generate payload of request
-func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*jadesdk.Capability, capacity *kernel.Capacity) *RequestPayload {
+func (j *JADE) GeneratePayloadOfRequest(targetNode *kernel.Node, thePayload interface{}, capabilities []*ds.Capability, capacity *kernel.Capacity) *RequestPayload {
 	payload := RequestPayload{
 		Token:  j.Config.UpperNode.Token,
 		NodeID: j.Config.SelfNode.Key(),

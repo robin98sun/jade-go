@@ -2,7 +2,7 @@ package kernel
 
 import (
 	"strconv"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type Node struct {
@@ -62,8 +62,8 @@ func NodeFromMap(nodeMap map[string]interface{}) *Node {
 	return node
 }
 
-func (n *Node) GetSDKNode() *jadesdk.Node {
-	sdkNode := &jadesdk.Node{
+func (n *Node) GetSDKNode() *ds.Node {
+	sdkNode := &ds.Node{
 		Addr:     n.Address,
 		Port:     n.Port,
 		Protocol: n.Protocol,

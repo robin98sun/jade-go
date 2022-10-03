@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // ReadConfFromEnv Read configuration from environment variables
@@ -122,7 +122,7 @@ func ReadConfFromEnv() *Conf {
 			}
 		}
 	}
-	c.Capabilities = jadesdk.ReadCapabilitiesFromEnv()
+	c.Capabilities = ds.ReadCapabilitiesFromEnv()
 	return c
 }
 
@@ -136,7 +136,7 @@ func ReadConfFromJSON(jsonstr string, isFile bool) *Conf {
 		_ = json.Unmarshal([]byte(jsonstr), c)
 	}
 	if c.Capabilities == nil {
-		c.Capabilities = make(map[string][]*jadesdk.Capability)
+		c.Capabilities = make(map[string][]*ds.Capability)
 	}
 	for _, list := range c.Capabilities {
 		if len(list) > 0 {

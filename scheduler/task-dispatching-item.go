@@ -3,7 +3,7 @@ package scheduler
 import (
 	"time"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
 	"strings"
 )
@@ -206,7 +206,7 @@ func (t *TaskDispatchingItem) GetArriveTime() time.Time {
 
 
 type TaskDispatchingItemReportTo struct {
-	Node *jadesdk.Node `json:"node,omitempty"`
+	Node *ds.Node `json:"node,omitempty"`
 	Pod  *kernel.Pod  `json:"pod,omitempty"`
 }
 
@@ -235,7 +235,7 @@ func (r *TaskDispatchingItemReportTo) Desc() string {
 	return desc
 }
 
-func NewTaskDispatchingItemReportTo(node *jadesdk.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
+func NewTaskDispatchingItemReportTo(node *ds.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
 	minimumPod := pod 
 	if pod != nil {
 		minimumPod = pod.CopyForReportTo()
@@ -256,7 +256,7 @@ type TaskDispatchingItemSLO struct {
 	TailLatencyInMilliseconds float64 `json:"tailLatencyInMilliseconds,omitempty"`
 }
 
-func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *jadesdk.Node, pod *kernel.Pod) {
+func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *ds.Node, pod *kernel.Pod) {
 	if t == nil || len(moduleName) == 0 {
 		return
 	}

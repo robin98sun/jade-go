@@ -2,7 +2,7 @@ package kernel
 // if talking about "registry", it actually means kernel in the implementation
 
 import (
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"sync"
 )
 
@@ -21,10 +21,10 @@ func NewCapabilityCache() *CapabilityCache {
 
 type capabilityCacheItem struct {
 	nodes map[string]bool
-	capability *jadesdk.Capability
+	capability *ds.Capability
 }
 
-func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability) {
+func (c *CapabilityCache) Set(nodeId string, capabilities []*ds.Capability) {
 	if nodeId == "" || len(capabilities) == 0 {
 		return
 	}
@@ -76,14 +76,14 @@ func (c *CapabilityCache) Set(nodeId string, capabilities []*jadesdk.Capability)
 	}
 }
 
-func (c *CapabilityCache) GetAllCapabilities() []*jadesdk.Capability {
+func (c *CapabilityCache) GetAllCapabilities() []*ds.Capability {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	var mergedCapabilitis = make([]*jadesdk.Capability,0)
+	var mergedCapabilitis = make([]*ds.Capability,0)
 	for name, subcache := range c.cache {
 		for value, _ := range subcache { 
 			// mergedCapabilitis = append(mergedCapabilitis, item.capability)
-			mergedCapabilitis = append(mergedCapabilitis, &jadesdk.Capability{
+			mergedCapabilitis = append(mergedCapabilitis, &ds.Capability{
 				Name: name,
 				Value: value,
 			})
@@ -105,7 +105,7 @@ func (c *CapabilityCache) DeleteNode(nodeId string) {
 }
 
 // GetNodes node Id list for that capability
-func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string) []string {
+func (c *CapabilityCache) getNodes(cap *ds.Capability, nodefilter []string) []string {
 	if cap == nil || cap.Name == "" {
 		return nil
 	}
@@ -130,7 +130,7 @@ func (c *CapabilityCache) getNodes(cap *jadesdk.Capability, nodefilter []string)
 }
 
 type capabilityWithNodes struct {
-	Capability *jadesdk.Capability `json:"capability"`
+	Capability *ds.Capability `json:"capability"`
 	Nodes      []string           `json:"nodes"`
 }
 
@@ -148,7 +148,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 			}
 			result = append(result, capabilityWithNodes{
 				// Capability: item.capability,
-				Capability: &jadesdk.Capability{
+				Capability: &ds.Capability{
 					Name: name,
 					Value: value,
 				},
@@ -159,7 +159,7 @@ func (c *CapabilityCache) AllCapabilitiesWithNodes() []capabilityWithNodes {
 	return result
 }
 
-func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
+func (c *CapabilityCache) SelectNodesExclusively(capabilities []*ds.Capability, nodefilter []string) []string {
 	if len(capabilities) == 0 {
 		return nil
 	}
@@ -183,7 +183,7 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*jadesdk.Capabil
 	return nodes
 }
 
-func (c *CapabilityCache) SelectNodesCollectively(capabilities []*jadesdk.Capability, nodefilter []string) []string {
+func (c *CapabilityCache) SelectNodesCollectively(capabilities []*ds.Capability, nodefilter []string) []string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	var nodes []string

@@ -4,7 +4,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
 	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"runtime"
 	"encoding/json"
 )
@@ -55,7 +55,7 @@ func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 // AddCapability add a capability to self-node
 func (j *JADE) AddCapability(w rest.ResponseWriter, r *rest.Request) {
 	nc := &struct{
-		Capability *jadesdk.Capability
+		Capability *ds.Capability
 		Type string
 	}{}
 	err := r.DecodeJsonPayload(nc)
@@ -72,7 +72,7 @@ func (j *JADE) AddCapability(w rest.ResponseWriter, r *rest.Request) {
 // DeleteCapability delete a capability of self-node
 func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 	nc := &struct{
-		Capability *jadesdk.Capability
+		Capability *ds.Capability
 		Type string
 	}{}
 	err := r.DecodeJsonPayload(nc)
@@ -80,7 +80,7 @@ func (j *JADE) DeleteCapability(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var deleted *jadesdk.Capability
+	var deleted *ds.Capability
 	if nc.Capability != nil {
 		deleted = j.Config.DeleteCapability(nc.Type, nc.Capability.Name)
 	}
