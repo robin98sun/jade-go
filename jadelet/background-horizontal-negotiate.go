@@ -292,7 +292,7 @@ func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingIt
 	return nil
 }
 
-func (j *JADE) fetchEligibleAutonomyServiceDomains(query *ds.Requirements) []*ds.Node {
+func (j *JADE) fetchEligibleAutonomyServiceDomains(query *ds.Requirements) *InqueryNeighborResponse {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)
 
 

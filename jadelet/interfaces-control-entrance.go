@@ -113,17 +113,10 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
-func (j *JADE) ClassifyTasks(tasklist map[string]*ds.TaskDispatchingItem) {
+func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 	collaborativeTasks := map[string]*ds.TaskDispatchingItem{}
 	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
-=======
-func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*scheduler.TaskDispatchingItem) {
-	collaborativeTasks := map[string]*scheduler.TaskDispatchingItem{}
-	aggregativeTasks := map[string]*scheduler.TaskDispatchingItem{}
 
-
->>>>>>> nsdi23:jadelet/interfaces-control-entrance.go
 	for taskKey, dispatchItem := range tasklist {
 
 		if j.HasRegistry() && dispatchItem.TTL > 0 {

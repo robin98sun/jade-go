@@ -30,7 +30,7 @@ type InqueryNeighborResponse struct {
 	Populating float64 `json:"populating,omitempty"`
 	Matching float64 `json:"matching,omitempty"`
 	PackageSize int `json:packageSize,omitempty"`
-	Nodes []*kernel.Node `json:"nodes,omitempty"`
+	Nodes []*ds.Node `json:"nodes,omitempty"`
 }
 
 func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {

@@ -547,11 +547,11 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *task.BudgetNego
 	j.log.Debug.Printf("[budget negotiation] non-block negotiation is done, going to re-dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 
 	if dispatchItem.Options == nil {
-		dispatchItem.Options = &task.TaskDispatchingOptions{}
+		dispatchItem.Options = &ds.TaskDispatchingOptions{}
 	}
-	dispatchItem.Options.BudgetNegotiationPhase = task.BudgetNegotiationPhaseConfirm
+	dispatchItem.Options.BudgetNegotiationPhase = ds.BudgetNegotiationPhaseConfirm
 
-	j.evaluateAggregativeTasks(map[string]*task.TaskDispatchingItem{
+	j.evaluateAggregativeTasks(map[string]*ds.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})
 

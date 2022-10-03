@@ -1,17 +1,14 @@
 package jadelet
 
 import (
-	// "encoding/json"
-	// "github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"time"
 	"sync"
 	"math"
 )
 
 
-func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([]*kernel.Node, int, float64, float64) {
+func (j *JADE) discoverNeighbors(dispatchItem *ds.TaskDispatchingItem) ([]*ds.Node, int, float64, float64) {
 	matching := float64(0)
 	populating := float64(0)
 	packageSize := 0
@@ -21,7 +18,7 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 		return nil, packageSize, matching, populating
 	}
 
-	var eligibleNeighbors []*kernel.Node 
+	var eligibleNeighbors []*ds.Node 
 	overwriteCache := false
 
 	if dispatchItem.Options!=nil && dispatchItem.Options.ControlPlaneOptions!=nil {
@@ -45,7 +42,7 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 		packageSize = res.PackageSize
 		j.log.Debug.Printf("[control plane] got %v eligible neighbors from registry", len(eligibleNeighbors))
 		if eligibleNeighbors == nil {
-			eligibleNeighbors = []*kernel.Node{}
+			eligibleNeighbors = []*ds.Node{}
 		}
 		j.eligibleNeighborCache.StoreEligibleNeighbors(query_key, eligibleNeighbors)
 	} else {
@@ -55,7 +52,7 @@ func (j *JADE) discoverNeighbors(dispatchItem *scheduler.TaskDispatchingItem) ([
 	return eligibleNeighbors, packageSize, matching, populating
 }
 
-func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingItem) (int, float64, float64, float64, float64, int, int) {
+func (j *JADE) processControlPlaneTask(dispatchItem *ds.TaskDispatchingItem) (int, float64, float64, float64, float64, int, int) {
 
 	start_time := time.Now()
 	discovery_time := float64(0)
@@ -90,7 +87,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *scheduler.TaskDispatchingIt
 				mutex: &sync.Mutex{},
 				returnlist: map[string]bool{},
 			}
-			routine := func(node *kernel.Node, i int) {
+			routine := func(node *ds.Node, i int) {
 				time.Sleep(time.Duration(500+i*100)*time.Microsecond)
 				j.log.Op.Printf("[control plane][parallel negotiation] dispatching to No.%v node", i)
 				if ! doNotDispatch {
