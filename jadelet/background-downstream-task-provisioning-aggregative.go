@@ -46,6 +46,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*scheduler.TaskDispa
 			j.log.Debug.Printf("[task provision] the incoming task already exists, typically is to confirm the negotiated budget, the task involves %v neighbors", len(task.NeighborNodes))
 			j.checkTaskStatus(task.GetKey(), true, taskItem)
 		} else {
+			j.log.Op.Printf("[task provision] evaluating an incoming task [%v]", task.GetKey())
 			j.log.Debug.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)
 			if j.IsCoordinator() {
 				// allocate an aggregator pod if needed

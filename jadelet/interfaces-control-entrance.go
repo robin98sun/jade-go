@@ -128,15 +128,18 @@ func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*scheduler.TaskDispatc
 			if _, aggregatorExists := task.Application.Modules[string(kernel.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(kernel.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
+					j.log.Op.Printf("the autonomous task is an aggregative task")
 					j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
 				}
 			}
 		}
 	}
 	if len(aggregativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v aggregative tasks", len(aggregativeTasks))
 		go j.evaluateAggregativeTasks(aggregativeTasks)
 	}
 	if len(collaborativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v collaborative tasks", len(aggregativeTasks))
 		go j.evaluateCollaborativeTasks(collaborativeTasks)
 	}
 }
