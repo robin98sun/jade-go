@@ -592,7 +592,7 @@ func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatching
 			ModuleName: string(kernel.AppModuleAggregator),
 		}
 		inst.ReportTo = append(inst.ReportTo, intf)
-		j.log.Debug.Printf("[task dispatcher] new report to message, module: %v, node addr: %v, port: %v, protocol: %v", intf.ModuleName, intf.Node.Addr, intf.Node.Port, intf.Node.Protocol)
+		j.log.Debug.Printf("[task dispatcher] NewAggregatorEnqueuingMessage, module: %v, node addr: %v, port: %v, protocol: %v", intf.ModuleName, intf.Node.Addr, intf.Node.Port, intf.Node.Protocol)
 	}
 	for _, item := range subtasks {
 		inst.Subtasks = append(inst.Subtasks, item.Subtask.GetKey())
@@ -601,7 +601,7 @@ func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatching
 	return inst
 }
 
-func NewAggregativeWorkerTask(
+func(j *JADE) NewAggregativeWorkerTask(
 	taskItem *scheduler.TaskDispatchingItem,
 	worker *scheduler.SubtaskOnNode,
 	protocol string, input interface{}, estimatedServiceTime float64,
@@ -611,27 +611,28 @@ func NewAggregativeWorkerTask(
 	if reportTo == nil || reportTo.Pod == nil {
 		return nil
 	}
+	intf := &InterfaceSpec{
+		Node: &NodeSpec{
+			Addr:     reportTo.Pod.Addr,
+			Port:     reportTo.Pod.Port,
+			Protocol: protocol,
+		},
+		ModuleName: string(kernel.AppModuleAggregator),
+	}
 	req := &Request{
 		Task: &TaskSpec{
 			ModuleName: string(kernel.AppModuleWorker),
 			TaskID:     task.GetKey(),
 			SubtaskID:  worker.Subtask.GetKey(),
 		},
-		To: []*InterfaceSpec{
-			&InterfaceSpec{
-				Node: &NodeSpec{
-					Addr:     reportTo.Pod.Addr,
-					Port:     reportTo.Pod.Port,
-					Protocol: protocol,
-				},
-				ModuleName: string(kernel.AppModuleAggregator),
-			},
-		},
+		To: []*InterfaceSpec{ intf },
 		Payload: input,
 		Options: &RequestOptions{
 			EstimatedServiceTime: estimatedServiceTime,
 		},
 	}
+
+	j.log.Debug.Printf("[task dispatcher] NewAggregativeWorkerTask, module: %v, node addr: %v, port: %v, protocol: %v", intf.ModuleName, intf.Node.Addr, intf.Node.Port, intf.Node.Protocol)
 	return req
 }
 
