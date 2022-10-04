@@ -644,7 +644,7 @@ type TaskSpec struct {
 }
 
 type NodeSpec struct {
-	Addr     string `json:"addr,omitempty"`
+	Addr     string `json:"address,omitempty"`
 	Port     int    `json:"port,omitempty"`
 	Protocol string `json:"protocol,omitempty"`
 }
