@@ -7,6 +7,8 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
@@ -165,7 +167,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 			for _, aggregator := range aggregatorSubtasks {
 				if !isConfirmingBudget {
-					msg := NewAggregatorEnqueuingMessage(dispatchItem, allSubtasks, j.Config.SelfNode.Protocol)
+					msg := j.NewAggregatorEnqueuingMessage(dispatchItem, allSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()
 					j.log.Debug.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
 					// Save the dispatching timestamp and fanout degree
@@ -566,29 +568,31 @@ func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *scheduler.
 }
 
 
-type AggregatorEnqueuingMessage struct {
-	TaskKey    string           `json:"taskId,omitempty"`
-	SubtaskKey string           `json:"subtaskId,omitempty"`
-	Subtasks   []string         `json:"subtasks,omitempty"`
-	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
-}
+// type AggregatorEnqueuingMessage struct {
+// 	TaskKey    string           `json:"taskId,omitempty"`
+// 	SubtaskKey string           `json:"subtaskId,omitempty"`
+// 	Subtasks   []string         `json:"subtasks,omitempty"`
+// 	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
+// }
 
-func NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *AggregatorEnqueuingMessage {
-	inst := &AggregatorEnqueuingMessage{
+func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *jadesdk.AggregatorEnqueuingMessage {
+	inst := &jadesdk.AggregatorEnqueuingMessage{
 		TaskKey:  taskItem.Task.GetKey(),
 		Subtasks: []string{},
-		ReportTo: []*InterfaceSpec{},
+		ReportTo: []*jadesdk.Interface{},
 	}
 	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleAggregator))
 	if reportTo != nil && reportTo.Pod != nil {
-		inst.ReportTo = append(inst.ReportTo, &InterfaceSpec{
-			Node: &NodeSpec{
+		intf := &jadesdk.Interface{
+			Node: &ds.Node{
 				Addr:     reportTo.Pod.Addr,
 				Port:     reportTo.Pod.Port,
 				Protocol: protocol,
 			},
 			ModuleName: string(kernel.AppModuleAggregator),
-		})
+		}
+		inst.ReportTo = append(inst.ReportTo, intf)
+		j.log.Debug.Printf("[task dispatcher] new report to message, module: %v, node addr: %v, port: %v, protocol: %v", intf.ModuleName, intf.Node.Addr, intf.Node.Port, intf.Node.Protocol)
 	}
 	for _, item := range subtasks {
 		inst.Subtasks = append(inst.Subtasks, item.Subtask.GetKey())
