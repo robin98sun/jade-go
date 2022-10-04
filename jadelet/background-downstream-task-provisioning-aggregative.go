@@ -5,6 +5,7 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	ds "uta.edu/aces/jadesdk/data_structure"
+	"uta.edu/aces/jadesdk"
 )
 
 type DispatchItemWithAggregator struct {
@@ -196,7 +197,7 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	seconds := 60 
 	j.log.Debug.Printf("[task provision] waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
-	newConf := &ds.Conf{
+	newConf := &jadesdk.SDKConf{
 		SelfNode: &ds.Node{
 			Addr:     j.Config.SelfNode.Address,
 			Port:     nodePort,
@@ -204,8 +205,8 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 		},
 	}
 	if j.Config != nil && j.Config.Capabilities != nil && len(j.Config.Capabilities) > 0 {
-		// newConf.Capabilities = j.Config.GetAllCapabilities()
-		newConf.Capabilities = j.Config.Capabilities
+		newConf.Capabilities = j.Config.GetAllCapabilities()
+		// newConf.Capabilities = j.Config.Capabilities
 	}
 	_, _, _, err := j.sdk.HTTPCommunicate(
 		"update configuration", j.Config.SelfNode.Protocol,
