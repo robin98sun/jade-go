@@ -392,7 +392,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					}
 				}
 				// generate request payload for the subtask
-				req := NewAggregativeWorkerTask(
+				req := j.NewAggregativeWorkerTask(
 					dispatchItem, worker, j.Config.SelfNode.Protocol,
 					task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
 					estimatedServiceTime,
