@@ -1,9 +1,8 @@
 package perfstat
 
 import (
-	// "uta.edu/aces/jade-go/histogram"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"uta.edu/aces/jade-go/scheduler"
-	"uta.edu/aces/jade-go/kernel"
 	"sync"
 	"time"
 )
@@ -12,7 +11,7 @@ import (
 type SubtaskPerfVector struct {
 	ArrivalClock                    uint64
 	ResponseClock					uint64
-	DispatchItem 			 		*scheduler.TaskDispatchingItem
+	DispatchItem 			 		*ds.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
 	TailLatency  			 		float64
 	Fanout       			 		int
@@ -38,7 +37,7 @@ type SubtaskPerfVector struct {
 }
 
 func NewSubtaskPerfVector(
-	dispatchItem *scheduler.TaskDispatchingItem,
+	dispatchItem *ds.TaskDispatchingItem,
 ) *SubtaskPerfVector {
 	vector := &SubtaskPerfVector{
 		DispatchItem: dispatchItem,
@@ -69,7 +68,7 @@ func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.T
 
 		for _, subtaskItem := range snItems {
 			// only count for worker module
-			if subtaskItem.GetModuleName() == string(kernel.AppModuleAggregator) {
+			if subtaskItem.GetModuleName() == string(ds.AppModuleAggregator) {
 				continue
 			}
 			v.Fanout += 1

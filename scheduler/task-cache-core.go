@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 	"uta.edu/aces/jade-go/histogram"
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // the shape of task cache:
@@ -61,7 +61,7 @@ func (c *TaskCache) Describe() map[string]interface{} {
 	return cache
 }
 
-func (c *TaskCache) GetTask(taskID string, lock bool) *TaskDispatchingItem {
+func (c *TaskCache) GetTask(taskID string, lock bool) *ds.TaskDispatchingItem {
 	if taskID == "" {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (c *TaskCache) GetBudgetNegotiationCache(taskId string) *BudgetNegotiationR
 }
 
 type TaskCacheTaskItem struct {
-	task                *TaskDispatchingItem
+	task                *ds.TaskDispatchingItem
 	dispatchedNodes     map[string]*TaskCacheNodeItem // node-key : nodeItem
 	status              TaskStatus
 	LastUpdateTimestamp time.Time `json:"lastUpdateTimestamp,omitempty"`
@@ -145,7 +145,7 @@ type TaskCacheTaskItem struct {
 	BudgetNegotiationCache *BudgetNegotiationResponseCache `json:"budgetNegotiationCache,omitempty"`
 }
 
-func NewTaskCacheTaskItem(taskItem *TaskDispatchingItem) *TaskCacheTaskItem {
+func NewTaskCacheTaskItem(taskItem *ds.TaskDispatchingItem) *TaskCacheTaskItem {
 	item := &TaskCacheTaskItem{
 		task:            taskItem,
 		dispatchedNodes: make(map[string]*TaskCacheNodeItem),
@@ -194,11 +194,11 @@ type BudgetNegotiationResponse struct {
 	AvailableNodes 	int64 			`json:"availableNodes,omitempty"`
 	CDF 			*histogram.CDF 	`json:"cdf,omitempty"`
 	TaskKey 		string 			`json:"taskId,omitempty"`
-	Node            *kernel.Node    `json:"node,omitempty"`
+	Node            *ds.Node    `json:"node,omitempty"`
 }
 
 type BudgetNegotiationResponseCacheItem struct {
-	Neighbor 			*kernel.Node
+	Neighbor 			*ds.Node
 	RequestSentAt 		time.Time
 	ResponseArriveAt 	time.Time
 	Response 			*BudgetNegotiationResponse
@@ -226,7 +226,7 @@ func (c *BudgetNegotiationResponseCache) Unlock() {
 }
 
 
-func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *kernel.Node, response *BudgetNegotiationResponse) {
+func (c *BudgetNegotiationResponseCache) SetResponse(neighbor *ds.Node, response *BudgetNegotiationResponse) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 

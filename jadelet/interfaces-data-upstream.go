@@ -3,9 +3,10 @@ package jadelet
 import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"strconv"
 	"time"
 )
@@ -37,21 +38,22 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			)
 			// save result and stat
 			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
-			if subtask != nil && subtask.Pod != nil {
+			if subtask != nil && subtask.ResourceKey != "" {
 				j.DoneRequest(w, r, "message received")
 				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
 				// then dequeue or release the pod queue
-				j.PodCache.SetPodIdle(subtask.Pod, serviceRequestTime, communicationTime, queueingTime, budget)
+				pod := j.PodCache.GetPod(subtask.ResourceKey)
+				j.PodCache.SetPodIdle(pod, serviceRequestTime, communicationTime, queueingTime, budget)
 				// forward aggregator subtask to upper tier if possible
-				if subtask.ModuleName == string(kernel.AppModuleAggregator) && j.HasUpperNode() {
+				if subtask.ModuleName == string(ds.AppModuleAggregator) && j.HasUpperNode() {
 					j.sdk.SendReportMessageToJadelet(j.Config.UpperNode.GetSDKNode(), msg)
 				}
 
 				postQueryPerfAnalysis := func() {
-					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.Pod.NodeKey, serviceRequestTime)
+					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.NodeKey, serviceRequestTime)
 
 					metricsEnv := msg.MetricsEnv
-					j.PerfCache.EnqueueEnvMetrics(subtask.Pod.NodeKey, metricsEnv)
+					j.PerfCache.EnqueueEnvMetrics(subtask.NodeKey, metricsEnv)
 
 					// to see if the task is done
 					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
@@ -112,7 +114,7 @@ func (j *JADE) GetAggregativeTaskResults(w rest.ResponseWriter, r *rest.Request)
 	} else {
 		results := make(map[string][]*scheduler.TaskResult)
 		for _, taskKey := range taskIDList {
-			taskResult := j.TaskCache.GetResultOfTask(taskKey, string(kernel.AppModuleAggregator))
+			taskResult := j.TaskCache.GetResultOfTask(taskKey, string(ds.AppModuleAggregator))
 			results[taskKey] = taskResult
 		}
 		j.DoneRequest(w, r, results)

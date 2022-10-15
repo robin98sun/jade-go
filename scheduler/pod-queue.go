@@ -4,8 +4,8 @@ import (
 	"math"
 	"sync"
 	"time"
-	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/histogram"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type PodQueueType string
@@ -23,7 +23,7 @@ const(
 )
 
 type PodQueue struct {
-	Pod          	*kernel.Pod
+	Pod          	*ds.Pod
 	MainQueue       []*PodQueueItem
 	ShadowQueue  	[]*PodQueueItem
 	ItemsInQueue 	map[string]*PodQueueItem
@@ -150,7 +150,7 @@ func (q *PodQueue) search_insertion_place(low int, high int, ddl time.Time, pri 
 func (q *PodQueue) Enqueue( 
 	podQueueType PodQueueType,
 	key string, taskKey string, subtaskKey string, payload interface{},
-	queueingMechanism kernel.TaskQueuingMechanism, maxQueuingTime float64, priority int,
+	queueingMechanism ds.TaskQueuingMechanism, maxQueuingTime float64, priority int,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
 ) (bool, *PodQueueItem, int) {
@@ -167,7 +167,7 @@ func (q *PodQueue) Enqueue(
 	}
 	printf("[pod queue] enqueuing to [%v] queue", podQueueType)
 
-	if queueingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock &&
+	if queueingMechanism == ds.TaskQueuingDDL_CDF_NonBlock &&
 	   podQueueType == PodQueueTypeMain {
 		if _, e := q.ItemsInQueue[key]; e {
 			// find the item in shadow queue
@@ -224,17 +224,17 @@ func (q *PodQueue) Enqueue(
 			len(q.ItemsInQueue),
 		)
 	}
-	if queueingMechanism == kernel.TaskQueuingFIFO {
+	if queueingMechanism == ds.TaskQueuingFIFO {
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueingMechanism: %v", podKey, queueingMechanism)
 		}
 		theQueue = append(theQueue, newItem)
-	} else if 	queueingMechanism == kernel.TaskQueuingDDL || 
-				queueingMechanism == kernel.TaskQueuingPRQ ||
-				queueingMechanism == kernel.TaskQueuingClass ||
-				queueingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
-				queueingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
-				queueingMechanism == kernel.TaskQueuingDDL_None  {
+	} else if 	queueingMechanism == ds.TaskQueuingDDL || 
+				queueingMechanism == ds.TaskQueuingPRQ ||
+				queueingMechanism == ds.TaskQueuingClass ||
+				queueingMechanism == ds.TaskQueuingDDL_CDF_Block ||
+				queueingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
+				queueingMechanism == ds.TaskQueuingDDL_None  {
 		if printf != nil {
 			printf("[pod queue][%v] enqueuing the new item using queueingMechanism: %v, budget: %v, priority: %v", podKey, queueingMechanism, newItem.Budget, newItem.Priority)
 		}
@@ -251,7 +251,7 @@ func (q *PodQueue) Enqueue(
 			}
 		} else {
 			point := -1
-			if queueingMechanism == kernel.TaskQueuingPRQ && newItem.Priority >= 0 {
+			if queueingMechanism == ds.TaskQueuingPRQ && newItem.Priority >= 0 {
 				point = q.search_insertion_place(0, qlen, newItem.Deadline, newItem.Priority)
 
 				// this is for the sanity check, to use the most simplest formation

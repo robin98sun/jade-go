@@ -3,14 +3,14 @@ package scheduler
 import (
 	"sort"
 	"sync"
-	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/histogram"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type PodCache struct {
 	Nodes                      map[string]*PodCacheNodeItem // nodekey: cacheItem
-	Pods                       map[string]*kernel.Pod
-	QueuingPods                map[string]*kernel.Pod
+	Pods                       map[string]*ds.Pod
+	QueuingPods                map[string]*ds.Pod
 	IsBackgroundRoutineStarted bool
 	mutex                      *sync.Mutex
 }
@@ -23,11 +23,23 @@ func (p *PodCache) Unlock() {
 	p.mutex.Unlock()
 }
 
-func (p *PodCache) GetPods() []*kernel.Pod {
+func (p *PodCache) GetPod(podkey string) *ds.Pod {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.Pods != nil && len(p.Pods) > 0 {
+		if pod, e := p.Pods[podkey]; e {
+			return pod
+		}
+	}	
+
+	return nil
+}
+
+func (p *PodCache) GetPods() []*ds.Pod {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	var result []*kernel.Pod
+	var result []*ds.Pod
 
 	for _, pod := range p.Pods {
 		result = append(result, pod)
@@ -90,29 +102,29 @@ func NewPodCacheNodeItem() *PodCacheNodeItem {
 }
 
 type PodCacheItem struct {
-	Application *kernel.Application
+	Application *ds.Application
 	Queue       *PodQueue
 	ModuleName  string
-	Allocation  *kernel.AllocationUnit
-	Pod         *kernel.Pod
+	Allocation  *ds.AllocationUnit
+	Pod         *ds.Pod
 	IsIdle      bool
 }
 
 
-func (p *PodCache) GetAllPods() []*kernel.Pod {
+func (p *PodCache) GetAllPods() []*ds.Pod {
 	// p.LockMeta()
 	// defer p.UnlockMeta()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	pod_list := []*kernel.Pod {}
+	pod_list := []*ds.Pod {}
 	for _, pod := range p.Pods {
 		pod_list = append(pod_list, pod)
 	}
 	return pod_list
 }
 
-func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod) *PodCacheItem {
+func NewPodCacheItem(app *ds.Application, moduleName string, alloc *ds.AllocationUnit, pod *ds.Pod) *PodCacheItem {
 	inst := &PodCacheItem{
 		Application: app,
 		ModuleName:  moduleName,
@@ -125,13 +137,13 @@ func NewPodCacheItem(app *kernel.Application, moduleName string, alloc *kernel.A
 	return inst
 }
 
-func (p *PodCache) SetPodIdle(pod *kernel.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem {
+func (p *PodCache) SetPodIdle(pod *ds.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem {
 	return p.setPodIdleOrNot(pod, true, serviceRequestTime, communicationTime, queueingTime, budget)
 }
-func (p *PodCache) SetPodBusy(pod *kernel.Pod) *PodCacheItem {
+func (p *PodCache) SetPodBusy(pod *ds.Pod) *PodCacheItem {
 	return p.setPodIdleOrNot(pod, false, float64(-1), float64(-1), float64(-1), float64(-1))
 }
-func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem  {
+func (p *PodCache) setPodIdleOrNot(pod *ds.Pod, idle bool, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *PodCacheItem  {
 
 	// p.LockMeta()
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
@@ -168,7 +180,7 @@ func (p *PodCache) setPodIdleOrNot(pod *kernel.Pod, idle bool, serviceRequestTim
 	// p.UnlockMeta()
 	return nil
 }
-func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
+func (p *PodCache) IsPodIdle(pod *ds.Pod) bool {
 
 	if p == nil || len(p.Nodes) == 0 || pod == nil {
 		return false
@@ -185,7 +197,7 @@ func (p *PodCache) IsPodIdle(pod *kernel.Pod) bool {
 	return false
 }
 
-func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit) *kernel.Pod {
+func (p *PodCache) GetPodForApplication(nodeKey string, app *ds.Application, moduleName string, alloc *ds.AllocationUnit) *ds.Pod {
 	if p == nil {
 		return nil
 	}
@@ -206,25 +218,22 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *kernel.Application,
 	return nil
 }
 
-func (p *PodCache) GetPodQueue(pod *kernel.Pod) *PodQueue {
-	if pod == nil {
-		return nil
-	}
-
-	// p.LockData()
-	// defer p.UnlockData()
+func (p *PodCache) GetPodQueue(podkey string) *PodQueue {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
-		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-		if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
-			if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-				return podItem.Queue
+	if pod, e := p.Pods[podkey]; e {
+		if nodeItem, e := p.Nodes[pod.NodeKey]; e {
+			key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
+			if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
+				if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
+					return podItem.Queue
+				}
 			}
 		}
 	}
+	
 	return nil
 }
 
@@ -232,7 +241,7 @@ func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName stri
 	return appKey + ":" + moduleName
 }
 
-func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application, moduleName string, alloc *kernel.AllocationUnit, pod *kernel.Pod, enqueue bool) {
+func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, moduleName string, alloc *ds.AllocationUnit, pod *ds.Pod, enqueue bool) {
 	// p.LockMeta()
 	// defer p.UnlockMeta()
 	p.mutex.Lock()
@@ -280,38 +289,41 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *kernel.Application,
 	nodeItem.AppModules[key].Cache[pod.GetKey()] = podItem
 	if enqueue {
 		if p.QueuingPods == nil {
-			p.QueuingPods = make(map[string]*kernel.Pod)
+			p.QueuingPods = make(map[string]*ds.Pod)
 		}
 		p.QueuingPods[pod.GetKey()] = pod
 	}
 	if p.Pods == nil {
-		p.Pods = make(map[string]*kernel.Pod)
+		p.Pods = make(map[string]*ds.Pod)
 	}
 	p.Pods[pod.GetKey()] = pod
 }
 
 
-func (p *PodCache) CalcTailForPods(pods []*kernel.Pod, percentile float64, histType PodQueueHistogramType) float64 {
+func (p *PodCache) CalcTailForPods(pod_keys []string, percentile float64, histType PodQueueHistogramType) float64 {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
 	histogram_list := []*histogram.Histogram{}
 
-	for _, pod := range pods {
-		if nodeItem, e := p.Nodes[pod.NodeKey]; e {
-			key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-			if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
-				if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-					if histType == PodQueueHistogramTypeServiceResponseTime {
-						histogram_list = append(histogram_list, podItem.Queue.HistogramServiceTime)
-					} else if histType == PodQueueHistogramTypeServiceResponseTimeWithQueueingTime {
-						histogram_list = append(histogram_list, podItem.Queue.HistogramWithQueueingTime)
-					} else if histType == PodQueueHistogramTypeAdjustedServiceResponseTime {
-						histogram_list = append(histogram_list, podItem.Queue.HistogramAdjustedServiceTime)
+	for _, podkey := range pod_keys {
+		if pod, e := p.Pods[podkey]; e {
+			if nodeItem, e := p.Nodes[pod.NodeKey]; e {
+				key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
+				if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
+					if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
+						if histType == PodQueueHistogramTypeServiceResponseTime {
+							histogram_list = append(histogram_list, podItem.Queue.HistogramServiceTime)
+						} else if histType == PodQueueHistogramTypeServiceResponseTimeWithQueueingTime {
+							histogram_list = append(histogram_list, podItem.Queue.HistogramWithQueueingTime)
+						} else if histType == PodQueueHistogramTypeAdjustedServiceResponseTime {
+							histogram_list = append(histogram_list, podItem.Queue.HistogramAdjustedServiceTime)
+						}
 					}
 				}
 			}
 		}
+		
 	}
 
 	if len(histogram_list) > 0 {

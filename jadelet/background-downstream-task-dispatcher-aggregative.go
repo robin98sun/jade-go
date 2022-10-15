@@ -4,7 +4,7 @@ import (
 	"time"
 	"sort"
 	"math"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jadesdk"
@@ -37,7 +37,7 @@ func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
 	}
 }
 
-func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
+func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 	j.PodCache.Lock()
 
 	if !j.PodCache.IsPodIdle(pod) {
@@ -68,7 +68,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
 	_, reqlen, _, _ := j.HTTPCommunicate(
-		"dispatch subtask "+string(kernel.AppModuleWorker), "POST", "/"+string(kernel.AppModuleWorker),
+		"dispatch subtask "+string(ds.AppModuleWorker), "POST", "/"+string(ds.AppModuleWorker),
 		pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 		req,
 		0, 10,
@@ -81,7 +81,7 @@ func (j *JADE) dispatchSubtask(pod *kernel.Pod) {
 	j.PerfCache.AppendQueueDeadlineViolationEvent(pod.NodeKey, float64(queueItem.DispatchTime.Sub(queueItem.Deadline)/time.Millisecond))
 }
 
-func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *scheduler.TaskDispatchingItem) {
+func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *ds.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
 	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
@@ -106,17 +106,17 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 		// 1. dispatch the task to the aggregator,
 		//    to inform the aggregator which workers it has to wait for responses
 		//   a. collect the workers
-		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
+		aggregatorSubtasks := j.TaskCache.GetSubtasksRegardingNode(taskKey, string(ds.AppModuleAggregator), "", j.Config.SelfNode.Key())
 		if len(aggregatorSubtasks) > 0 {
 			// only for valid aggregative tasks
-			phase := scheduler.BudgetNegotiationPhaseNotStarted
+			phase := ds.BudgetNegotiationPhaseNotStarted
 			budget := float64(0)
 			priority := 0
 			if isConfirmingBudget {
-				budget = dispatchItemToConfirm.GetBudgetForModule(string(kernel.AppModuleWorker))
+				budget = dispatchItemToConfirm.GetBudgetForModule(string(ds.AppModuleWorker))
 				priority = dispatchItemToConfirm.Priority
 			} else {
-				budget = dispatchItem.GetBudgetForModule(string(kernel.AppModuleWorker))
+				budget = dispatchItem.GetBudgetForModule(string(ds.AppModuleWorker))
 				priority = dispatchItem.Priority
 			}
 			if priority == 0 {
@@ -124,31 +124,31 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			}
 			j.log.Debug.Printf("[task dispatcher] budget: %v, priority: %v", budget, priority)
 
-			var neighborSubtasks []*scheduler.SubtaskOnNode
-			var allSubtasks []*scheduler.SubtaskOnNode
-			var workerSubtasks []*scheduler.SubtaskOnNode
+			var neighborSubtasks []*ds.SubtaskOnNode
+			var allSubtasks []*ds.SubtaskOnNode
+			var workerSubtasks []*ds.SubtaskOnNode
 
-			workerSubtasks = j.TaskCache.GetSubtasksRegardingNode(taskKey, string(kernel.AppModuleWorker), j.Config.SelfNode.Key(), "")
+			workerSubtasks = j.TaskCache.GetSubtasksRegardingNode(taskKey, string(ds.AppModuleWorker), j.Config.SelfNode.Key(), "")
 
-			budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+			budgetNegotiation := ds.BudgetNegotiationTypeNone
 			// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
 				// budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 			// }
-			if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
-				budgetNegotiation = scheduler.BudgetNegotiationTypeCDFBlock
-			} else if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
-				budgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
+			if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
+				budgetNegotiation = ds.BudgetNegotiationTypeCDFBlock
+			} else if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
+				budgetNegotiation = ds.BudgetNegotiationTypeCDFNonBlock
 			}
 			var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 				
-			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(kernel.AppModuleAggregator), "", j.Config.SelfNode.Key())
+			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(ds.AppModuleAggregator), "", j.Config.SelfNode.Key())
 			for _, neighborNode := range neighborNodes {
-				subtaskItem := &scheduler.SubtaskOnNode{
+				subtaskItem := &ds.SubtaskOnNode{
 					Node: neighborNode,
-					Subtask: kernel.NewSubtask(
+					Subtask: ds.NewSubtask(
 						task.GetKey(),
 						task.Application.Name,
-						string(kernel.AppModuleAggregator),
+						string(ds.AppModuleAggregator),
 						neighborNode.GetKey(),
 						"", "",
 					),
@@ -159,7 +159,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			
 			allSubtasks = workerSubtasks
 			if len(neighborSubtasks) > 0 {
-				allSubtasks = append([]*scheduler.SubtaskOnNode{}, workerSubtasks...)
+				allSubtasks = append([]*ds.SubtaskOnNode{}, workerSubtasks...)
 				allSubtasks = append(allSubtasks, neighborSubtasks...)
 			}
 
@@ -169,7 +169,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if !isConfirmingBudget {
 					msg := j.NewAggregatorEnqueuingMessage(dispatchItem, allSubtasks, j.Config.SelfNode.Protocol)
 					msg.SubtaskKey = aggregator.Subtask.GetKey()
-					j.log.Debug.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.Pod.GetKey())
+					j.log.Debug.Println("[task dispatcher] dispatching aggregator tasks to pod", aggregator.Subtask.ResourceKey)
 					// Save the dispatching timestamp and fanout degree
 					aggregator.Subtask.Fanout = len(workerSubtasks)
 					aggregatorSubtaskCacheItem := j.TaskCache.GetSubtaskItem(taskKey, aggregator.Subtask.GetKey())
@@ -178,9 +178,10 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						aggregatorSubtaskCacheItem.DispatchTimestamp = time.Now()
 					}
 					// dispatch the aggregator subtask
+					pod := j.PodCache.GetPod(aggregator.Subtask.ResourceKey)
 					_, reqlen, _, _ := j.HTTPCommunicate(
-						"dispatch subtask "+string(kernel.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
-						aggregator.Subtask.Pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
+						"dispatch subtask "+string(ds.AppModuleAggregator), "PUT", "/$jade$/enqueueAggregativeTask",
+						pod.GetNodeRepresentation(j.Config.SelfNode.Protocol),
 						msg,
 						0, 10,
 					)
@@ -193,14 +194,14 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if len(neighborSubtasks) > 0 {
 					j.log.Debug.Printf("[task dispatcher] dispatching neighbor subtasks")
 					
-					if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
-						(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
-							budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock) {
+					if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock || 
+						(	task.QueuingMechanism == ds.TaskQueuingDDL && 
+							budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock) {
 
 						if !isConfirmingBudget {
-							phase = scheduler.BudgetNegotiationPhaseInquiry
+							phase = ds.BudgetNegotiationPhaseInquiry
 						} else {
-							phase = scheduler.BudgetNegotiationPhaseConfirm
+							phase = ds.BudgetNegotiationPhaseConfirm
 						}
 						if !isConfirmingBudget {
 							budgetnegotationCache = scheduler.NewBudgetNegotiationResponseCache()
@@ -211,13 +212,14 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						newDispatchItem := dispatchItem.CopyForSubtask(false)
 						newDispatchItem.Task.SubtaskKey = neighborItem.Subtask.GetKey()
 
-						newDispatchItem.SetReportToForModule(string(kernel.AppModuleWorker), nil, aggregator.Subtask.Pod)
+						pod := j.PodCache.GetPod(aggregator.Subtask.ResourceKey)
+						newDispatchItem.SetReportToForModule(string(ds.AppModuleWorker), nil, pod)
 
 						// for non-block budget negotiation, prepare for the cache
-						if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+						if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 
 							if newDispatchItem.Options == nil {
-								newDispatchItem.Options = &scheduler.TaskDispatchingOptions{}
+								newDispatchItem.Options = &ds.TaskDispatchingOptions{}
 							}
 							newDispatchItem.Options.BudgetNegotiationPhase = phase
 							// newDispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
@@ -234,7 +236,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 						dispatchItem.InquiryStartTimestamp = time.Now()
 						go j.dispatchNeighborTask(neighborItem.Node, newDispatchItem)
-						if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+						if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 							j.log.Debug.Printf("[task dispatcher] non-block budget negotiation phase: %v", phase)
 						}
 						if !isConfirmingBudget {
@@ -269,16 +271,16 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				if dispatchItem.Options != nil {
 					j.log.Debug.Printf("[task dispatcher] SLO percentile: %v", dispatchItem.Options.BudgetEstimationPercentilePoint)
 				}
-				if task.QueuingMechanism == kernel.TaskQueuingClass {
+				if task.QueuingMechanism == ds.TaskQueuingClass {
 					if dispatchItem.SLO != nil {
 						budget = dispatchItem.SLO.TailLatencyInMilliseconds
 					}
 				} else if budget == 0 {
 					// calculate budget using online measurement
-					if 	task.QueuingMechanism == kernel.TaskQueuingDDL || 
-						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
-						task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
-						task.QueuingMechanism == kernel.TaskQueuingDDL_None {
+					if 	task.QueuingMechanism == ds.TaskQueuingDDL || 
+						task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block ||
+						task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock || 
+						task.QueuingMechanism == ds.TaskQueuingDDL_None {
 						if dispatchItem.SLO != nil && dispatchItem.SLO.TailLatencyInMilliseconds > 0 {
 							provisionOverhead := float64(0)
 							overheadCheckpoint := time.Now()
@@ -293,10 +295,10 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							j.log.Debug.Printf("[task dispatcher] going to calculate tail latency")
 
 
-							pods_to_calculate_unloaded_tail := []*kernel.Pod{}
+							pods_to_calculate_unloaded_tail := []string{}
 
 							for _, subtaskOnNode := range workerSubtasks {
-								pods_to_calculate_unloaded_tail = append(pods_to_calculate_unloaded_tail, subtaskOnNode.Subtask.Pod)
+								pods_to_calculate_unloaded_tail = append(pods_to_calculate_unloaded_tail, subtaskOnNode.Subtask.ResourceKey)
 							}
 							// histogram_list := []*histogram.Histogram{}
 							// for _, subtaskOnNode := range workerSubtasks {
@@ -332,13 +334,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					}
 					// for queueing by class,
 					//     and compatible with legacy using static budget
-					if budget == 0 && task.QueuingMechanism == kernel.TaskQueuingDDL {
+					if budget == 0 && task.QueuingMechanism == ds.TaskQueuingDDL {
 						j.log.Debug.Printf("[task dispatcher] checking task fanout table for budget sepcification")
-						budget = dispatchItem.GetBudgetForModuleAtFanoutDegree(string(kernel.AppModuleWorker), fanoutDegree)
+						budget = dispatchItem.GetBudgetForModuleAtFanoutDegree(string(ds.AppModuleWorker), fanoutDegree)
 						if budget > 0 {
 							j.log.Debug.Printf("[task dispatcher] task[%v] budget sepcified in the task for fanout degree[%v]: %v", task.GetKey(), fanoutDegree, budget)
 						} else {
-							budget = dispatchItem.GetDeterministicBudget(string(kernel.AppModuleWorker))
+							budget = dispatchItem.GetDeterministicBudget(string(ds.AppModuleWorker))
 							j.log.Debug.Printf("[task dispatcher] task[%v] budget sepcified in the task regardless of fanout degree: %v", task.GetKey(), budget)
 						}
 					}
@@ -351,7 +353,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				// sort available subnodes if needed
 				if dispatchItem.Options != nil && dispatchItem.Options.SortSubnodes {
 					sort.Slice(workerSubtasks, func(i, j int) bool {
-						if workerSubtasks[i].Subtask.Pod.GetKey() < workerSubtasks[j].Subtask.Pod.GetKey() {
+						if workerSubtasks[i].Subtask.ResourceKey < workerSubtasks[j].Subtask.ResourceKey {
 							return true
 						}
 						return i < j
@@ -363,12 +365,12 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 
 			// enqueue each worker subtask
 			for i, worker := range workerSubtasks {
-				if worker.Subtask.ModuleName != string(kernel.AppModuleWorker) {
+				if worker.Subtask.ModuleName != string(ds.AppModuleWorker) {
 					continue
 				}
 				j.log.Debug.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
-					worker.Subtask.Pod.GetKey(), worker.Node.Key(),
-					dispatchItem.GetReportToForModule(string(kernel.AppModuleWorker)).Desc(),
+					worker.Subtask.ResourceKey, worker.Node.Key(),
+					dispatchItem.GetReportToForModule(string(ds.AppModuleWorker)).Desc(),
 				)
 				// backdoor for fake service time
 				estimatedServiceTime := float64(-1)
@@ -388,18 +390,18 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
 					} else if options.EstimatedServiceTimeModel == "custom" && i < len(options.ServiceTimeList) {
 						estimatedServiceTime = float64(options.ServiceTimeList[i])
-						j.log.Debug.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.Pod.GetKey(), worker.Node.Key())
+						j.log.Debug.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.ResourceKey, worker.Node.Key())
 					}
 				}
 				// generate request payload for the subtask
 				req := j.NewAggregativeWorkerTask(
 					dispatchItem, worker, j.Config.SelfNode.Protocol,
-					task.Application.GetModule(string(kernel.AppModuleWorker)).Input,
+					task.Application.GetModule(string(ds.AppModuleWorker)).Input,
 					estimatedServiceTime,
 				)
-				queue := j.PodCache.GetPodQueue(worker.Subtask.Pod)
+				queue := j.PodCache.GetPodQueue(worker.Subtask.ResourceKey)
 				if queue == nil {
-					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.Pod.GetKey())
+					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.ResourceKey)
 					continue
 				}
 				// enqueue the subtask
@@ -410,46 +412,46 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				}
 
 				// according to budget negotiation method, to enqueue the task
-				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+				budgetNegotiation := ds.BudgetNegotiationTypeNone
 				// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
 				// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 				// }
-				if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
-					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
-				} else if task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
-					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFBlock
+				if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFNonBlock
+				} else if task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFBlock
 				}
 				
-				phase := scheduler.BudgetNegotiationPhaseNotStarted
+				phase := ds.BudgetNegotiationPhaseNotStarted
 				if isConfirmingBudget {
-					phase = scheduler.BudgetNegotiationPhaseConfirm
+					phase = ds.BudgetNegotiationPhaseConfirm
 				} else if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationPhase != "" {
 					phase = dispatchItem.Options.BudgetNegotiationPhase
 				}
-				if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
-					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
-					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) {
+				if (task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
+					(task.QueuingMechanism == ds.TaskQueuingDDL && 
+					  budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock)) {
 					j.log.Debug.Printf("[task dispatcher] the non-block budget negotiation phase is [%v]", phase)
 				}
 
 				targetQueue := scheduler.PodQueueTypeMain
 				if isConfirmingBudget {
 					targetQueue = scheduler.PodQueueTypeMain
-				} else if (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
-					(task.QueuingMechanism == kernel.TaskQueuingDDL && 
-					  budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)) &&
-					phase != scheduler.BudgetNegotiationPhaseConfirm {
+				} else if (task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
+					(task.QueuingMechanism == ds.TaskQueuingDDL && 
+					  budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock)) &&
+					phase != ds.BudgetNegotiationPhaseConfirm {
 					targetQueue = scheduler.PodQueueTypeShadow
 				}
 
 				queuingMech := task.QueuingMechanism
-				if task.QueuingMechanism == kernel.TaskQueuingDDL {
-					if budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock {
-						queuingMech = kernel.TaskQueuingDDL_CDF_NonBlock
-					} else if budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock {
-						queuingMech = kernel.TaskQueuingDDL_CDF_Block
-					} else if budgetNegotiation == scheduler.BudgetNegotiationTypeNone {
-						queuingMech = kernel.TaskQueuingDDL_None
+				if task.QueuingMechanism == ds.TaskQueuingDDL {
+					if budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock {
+						queuingMech = ds.TaskQueuingDDL_CDF_NonBlock
+					} else if budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock {
+						queuingMech = ds.TaskQueuingDDL_CDF_Block
+					} else if budgetNegotiation == ds.BudgetNegotiationTypeNone {
+						queuingMech = ds.TaskQueuingDDL_None
 					}
 				}
 				done,_,_ := queue.Enqueue(
@@ -461,12 +463,12 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				)
 				if done || isConfirmingBudget{
 					if done {
-						j.log.Debug.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+						j.log.Debug.Printf("[task dispatcher] pod[%v] enqueued subtask[%v] for [%v] queueing", worker.Subtask.ResourceKey, worker.Subtask.GetKey(), task.QueuingMechanism)
 					} else {
-						j.log.Debug.Printf("[task dispatcher] pod[%v] subtask[%v] for [%v] queueing has been served before budget negotiation is done", worker.Subtask.Pod.GetKey(), worker.Subtask.GetKey(), task.QueuingMechanism)
+						j.log.Debug.Printf("[task dispatcher] pod[%v] subtask[%v] for [%v] queueing has been served before budget negotiation is done", worker.Subtask.ResourceKey, worker.Subtask.GetKey(), task.QueuingMechanism)
 					}
 				} else {
-					j.log.Debug.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.Pod.GetKey())
+					j.log.Debug.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.ResourceKey)
 				}
 			}
 			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
@@ -479,13 +481,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusWorkerReady)
 
 			// for non-block budget negotiation, prepare for the cache
-			if !isConfirmingBudget && (task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock || 
-				(	task.QueuingMechanism == kernel.TaskQueuingDDL && 
-					budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock)){
+			if !isConfirmingBudget && (task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock || 
+				(	task.QueuingMechanism == ds.TaskQueuingDDL && 
+					budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock)){
 				// just to collect the local cdf and check the remote CDFs
-				pods := []*kernel.Pod{}
+				pods := []string{}
 				for _, worker := range workerSubtasks {
-					pods = append(pods, worker.Subtask.Pod)
+					pods = append(pods, worker.Subtask.ResourceKey)
 				}
 
 				if  budgetnegotationCache != nil {
@@ -501,7 +503,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 	}
 }
 
-func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.BudgetNegotiationResponseCache, pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem) {
+func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.BudgetNegotiationResponseCache, pods []string, dispatchItem *ds.TaskDispatchingItem) {
 	localResponse := j.MultiplyCDFs(pods, dispatchItem)
 
 	for {
@@ -546,17 +548,17 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 	j.log.Debug.Printf("[budget negotiation] non-block negotiation is done, going to re-dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 
 	if dispatchItem.Options == nil {
-		dispatchItem.Options = &scheduler.TaskDispatchingOptions{}
+		dispatchItem.Options = &ds.TaskDispatchingOptions{}
 	}
-	dispatchItem.Options.BudgetNegotiationPhase = scheduler.BudgetNegotiationPhaseConfirm
+	dispatchItem.Options.BudgetNegotiationPhase = ds.BudgetNegotiationPhaseConfirm
 
-	j.evaluateAggregativeTasks(map[string]*scheduler.TaskDispatchingItem{
+	j.evaluateAggregativeTasks(map[string]*ds.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})
 
 }
 
-func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem, initiator *kernel.Node) {
+func (j *JADE) ReportCDFtoInitiator(pods []string, dispatchItem *ds.TaskDispatchingItem, initiator *ds.Node) {
 	localResponse := j.MultiplyCDFs(pods, dispatchItem)
 	j.log.Debug.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
 	payload := j.GeneratePayloadOfRequest(initiator, localResponse, nil, nil)
@@ -575,13 +577,13 @@ func (j *JADE) ReportCDFtoInitiator(pods []*kernel.Pod, dispatchItem *scheduler.
 // 	ReportTo   []*InterfaceSpec `json:"reportTo,omitempty"`
 // }
 
-func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatchingItem, subtasks []*scheduler.SubtaskOnNode, protocol string) *jadesdk.AggregatorEnqueuingMessage {
+func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *ds.TaskDispatchingItem, subtasks []*ds.SubtaskOnNode, protocol string) *jadesdk.AggregatorEnqueuingMessage {
 	inst := &jadesdk.AggregatorEnqueuingMessage{
 		TaskKey:  taskItem.Task.GetKey(),
 		Subtasks: []string{},
 		ReportTo: []*jadesdk.Interface{},
 	}
-	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleAggregator))
+	reportTo := taskItem.GetReportToForModule(string(ds.AppModuleAggregator))
 	if reportTo != nil && reportTo.Pod != nil {
 		intf := &jadesdk.Interface{
 			Node: &ds.Node{
@@ -589,7 +591,7 @@ func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatching
 				Port:     reportTo.Pod.Port,
 				Protocol: protocol,
 			},
-			ModuleName: string(kernel.AppModuleAggregator),
+			ModuleName: string(ds.AppModuleAggregator),
 		}
 		inst.ReportTo = append(inst.ReportTo, intf)
 		j.log.Debug.Printf("[task dispatcher] NewAggregatorEnqueuingMessage, module: %v, node addr: %v, port: %v, protocol: %v", intf.ModuleName, intf.Node.Addr, intf.Node.Port, intf.Node.Protocol)
@@ -602,12 +604,12 @@ func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *scheduler.TaskDispatching
 }
 
 func(j *JADE) NewAggregativeWorkerTask(
-	taskItem *scheduler.TaskDispatchingItem,
-	worker *scheduler.SubtaskOnNode,
+	taskItem *ds.TaskDispatchingItem,
+	worker *ds.SubtaskOnNode,
 	protocol string, input interface{}, estimatedServiceTime float64,
 ) *Request {
 	task := taskItem.Task
-	reportTo := taskItem.GetReportToForModule(string(kernel.AppModuleWorker))
+	reportTo := taskItem.GetReportToForModule(string(ds.AppModuleWorker))
 	if reportTo == nil || reportTo.Pod == nil {
 		return nil
 	}
@@ -617,11 +619,11 @@ func(j *JADE) NewAggregativeWorkerTask(
 			Port:     reportTo.Pod.Port,
 			Protocol: protocol,
 		},
-		ModuleName: string(kernel.AppModuleAggregator),
+		ModuleName: string(ds.AppModuleAggregator),
 	}
 	req := &Request{
 		Task: &TaskSpec{
-			ModuleName: string(kernel.AppModuleWorker),
+			ModuleName: string(ds.AppModuleWorker),
 			TaskID:     task.GetKey(),
 			SubtaskID:  worker.Subtask.GetKey(),
 		},

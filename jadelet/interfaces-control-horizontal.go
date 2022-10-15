@@ -3,7 +3,7 @@ package jadelet
 import (
 	// "encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/histogram"
 	"encoding/json"
@@ -29,7 +29,7 @@ type InqueryNeighborResponse struct {
 	Populating float64 `json:"populating,omitempty"`
 	Matching float64 `json:"matching,omitempty"`
 	PackageSize int `json:packageSize,omitempty"`
-	Nodes []*kernel.Node `json:"nodes,omitempty"`
+	Nodes []*ds.Node `json:"nodes,omitempty"`
 }
 
 func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
@@ -42,7 +42,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *kernel.Requirements
+		Payload *ds.Requirements
 	}{}
 	err = json.Unmarshal(content, reqInst)
 
@@ -59,7 +59,7 @@ func (j *JADE) ListNeighbors(w rest.ResponseWriter, r *rest.Request) {
 	matching := float64(time.Now().Sub(start_time)) / float64(time.Millisecond)
 
 	start_time = time.Now()
-	var nodes []*kernel.Node
+	var nodes []*ds.Node
 	if len(nodekeys) > 0 {
 		j.registryMutex.Lock()
 		defer j.registryMutex.Unlock()
@@ -125,7 +125,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *scheduler.TaskDispatchingItem
+		Payload *ds.TaskDispatchingItem
 	}{}
 	err = json.Unmarshal(content, reqInst)
 
@@ -150,7 +150,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	// }
 
 	// var histogram_list []*histogram.Histogram
-	pods := []*kernel.Pod{}
+	pods := []string{}
 	if len(availableNodes) > 0 {
 		// for non-block negotiation, schedule the job immediately
 
@@ -161,7 +161,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
-			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(kernel.AppModuleWorker), nil )
+			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(ds.AppModuleWorker), nil )
 			if workerPod == nil {
 				j.log.Op.Printf("[inquiry]ERROR: NO worker pod for application %v on node %v",
 					dispatchItem.Task.Application.Key(),
@@ -174,7 +174,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
-			pods = append(pods, workerPod)
+			pods = append(pods, workerPod.GetKey())
 
 			
 		}
@@ -187,24 +187,24 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 }
 
 
-func (j *JADE) MultiplyCDFs(pods []*kernel.Pod, dispatchItem *scheduler.TaskDispatchingItem) *scheduler.BudgetNegotiationResponse {
+func (j *JADE) MultiplyCDFs(pods []string, dispatchItem *ds.TaskDispatchingItem) *scheduler.BudgetNegotiationResponse {
 	response := &scheduler.BudgetNegotiationResponse{
 		AvailableNodes: int64(len(pods)),
 		TaskKey: dispatchItem.Task.GetKey(),
 		Node: j.Config.SelfNode.MiniNode(),
 	}
 	var histogram_list []*histogram.Histogram
-	for _, workerPod := range pods {
-		podQueue := j.PodCache.GetPodQueue(workerPod)
+	for _, workerPodKey := range pods {
+		podQueue := j.PodCache.GetPodQueue(workerPodKey)
 		if podQueue == nil {
 			j.log.Op.Printf("[inquiry] ERROR: the queue of pod [%v] for application %v is nil",
-				workerPod.GetKey(),
+				workerPodKey,
 				dispatchItem.Task.Application.Key(),
 			)
 			continue
 		}
 		j.log.Op.Printf("[inquiry] got the queue of pod [%v] for application %v",
-			workerPod.GetKey(),
+			workerPodKey,
 			dispatchItem.Task.Application.Key(),
 		)
 		histogram_list = append(histogram_list, podQueue.HistogramServiceTime)

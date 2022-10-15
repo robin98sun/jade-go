@@ -3,8 +3,8 @@ package scheduler
 import (
 	// "strconv"
 	"time"
-	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (c *TaskCache) GetJobIdList() []string {
@@ -21,7 +21,7 @@ func (c *TaskCache) GetJobIdList() []string {
 	return jobs
 }
 
-func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, realModuleName string, taskItem *TaskDispatchingItem, pod *kernel.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *kernel.SubTask {
+func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realModuleName string, taskItem *ds.TaskDispatchingItem, pod *ds.Pod, originalModuleName string, subtaskKey string, printf func(string, ...interface{})) *ds.SubTask {
 	if c == nil {
 		return nil
 	}
@@ -67,7 +67,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 		printf("[task cache] created module [%v] for task [%v] on node [%v]", moduleName, taskKey, subnodeKey)
 	}
 	
-	var subtask *kernel.SubTask
+	var subtask *ds.SubTask
 	if pod != nil {
 		if originalModuleName != "" && originalModuleName != realModuleName {
 			if _, e := c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[originalModuleName]; e {
@@ -84,10 +84,10 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 
 		if len(c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks) > 0 {
 			for _, tmpst := range c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks {
-				if tmpst.subtask.PodKey == pod.GetKey() {
+				if tmpst.subtask.Key == pod.GetKey() {
 					subtask = tmpst.subtask
-					if subtask.Pod == nil {
-						subtask.Pod = pod
+					if subtask.ResourceKey == "" {
+						subtask.ResourceKey = pod.Key
 						tmpst.status = TaskStatusAccepted
 						printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 					}
@@ -103,7 +103,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 				pod.GetKey(),
 				subtaskKey,
 			)
-			subtask.Pod = pod
+			subtask.ResourceKey = pod.Key
 			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
 				c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks = make(map[string]*TaskCacheSubtaskItem)
 			}
@@ -128,20 +128,20 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *kernel.Node, re
 	return subtask
 }
 
-func (c *TaskCache) SaveNeighborNode(subnode *kernel.Node, taskKey string, moduleName string, neighborNode *kernel.Node, printf func(string, ...interface{})) {
+func (c *TaskCache) SaveNeighborNode(subnode *ds.Node, taskKey string, moduleName string, neighborNode *ds.Node, printf func(string, ...interface{})) {
 	if neighborNode != nil {
 		c.mutex.Lock()
 		defer c.mutex.Unlock()
 		printf("[task cache] saving neighbor %v", neighborNode)
 		if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors == nil {
-			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors = make(map[string]*kernel.Node)
+			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors = make(map[string]*ds.Node)
 		}
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].neighbors[neighborNode.GetKey()] = neighborNode
 	}
 }
 
 func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
-) (*kernel.SubTask, float64, float64, float64, float64) {
+) (*ds.SubTask, float64, float64, float64, float64) {
 	if c == nil {
 		return nil, float64(-1), float64(-1), float64(-1), float64(-1)
 	}
@@ -192,7 +192,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 	subtaskItem.CommunicationTime = subtaskItem.RequestTime - subtaskItem.ServiceTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime
 	subtaskItem.CommunicationTime -= subtaskItem.ReportProcessingTime
 	subtaskItem.CommunicationTime -= subtaskItem.PostServiceTime
-	if subtask.ModuleName == string(kernel.AppModuleWorker) {
+	if subtask.ModuleName == string(ds.AppModuleWorker) {
 		subtaskItem.CommunicationTime -= subtaskItem.PreServiceTime
 	}
 	subtaskItem.MetricsEnv = metricsEnv
@@ -263,7 +263,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 					}
 					if checkModule == desiredStatus {
 						moduleItem.status = desiredStatus
-						if moduleName == string(kernel.AppModuleWorker) {
+						if moduleName == string(ds.AppModuleWorker) {
 							allWorkersDone = true
 						}
 						if printf != nil {
@@ -298,7 +298,7 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 }
 
 // dispatchItem, unloaded-tail, budget, pre-dispatching-overhead, aggregation-overhead
-func (c *TaskCache) GetDispatchingItem(taskKey string) (*TaskDispatchingItem, float64, float64, float64, float64) {
+func (c *TaskCache) GetDispatchingItem(taskKey string) (*ds.TaskDispatchingItem, float64, float64, float64, float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
@@ -434,18 +434,18 @@ func (c *TaskCache) FailTask(taskKey string) {
 	}
 }
 
-type SubtaskOnNode struct {
-	Subtask *kernel.SubTask
-	Node    *kernel.Node
-}
+// type SubtaskOnNode struct {
+// 	Subtask *ds.SubTask
+// 	Node    *ds.Node
+// }
 
-func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) []*SubtaskOnNode {
+func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) []*ds.SubtaskOnNode {
 	if c == nil || c.Cache == nil {
 		return nil
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	subtasks := []*SubtaskOnNode{}
+	subtasks := []*ds.SubtaskOnNode{}
 	if taskItem, e := c.Cache[taskKey]; e {
 
 		for _, nodeItem := range taskItem.dispatchedNodes {
@@ -460,7 +460,7 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 					continue
 				}
 				for _, subtaskItem := range moduleItem.subtasks {
-					subtasks = append(subtasks, &SubtaskOnNode{
+					subtasks = append(subtasks, &ds.SubtaskOnNode{
 						Subtask: subtaskItem.subtask,
 						Node:    nodeItem.node,
 					})
@@ -474,7 +474,7 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 	return subtasks
 }
 
-func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) map[string]*kernel.Node {
+func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) map[string]*ds.Node {
 	if c == nil || c.Cache == nil {
 		return nil
 	}
@@ -499,7 +499,7 @@ func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName str
 	return nil
 }
 
-func (c *TaskCache) DispatchedPodQueueItem(pod *kernel.Pod, item *PodQueueItem, timestampSending time.Time) float64 {
+func (c *TaskCache) DispatchedPodQueueItem(pod *ds.Pod, item *PodQueueItem, timestampSending time.Time) float64 {
 	if c == nil || len(c.Cache) == 0 {
 		return float64(-1)
 	}
@@ -544,9 +544,9 @@ func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCache
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if cacheItem, ok := c.Cache[taskKey]; ok {
-		if subtask := cacheItem.task.Task.GetSubtask(subtaskKey); subtask != nil && subtask.Pod != nil {
-			if dispatchedNodeItem, exists := cacheItem.dispatchedNodes[subtask.Pod.NodeKey]; exists {
-				if subtaskCache, exists := dispatchedNodeItem.modules[subtask.Pod.ModuleName]; exists {
+		if subtask := cacheItem.task.Task.GetSubtask(subtaskKey); subtask != nil && subtask.ResourceKey != "" {
+			if dispatchedNodeItem, exists := cacheItem.dispatchedNodes[subtask.NodeKey]; exists {
+				if subtaskCache, exists := dispatchedNodeItem.modules[subtask.ModuleName]; exists {
 					if subtaskItem, exists := subtaskCache.subtasks[subtask.GetKey()]; exists {
 						return subtaskItem
 					}
@@ -557,12 +557,12 @@ func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCache
 	return nil
 }
 
-func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string) (map[string][]*TaskCacheSubtaskItem, []*kernel.Pod) {
+func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string) (map[string][]*TaskCacheSubtaskItem, []string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	
 	result := make(map[string][]*TaskCacheSubtaskItem)
-	pods_to_calculate_adjusted_tail := []*kernel.Pod{}
+	pods_to_calculate_adjusted_tail := []string{}
 	if taskItem, e := c.Cache[taskKey]; e {
 		for nodeKeyInCache, dispatchedNode := range taskItem.dispatchedNodes {
 			if nodeKey != "" && nodeKeyInCache != nodeKey {
@@ -575,7 +575,7 @@ func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string,
 				}
 				for _, subtaskItem := range moduleItem.subtasks {
 					result[nodeKeyInCache] = append(result[nodeKeyInCache], subtaskItem)
-					pods_to_calculate_adjusted_tail = append(pods_to_calculate_adjusted_tail, subtaskItem.subtask.Pod)
+					pods_to_calculate_adjusted_tail = append(pods_to_calculate_adjusted_tail, subtaskItem.subtask.ResourceKey)
 				}
 			}
 		}

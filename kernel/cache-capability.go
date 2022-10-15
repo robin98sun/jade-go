@@ -122,7 +122,7 @@ func (c *CapabilityCache) getNodes(cap *ds.Capability, nodefilter []string) []st
 			if nodefilter == nil {
 				return nodes
 			} else {
-				return IntersectStringArrays(nodes, nodefilter)
+				return ds.IntersectStringArrays(nodes, nodefilter)
 			}
 		}
 	}
@@ -174,7 +174,7 @@ func (c *CapabilityCache) SelectNodesExclusively(capabilities []*ds.Capability, 
 		if nodes == nil {
 			nodes = tmpnodes
 		} else {
-			nodes = IntersectStringArrays(nodes, tmpnodes)
+			nodes = ds.IntersectStringArrays(nodes, tmpnodes)
 			if len(nodes) == 0 {
 				return nil
 			}
@@ -195,7 +195,7 @@ func (c *CapabilityCache) SelectNodesCollectively(capabilities []*ds.Capability,
 		if nodes == nil {
 			nodes = tmpnodes
 		} else {
-			nodes = MergeStringArrays(nodes, tmpnodes)
+			nodes = ds.MergeStringArrays(nodes, tmpnodes)
 		}
 	}
 	return nodes

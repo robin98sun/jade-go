@@ -1,11 +1,11 @@
 package scheduler
 
 import (
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type TaskCacheNodeItem struct {
-	node    *kernel.Node
+	node    *ds.Node
 	modules map[string]*TaskCacheModuleItem
 	status  TaskStatus
 }

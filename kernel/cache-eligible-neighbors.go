@@ -5,14 +5,15 @@ import (
 	// "uta.edu/aces/jade-go/kernel"
 	"sync"
 	// "log"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type EligibleNeighborCacheItem struct {
 	// Nodes 	map[string]*Node // nodeKey: node
-	NodeList []*Node
+	NodeList []*ds.Node
 }
 
-func NewEligibleNeighborCacheItem(neighborNodes []*Node) *EligibleNeighborCacheItem {
+func NewEligibleNeighborCacheItem(neighborNodes []*ds.Node) *EligibleNeighborCacheItem {
 	cacheItem := &EligibleNeighborCacheItem{
 		// Nodes: make(map[string]*Node),
 	}
@@ -25,7 +26,7 @@ func NewEligibleNeighborCacheItem(neighborNodes []*Node) *EligibleNeighborCacheI
 	return cacheItem
 }
 
-func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*Node {
+func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*ds.Node {
 	if item.NodeList == nil || len(item.NodeList) == 0 {
 		return nil
 	}
@@ -52,14 +53,14 @@ func NewEligibleNeighborCache() *EligibleNeighborCache {
 	}
 }
 
-func (c *EligibleNeighborCache) StoreEligibleNeighbors(requirementKey string, neighborNodes []*Node) {
+func (c *EligibleNeighborCache) StoreEligibleNeighbors(requirementKey string, neighborNodes []*ds.Node) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	c.cache[requirementKey] = NewEligibleNeighborCacheItem(neighborNodes)
 }
 
-func (c *EligibleNeighborCache) GetEligibleNeighbors(requirementKey string) []*Node {
+func (c *EligibleNeighborCache) GetEligibleNeighbors(requirementKey string) []*ds.Node {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 

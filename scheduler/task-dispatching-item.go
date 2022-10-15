@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"time"
-	"uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
 	"strings"
@@ -33,7 +32,7 @@ type TaskDispatchingOptions struct {
 	SortSubnodes 				bool `json:"sortSubnodes,omitempty"` // whether sort the available subnodes
 	// BudgetNegotiation           BudgetNegotiationType `json:"budgetNegotiation,omitempty"`
 	BudgetNegotiationPhase 		BudgetNegotiationPhase `json:"budgetNegotiationPhase,omitempty"`
-	BudgetNegotiationInitiator  *kernel.Node `json:"budgetNegotiationInitiator,omitempty"`
+	BudgetNegotiationInitiator  *ds.Node `json:"budgetNegotiationInitiator,omitempty"`
 	CDFPoints                   int 	`json:"cdfPoints,omitempty"`
 	CDFStartPoint				float64 `json:"cdfStartPoint,omitempty"`
 	BudgetEstimationPercentilePoint float64 `json:"budgetEstimationPercentilePoint,omitempty"`
@@ -53,7 +52,7 @@ type ControlPlaneOptions struct {
 
 const TaskDefaultPriority = 1000
 type TaskDispatchingItem struct {
-	Task            *kernel.Task                            `json:"task,omitempty"`
+	Task            *ds.Task                            `json:"task,omitempty"`
 	ReportTo        map[string]*TaskDispatchingItemReportTo `json:"reportTo,omitempty"` // moduleName: reportTo
 	SLO 			*TaskDispatchingItemSLO 				`json:"slo,omitempty"`
 	Budgets         map[string]*TaskDispatchingItemBudget   `json:"budgets,omitempty"`  // moduleName: budget
@@ -207,7 +206,7 @@ func (t *TaskDispatchingItem) GetArriveTime() time.Time {
 
 type TaskDispatchingItemReportTo struct {
 	Node *ds.Node `json:"node,omitempty"`
-	Pod  *kernel.Pod  `json:"pod,omitempty"`
+	Pod  *ds.Pod  `json:"pod,omitempty"`
 }
 
 func (r *TaskDispatchingItemReportTo) Copy() *TaskDispatchingItemReportTo {
@@ -235,7 +234,7 @@ func (r *TaskDispatchingItemReportTo) Desc() string {
 	return desc
 }
 
-func NewTaskDispatchingItemReportTo(node *ds.Node, pod *kernel.Pod) *TaskDispatchingItemReportTo {
+func NewTaskDispatchingItemReportTo(node *ds.Node, pod *ds.Pod) *TaskDispatchingItemReportTo {
 	minimumPod := pod 
 	if pod != nil {
 		minimumPod = pod.CopyForReportTo()
@@ -256,7 +255,7 @@ type TaskDispatchingItemSLO struct {
 	TailLatencyInMilliseconds float64 `json:"tailLatencyInMilliseconds,omitempty"`
 }
 
-func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *ds.Node, pod *kernel.Pod) {
+func (t *TaskDispatchingItem) SetReportToForModule(moduleName string, node *ds.Node, pod *ds.Pod) {
 	if t == nil || len(moduleName) == 0 {
 		return
 	}

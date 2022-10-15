@@ -2,13 +2,13 @@ package scheduler
 
 import (
 	"time"
-	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type TaskCacheModuleItem struct {
 	subtasks map[string]*TaskCacheSubtaskItem
-	neighbors map[string]*kernel.Node
+	neighbors map[string]*ds.Node
 	status   TaskStatus
 }
 
@@ -32,7 +32,7 @@ func (i *TaskCacheModuleItem) describe() map[string]interface{} {
 }
 
 type TaskCacheSubtaskItem struct {
-	subtask            *kernel.SubTask
+	subtask            *ds.SubTask
 	status             TaskStatus
 	updates            interface{}
 	ArriveTimestamp    time.Time     `json:"arriveTimestemp,omitempty"`

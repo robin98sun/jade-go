@@ -3,7 +3,8 @@ package jadelet
 import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // RegisterNode receive and process node registration
@@ -70,13 +71,13 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 	}
 
 	// En-cache capacity
-	if payload.Capacity != nil {
-		if nodeType == JadeNodeTypeSubnode {
-			j.subnodeCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
-		} else if nodeType == JadeNodeTypeNeighbor {
-			j.neighborCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
-		}
-	}
+	// if payload.Capacity != nil {
+	// 	if nodeType == JadeNodeTypeSubnode {
+	// 		j.subnodeCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	// 	} else if nodeType == JadeNodeTypeNeighbor {
+	// 		j.neighborCapacityCache.Set(nodekey, payload.Capacity, payload.Capacity)
+	// 	}
+	// }
 
 }
 
@@ -118,10 +119,10 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		})
 	} else {
 		j.log.Op.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v], module[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey, feedback.ModuleName)
-		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(kernel.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
+		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(ds.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey, true)
 		whetherEnqueue := true
-		if feedback.ModuleName == string(kernel.AppModuleAggregator) {
+		if feedback.ModuleName == string(ds.AppModuleAggregator) {
 			whetherEnqueue = false
 		}
 		j.PodCache.SetPodForApplication(

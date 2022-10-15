@@ -2,8 +2,9 @@ package provisioner
 
 import (
 	"strings"
-	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
+	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type Provisioner struct {
@@ -16,10 +17,10 @@ func NewProvisioner(logger *kernel.Logger) *Provisioner {
 	}
 }
 
-func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *kernel.Node,
-	envVars []map[string]string, app *kernel.Application,
-	moduleName string, container *kernel.Container,
-	allocationLimits *kernel.AllocationUnit,
+func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *ds.Node,
+	envVars []map[string]string, app *ds.Application,
+	moduleName string, container *ds.Container,
+	allocationLimits *ds.AllocationUnit,
 	replicas int) (string, int, error) {
 	// deploymentName
 	deploymentName := purifyString(node.Hostname) +"-"+ purifyString(app.Name) 

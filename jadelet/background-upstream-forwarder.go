@@ -2,18 +2,18 @@ package jadelet
 
 import (
 	"encoding/json"
-	"uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type TaskProvisioningResult struct {
 	NodeKey    string      `json:"nodeID,omitempty"`
 	TaskKey    string      `json:"taskID,omitempty"`
 	ModuleName string      `json:"moduleName,omitempty"`
-	Pod        *kernel.Pod `json:"pod,omitempty"`
+	Pod        *ds.Pod `json:"pod,omitempty"`
 	SubtaskKey string      `json:"subtaskId,omitempty"`
 }
 
-func NewTaskProvisioningResult(nodekey string, taskkey string, moduleName string, pod *kernel.Pod, subtaskKey string) *TaskProvisioningResult {
+func NewTaskProvisioningResult(nodekey string, taskkey string, moduleName string, pod *ds.Pod, subtaskKey string) *TaskProvisioningResult {
 	inst := &TaskProvisioningResult{
 		NodeKey:    nodekey,
 		TaskKey:    taskkey,

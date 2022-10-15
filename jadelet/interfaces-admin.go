@@ -3,7 +3,7 @@ package jadelet
 import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"runtime"
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 // UpdateConfigurations to configure JADE at runtime
 func (j *JADE) UpdateConfigurations(w rest.ResponseWriter, r *rest.Request) {
 	j.log.Op.Println("updating configuration")
-	c := kernel.NewConfiguration()
+	c := ds.NewConfiguration()
 	err := r.DecodeJsonPayload(c)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)

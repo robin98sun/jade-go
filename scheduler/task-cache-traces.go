@@ -262,7 +262,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						
 						// Pod_ID
 						// [37]
-						line = append(line, subtaskItem.subtask.PodKey)
+						line = append(line, subtaskItem.subtask.ResourceKey)
 						
 						// Task_ID
 						// [38]

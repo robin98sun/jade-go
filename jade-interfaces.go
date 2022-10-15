@@ -11,7 +11,8 @@ import (
 
 	// Sub packages
 	"uta.edu/aces/jade-go/jadelet"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 
 	// others
 	"flag"
@@ -26,7 +27,7 @@ func main() {
 	flag.Parse()
 	if *configurationFileInJSON != "" {
 		if *printConfigVariables {
-			kernel.PrintJSONasEnv(*configurationFileInJSON)
+			ds.PrintJSONasEnv(*configurationFileInJSON)
 			os.Exit(0)
 		}
 	}

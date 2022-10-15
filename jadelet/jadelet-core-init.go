@@ -8,6 +8,7 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // Init to do initializing work
@@ -19,22 +20,22 @@ func (j *JADE) Init() {
 	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
 	j.sdk = jadesdk.NewJadeSDK()
-	j.Subnodes = make(map[string]*kernel.Node)
-	j.Neighbors = make(map[string]*kernel.Node)
+	j.Subnodes = make(map[string]*ds.Node)
+	j.Neighbors = make(map[string]*ds.Node)
 	j.subnodeCapabilityCache = kernel.NewCapabilityCache()
-	j.subnodeCapacityCache = kernel.NewCapacityCache()
+	// j.subnodeCapacityCache = kernel.NewCapacityCache()
 	j.neighborCapabilityCache = kernel.NewCapabilityCache()
-	j.neighborCapacityCache = kernel.NewCapacityCache()
+	// j.neighborCapacityCache = kernel.NewCapacityCache()
 	j.eligibleNeighborCache = kernel.NewEligibleNeighborCache()
-	j.CapacityStatus = &kernel.CapacityStatus{}
+	// j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
 	j.PerfCache = perfstat.NewPerfCache()
 	j.dist = scheduler.NewDist()
 	// read environment variables into config
-	j.Config = kernel.ReadConfFromEnv()
-	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
-	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
+	j.Config = ds.ReadConfFromEnv()
+	// j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
+	// j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 
 	// read env metrics if the addon is deployed
 	
