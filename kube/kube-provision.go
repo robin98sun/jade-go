@@ -29,7 +29,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if len(deploymentName) > 36 {
 		deploymentName = deploymentName[0:36]
 	}
-	deploymentName =  deploymentName + "-" + ds.RandomString()
+	deploymentName =  strings.ToLower(deploymentName + "-" + ds.RandomString())
 
 	labels := map[string]string{
 		"jade-env":         envName,
