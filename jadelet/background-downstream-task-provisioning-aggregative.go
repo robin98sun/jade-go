@@ -248,7 +248,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		if len(availableNodes) == 0 && originalDispatchItem != nil && len(originalDispatchItem.Task.NeighborNodes) > 0 {
 			if _, e := readyTaskCache[task.GetKey()]; !e {
 				readyTaskCache[task.GetKey()] = nil
-				j.log.Debug.Printf("[task provision] accept the task even without available subnodes because of %v neighbor nodes", len(task.NeighborNodes))
+				j.log.Debug.Printf("[task provision] accept the task even without available subnodes because of %v neighbor nodes", len(originalDispatchItem.Task.NeighborNodes))
 			}
 		} 
 
