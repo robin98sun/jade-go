@@ -396,7 +396,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		nodesToDispatch[nodekey] = dispatchingList
 	}
 
-	j.log.Debug.Printf("[task provision] Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
+	if len(nodesToDispatch) > 0 {
+		j.log.Debug.Printf("[task provision] Further dispatching subtasks to {%v} sub-nodes", len(nodesToDispatch))
+	}
 	for nodekey, dispatchingList := range nodesToDispatch {
 		go j.dispatchTasks(nodekey, dispatchingList)
 	}	
