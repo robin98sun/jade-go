@@ -121,7 +121,6 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 		taskIndex++
 		job_stat.TaskCount++
 
-		task_fanout := 0
 		task_success_status_has_been_checked := false
 		failed_subtasks := 0
 		for nodeKey, dispatchedNode := range taskItem.dispatchedNodes {
@@ -129,7 +128,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 				for _, subtaskItem := range moduleItem.subtasks {
 
 					if moduleName == string(ds.AppModuleWorker) {
-						task_fanout++
+						job_stat.AvgFanout++
 					}
 					
 					// keys
@@ -168,18 +167,20 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					// Task_Total_Time(ms)
 					// [6]
 					dur := float64(0)
+					task_total_time := time.Duration(0)
 					if !taskItem.task.GetArriveTime().IsZero() && !taskItem.FinishTimestamp.IsZero() {
-						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
+						task_total_time = taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime())
+						dur = float64(float64(task_total_time) / float64(time.Millisecond))
 					}
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
 					time_gap := time.Duration(0)
 
 					if ! task_success_status_has_been_checked {
-						if dur > 0 {
+						if task_total_time > time.Duration(0) {
 							job_stat.SuccessTasks++
 						}
-						time_gap = time.Now().Sub(taskItem.task.ArriveTimestamp)
+						time_gap = time.Now().Sub(taskItem.task.GetArriveTime())
 						if job_stat.TimeGapSinceLastTaskArrived == 0 || time_gap < job_stat.TimeGapSinceLastTaskArrived {
 							job_stat.TimeGapSinceLastTaskArrived = time_gap
 						}
@@ -247,7 +248,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
-					if dur == 0 && moduleName == string(ds.AppModuleWorker) {
+					if subtaskItem.RequestTime == time.Duration(0) && moduleName == string(ds.AppModuleWorker) {
 						job_stat.AvgFailedSubtasks += float64(1)
 						failed_subtasks++
 					}
@@ -261,7 +262,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						job_stat.Nodes[nodeKey] = &NodeStat{}
 					}
 					job_stat.Nodes[nodeKey].Hits++
-					if dur >0 {
+					if subtaskItem.RequestTime > time.Duration(0) {
 						job_stat.Nodes[nodeKey].SuccessSubtasks++
 					}
 
