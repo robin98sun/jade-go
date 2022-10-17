@@ -3,6 +3,7 @@ package scheduler
 import (
 	"strconv"
 	"time"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // traceType: full / concise; jobKey: the id of which job you want to fetch, "" for all
@@ -54,15 +55,82 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 	}
 	traces = append(traces, headline)
 	taskIndex := -1
+
+	// job stat
+	type NodeStat struct{
+		Hits int
+		SuccessSubtasks int
+	}
+
+	type JobStat struct {
+		AvgFanout float64
+		TaskCount int
+		SuccessTasks int
+		Nodes map [string]*NodeStat
+		MaximumFailedSubtasks int
+		AvgFailedSubtasks float64
+		TimeGapSinceLastSuccessSubtask time.Duration
+		TimeGapSinceLastTaskArrived time.Duration
+	}
+	var finalize_and_log_job_stat = func(job_stat JobStat) {
+		if job_stat.TaskCount > 0 {
+			job_stat.AvgFanout /= float64(job_stat.TaskCount)
+			if job_stat.TaskCount - job_stat.SuccessTasks > 0 {
+				job_stat.AvgFailedSubtasks /= float64(job_stat.TaskCount - job_stat.SuccessTasks)
+			}
+		}
+		printf("job stat of job[%v]", jobKey)
+		fault_rate := float64(0)
+		if job_stat.TaskCount > 0 {
+			fault_rate = float64(job_stat.TaskCount-job_stat.SuccessTasks) / float64(job_stat.TaskCount)
+		}
+		printf("  %v seconds since last task arrived", 
+			float64(job_stat.TimeGapSinceLastTaskArrived)/float64(time.Second),
+		)
+		printf("  %v seconds since last succeeded subtask", 
+			float64(job_stat.TimeGapSinceLastSuccessSubtask)/float64(time.Second),
+		)
+		printf("  in %v tasks, %v succeeded, %v failed, fault rate: %v", 
+			job_stat.TaskCount, job_stat.SuccessTasks, job_stat.TaskCount - job_stat.SuccessTasks,
+			fault_rate,
+		)
+		printf("  avg fanout: %v, max failed subtasks: %v, avg failed subtasks: %v",
+			job_stat.AvgFanout, job_stat.MaximumFailedSubtasks, job_stat.AvgFailedSubtasks,
+		)
+		for nodeKey, node_stat := range job_stat.Nodes {
+			fault_rate = 0
+			if node_stat.Hits > 0 {
+				fault_rate = float64(node_stat.Hits - node_stat.SuccessSubtasks) / float64(node_stat.Hits)
+			}
+			printf("    node[%v] hits: %v, success: %v, failed: %v, fault rate: %v",
+				nodeKey, node_stat.Hits, node_stat.SuccessSubtasks,
+				node_stat.Hits - node_stat.SuccessSubtasks, fault_rate,
+			)
+		}
+	}
+	job_stat := JobStat{
+		Nodes: map[string]*NodeStat{},
+	}
+
+	// iterate among tasks
 	for _, taskItem := range c.Cache {
 		if jobKey != "" && jobKey != "all" && jobKey != taskItem.task.Task.JobKey {
 			continue
 		}
 		
 		taskIndex++
-		for _, dispatchedNode := range taskItem.dispatchedNodes {
-			for _, moduleItem := range dispatchedNode.modules {
+		job_stat.TaskCount++
+
+		task_fanout := 0
+		task_success_status_has_been_checked := false
+		failed_subtasks := 0
+		for nodeKey, dispatchedNode := range taskItem.dispatchedNodes {
+			for moduleName, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
+
+					if moduleName == string(ds.AppModuleWorker) {
+						task_fanout++
+					}
 					
 					// keys
 					line := []string{}
@@ -104,6 +172,19 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						dur = float64(float64(taskItem.FinishTimestamp.Sub(taskItem.task.GetArriveTime())) / float64(time.Millisecond))
 					}
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+
+					time_gap := time.Duration(0)
+
+					if ! task_success_status_has_been_checked {
+						if dur > 0 {
+							job_stat.SuccessTasks++
+						}
+						time_gap = time.Now().Sub(taskItem.task.ArriveTimestamp)
+						if job_stat.TimeGapSinceLastTaskArrived == 0 || time_gap < job_stat.TimeGapSinceLastTaskArrived {
+							job_stat.TimeGapSinceLastTaskArrived = time_gap
+						}
+						task_success_status_has_been_checked = true
+					}
 
 					// Task_Provision_Time(ms)
 					// [7]
@@ -165,6 +246,25 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					// [14]
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
+
+					if dur == 0 && moduleName == string(ds.AppModuleWorker) {
+						job_stat.AvgFailedSubtasks += float64(1)
+						failed_subtasks++
+					}
+					time_gap = time.Now().Sub(subtaskItem.FinishTimestamp)
+					if job_stat.TimeGapSinceLastSuccessSubtask == 0 || time_gap < job_stat.TimeGapSinceLastSuccessSubtask {
+						job_stat.TimeGapSinceLastSuccessSubtask = time_gap
+					}
+
+
+					if _, e := job_stat.Nodes[nodeKey]; !e {
+						job_stat.Nodes[nodeKey] = &NodeStat{}
+					}
+					job_stat.Nodes[nodeKey].Hits++
+					if dur >0 {
+						job_stat.Nodes[nodeKey].SuccessSubtasks++
+					}
+
 					// Subtask_Parallel_Part_Response_Time(ms)
 					// [15]
 					dur = float64(float64(subtaskItem.RequestTime - subtaskItem.ForwardingTime - subtaskItem.PreDispatchingTime ) / float64(time.Millisecond))
@@ -472,7 +572,25 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 				}
 			}
 		}
+
+		if failed_subtasks > job_stat.MaximumFailedSubtasks {
+			job_stat.MaximumFailedSubtasks = failed_subtasks
+		}
 	}
+
+	finalize_and_log_job_stat(job_stat)
+
+
 	printf("[task cache] %v lines of task traces have been collected for job[%v]", len(traces), jobKey)
 	return traces
 }
+
+
+
+
+
+
+
+
+
+
