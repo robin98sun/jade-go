@@ -9,7 +9,7 @@ import (
 type TaskCacheModuleItem struct {
 	subtasks map[string]*TaskCacheSubtaskItem
 	neighbors map[string]*ds.Node
-	status   TaskStatus
+	status   ds.TaskStatus
 }
 
 func (i *TaskCacheModuleItem) describe() map[string]interface{} {
@@ -33,7 +33,7 @@ func (i *TaskCacheModuleItem) describe() map[string]interface{} {
 
 type TaskCacheSubtaskItem struct {
 	subtask            *ds.SubTask
-	status             TaskStatus
+	status             ds.TaskStatus
 	updates            interface{}
 	ArriveTimestamp    time.Time     `json:"arriveTimestemp,omitempty"`
 	EnqueueTimestamp   time.Time     `json:"enqueueTimestemp,omitempty"`

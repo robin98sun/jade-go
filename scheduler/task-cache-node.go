@@ -7,7 +7,7 @@ import (
 type TaskCacheNodeItem struct {
 	node    *ds.Node
 	modules map[string]*TaskCacheModuleItem
-	status  TaskStatus
+	status  ds.TaskStatus
 }
 
 func (i *TaskCacheNodeItem) describe() map[string]interface{} {
@@ -26,20 +26,20 @@ func (i *TaskCacheNodeItem) describe() map[string]interface{} {
 	return desc
 }
 
-func (n *TaskCacheNodeItem) CheckStatus() TaskStatus {
-	var result TaskStatus
-	result = TaskStatusInvalid
+func (n *TaskCacheNodeItem) CheckStatus() ds.TaskStatus {
+	var result ds.TaskStatus
+	result = ds.TaskStatusInvalid
 	if n == nil {
 		return result
 	}
 	if len(n.modules) == 0 {
 		return n.status
 	}
-	items := []*ObjWithTaskStatus{}
+	items := []*ds.ObjWithTaskStatus{}
 	for _, s := range n.modules {
-		items = append(items, &ObjWithTaskStatus{status: s.status})
+		items = append(items, &ds.ObjWithTaskStatus{Status: s.status})
 	}
-	result = checkStatus(n.status, items)
+	result = ds.CheckTaskStatus(n.status, items)
 	n.status = result
 	return result
 }

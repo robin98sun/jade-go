@@ -84,7 +84,7 @@ func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *ds.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
-	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, scheduler.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
+	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, ds.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
 		if ! isConfirmingBudget {
 			j.log.Debug.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {
@@ -97,7 +97,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 		// set the task as running
 		// at the meanwhile the task record the timestamp as the beginning of ddispatching
 		if ! isConfirmingBudget {
-			j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusRunning)
+			j.TaskCache.SetTaskStatus(taskKey, ds.TaskStatusRunning)
 		}
 		// dispatching the task
 		dispatchItem := j.TaskCache.GetTask(taskKey, true)
@@ -120,7 +120,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				priority = dispatchItem.Priority
 			}
 			if priority == 0 {
-				priority = scheduler.TaskDefaultPriority
+				priority = ds.TaskDefaultPriority
 			}
 			j.log.Debug.Printf("[task dispatcher] budget: %v, priority: %v", budget, priority)
 
@@ -360,7 +360,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					})
 				}
 				// j.TaskCache.SetTaskStatus(taskKey, scheduler.TaskStatusAggregatorReady)
-				j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusAggregatorReady)
+				j.TaskCache.SetTaskTimestamp(taskKey, ds.TaskStatusAggregatorReady)
 			}
 
 			// enqueue each worker subtask
@@ -471,7 +471,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					j.log.Debug.Printf("[task dispatcher] ERROR: failed to enqueue subtask[%v] in pod[%v]", worker.Subtask.GetKey(), worker.Subtask.ResourceKey)
 				}
 			}
-			j.TaskCache.SetTaskTimestamp(taskKey, scheduler.TaskStatusWorkerReady)
+			j.TaskCache.SetTaskTimestamp(taskKey, ds.TaskStatusWorkerReady)
 			// it will fail if it has chance to fail
 			// the status was set after the message is sent
 			// that make it possible that the message arrives the destination

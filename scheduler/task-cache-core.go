@@ -130,7 +130,7 @@ func (c *TaskCache) GetBudgetNegotiationCache(taskId string) *BudgetNegotiationR
 type TaskCacheTaskItem struct {
 	task                *ds.TaskDispatchingItem
 	dispatchedNodes     map[string]*TaskCacheNodeItem // node-key : nodeItem
-	status              TaskStatus
+	status              ds.TaskStatus
 	LastUpdateTimestamp time.Time `json:"lastUpdateTimestamp,omitempty"`
 	DispatchTimestamp   time.Time `json:"dispatchTimestamp,omitempty"`
 	AggregatorReadyTimestamp time.Time `json:"aggregatorReadyTimestamp,omitempty"`
@@ -149,7 +149,7 @@ func NewTaskCacheTaskItem(taskItem *ds.TaskDispatchingItem) *TaskCacheTaskItem {
 	item := &TaskCacheTaskItem{
 		task:            taskItem,
 		dispatchedNodes: make(map[string]*TaskCacheNodeItem),
-		status:          TaskStatusPending,
+		status:          ds.TaskStatusPending,
 	}
 	return item
 }
@@ -172,16 +172,16 @@ func (i *TaskCacheTaskItem) describe() map[string]interface{} {
 
 // CheckTaskStatus check whether a task is totally accepted or rejected by all worker nodes, or totally done,
 // return accepted/rejected/waiting/invalid/done
-func (t *TaskCacheTaskItem) CheckStatus() TaskStatus {
+func (t *TaskCacheTaskItem) CheckStatus() ds.TaskStatus {
 	if t == nil {
-		return TaskStatusInvalid
+		return ds.TaskStatusInvalid
 	}
 
-	items := []*ObjWithTaskStatus{}
+	items := []*ds.ObjWithTaskStatus{}
 	for _, s := range t.dispatchedNodes {
-		items = append(items, &ObjWithTaskStatus{status: s.status})
+		items = append(items, &ds.ObjWithTaskStatus{Status: s.status})
 	}
-	t.status = checkStatus(t.status, items)
+	t.status = ds.CheckTaskStatus(t.status, items)
 	return t.status
 }
 

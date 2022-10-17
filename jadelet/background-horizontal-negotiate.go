@@ -41,14 +41,14 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 				dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block || 
 				dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 
-				budgetNegotiation := scheduler.BudgetNegotiationTypeNone
+				budgetNegotiation := ds.BudgetNegotiationTypeNone
 				// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
 				// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 				// }
 				if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
-					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFNonBlock
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFNonBlock
 				} else if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
-					budgetNegotiation = scheduler.BudgetNegotiationTypeCDFBlock
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFBlock
 				}
 
 				budgetEstimationPercentilePoint := float64(0.95)
@@ -62,7 +62,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 					// if dispatchItem.Options != nil  {
 					// 	dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
 					// }
-					budgetNegotiation = scheduler.BudgetNegotiationTypeNone
+					budgetNegotiation = ds.BudgetNegotiationTypeNone
 				}
 
 				// for larger fanouts, do whatever needed to negotiate

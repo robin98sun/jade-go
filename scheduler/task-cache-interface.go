@@ -50,7 +50,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()] = &TaskCacheNodeItem{
 			node:    subnode,
 			modules: make(map[string]*TaskCacheModuleItem),
-			status:  TaskStatusPending,
+			status:  ds.TaskStatusPending,
 		}
 	}
 	moduleName := realModuleName
@@ -62,7 +62,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 		}
 		c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName] = &TaskCacheModuleItem{
 			subtasks: nil,
-			status:   TaskStatusPending,
+			status:   ds.TaskStatusPending,
 		}
 		printf("[task cache] created module [%v] for task [%v] on node [%v]", moduleName, taskKey, subnodeKey)
 	}
@@ -88,7 +88,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 					subtask = tmpst.subtask
 					if subtask.ResourceKey == "" {
 						subtask.ResourceKey = pod.Key
-						tmpst.status = TaskStatusAccepted
+						tmpst.status = ds.TaskStatusAccepted
 						printf("[task cache] updated subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",subtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 					}
 					break
@@ -109,7 +109,7 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 			}
 			c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks[subtask.GetKey()] = &TaskCacheSubtaskItem{
 				subtask:         subtask,
-				status:          TaskStatusAccepted,
+				status:          ds.TaskStatusAccepted,
 				updates:         nil,
 				ArriveTimestamp: time.Now(),
 			}
@@ -140,7 +140,7 @@ func (c *TaskCache) SaveNeighborNode(subnode *ds.Node, taskKey string, moduleNam
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
+func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status ds.TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
 ) (*ds.SubTask, float64, float64, float64, float64) {
 	if c == nil {
 		return nil, float64(-1), float64(-1), float64(-1), float64(-1)
@@ -204,7 +204,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 }
 
 type TaskResult struct {
-	Status TaskStatus  `json:"status,omitempty"`
+	Status ds.TaskStatus  `json:"status,omitempty"`
 	Result interface{} `json:"result,omitempty"`
 }
 
@@ -233,7 +233,7 @@ func (c *TaskCache) GetResultOfTask(taskKey string, moduleName string) []*TaskRe
 	return result
 }
 
-func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus TaskStatus, printf func(string, ...interface{})) (bool, bool) {
+func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus ds.TaskStatus, printf func(string, ...interface{})) (bool, bool) {
 	allSubtasksDone := false
 	allWorkersDone := false
 	if taskItem, e := c.Cache[taskKey]; e {
@@ -244,19 +244,19 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			checkNode := desiredStatus
 			if len(nodeItem.modules) == 0 {
-				checkResult = TaskStatusInvalid
+				checkResult = ds.TaskStatusInvalid
 			} else {
 				for moduleName, moduleItem := range nodeItem.modules {
 					checkModule := desiredStatus
 					if len(moduleItem.subtasks) == 0 {
-						checkModule = TaskStatusInvalid
-						checkNode = TaskStatusInvalid
+						checkModule = ds.TaskStatusInvalid
+						checkNode = ds.TaskStatusInvalid
 					} else {
 						for _, subtaskItem := range moduleItem.subtasks {
 							if subtaskItem.status != desiredStatus {
-								checkModule = TaskStatusInvalid
-								checkNode = TaskStatusInvalid
-								checkResult = TaskStatusInvalid
+								checkModule = ds.TaskStatusInvalid
+								checkNode = ds.TaskStatusInvalid
+								checkResult = ds.TaskStatusInvalid
 								break
 							}
 						}
@@ -273,15 +273,15 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus T
 						if printf != nil {
 							printf("[task cache] task[%v] module[%v] on node[%v] is NOT {%v}", taskKey, moduleName, nodeItem.node.Key(), desiredStatus)
 						}
-						checkNode = TaskStatusInvalid
-						checkResult = TaskStatusInvalid
+						checkNode = ds.TaskStatusInvalid
+						checkResult = ds.TaskStatusInvalid
 					}
 				}
 			}
 			if checkNode == desiredStatus {
 				nodeItem.status = desiredStatus
 			} else {
-				checkResult = TaskStatusInvalid
+				checkResult = ds.TaskStatusInvalid
 			}
 		}
 		if checkResult == desiredStatus {
@@ -307,16 +307,16 @@ func (c *TaskCache) GetDispatchingItem(taskKey string) (*ds.TaskDispatchingItem,
 	return nil, 0, 0, 0, 0
 }
 
-func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
+func (c *TaskCache) CheckTask(taskKey string, desiredStatus ds.TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
 	if c == nil {
 		return false
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		if taskItem.status == TaskStatusRejected ||
-			taskItem.status == TaskStatusDone ||
-			taskItem.status == TaskStatusFailed {	
+		if taskItem.status == ds.TaskStatusRejected ||
+			taskItem.status == ds.TaskStatusDone ||
+			taskItem.status == ds.TaskStatusFailed {	
 			if taskItem.FinishTimestamp.IsZero() {
 				taskItem.FinishTimestamp = time.Now()
 			}
@@ -324,18 +324,18 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestam
 			return taskItem.status == desiredStatus
 		}
 		allSubtasksDone, allWorkersDone := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf);
-		if allWorkersDone && desiredStatus == TaskStatusDone {
+		if allWorkersDone && desiredStatus == ds.TaskStatusDone {
 			taskItem.WorkerFinishTimestamp = time.Now()
 		}
 		if allSubtasksDone {
-			if desiredStatus == TaskStatusDone {
+			if desiredStatus == ds.TaskStatusDone {
 				if taskItem.FinishTimestamp.IsZero() {
 					taskItem.FinishTimestamp = time.Now()
 				}
 				if taskItem.LastSubtaskFinishTimestamp.IsZero() {
 					taskItem.LastSubtaskFinishTimestamp = timestamp
 				}
-			} else if desiredStatus == TaskStatusAccepted {
+			} else if desiredStatus == ds.TaskStatusAccepted {
 				if taskItem.AcceptTimestamp.IsZero() {
 					taskItem.AcceptTimestamp = timestamp
 				}
@@ -349,18 +349,18 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus TaskStatus, timestam
 }
 
 // record timestamps for some status which is complicated for status sync in distributed env
-func (c *TaskCache) SetTaskTimestamp(taskKey string, status TaskStatus) {
+func (c *TaskCache) SetTaskTimestamp(taskKey string, status ds.TaskStatus) {
 	if c == nil {
 		return
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		if status == TaskStatusAggregatorReady {
+		if status == ds.TaskStatusAggregatorReady {
 			if taskItem.AggregatorReadyTimestamp.IsZero() {
 				taskItem.AggregatorReadyTimestamp = time.Now()
 			}
-		} else if status == TaskStatusWorkerReady {
+		} else if status == ds.TaskStatusWorkerReady {
 			if taskItem.WorkerReadyTimestamp.IsZero() {
 				taskItem.WorkerReadyTimestamp = time.Now()
 			}
@@ -368,7 +368,7 @@ func (c *TaskCache) SetTaskTimestamp(taskKey string, status TaskStatus) {
 	}
 }
 
-func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
+func (c *TaskCache) SetTaskStatus(taskKey string, status ds.TaskStatus) {
 	if c == nil {
 		return
 	}
@@ -376,11 +376,11 @@ func (c *TaskCache) SetTaskStatus(taskKey string, status TaskStatus) {
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
 		taskItem.status = status
-		if status == TaskStatusRunning {
+		if status == ds.TaskStatusRunning {
 			if taskItem.DispatchTimestamp.IsZero() {
 				taskItem.DispatchTimestamp = time.Now()
 			}
-		} else if status == TaskStatusDone || status == TaskStatusFailed {
+		} else if status == ds.TaskStatusDone || status == ds.TaskStatusFailed {
 			if taskItem.FinishTimestamp.IsZero() {
 				taskItem.FinishTimestamp = time.Now()
 			}
@@ -416,7 +416,7 @@ func (c *TaskCache) RejectTask(taskKey string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		taskItem.status = TaskStatusRejected
+		taskItem.status = ds.TaskStatusRejected
 	}
 }
 
@@ -427,7 +427,7 @@ func (c *TaskCache) FailTask(taskKey string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if taskItem, e := c.Cache[taskKey]; e {
-		taskItem.status = TaskStatusFailed
+		taskItem.status = ds.TaskStatusFailed
 		if taskItem.FinishTimestamp.IsZero() {
 			taskItem.FinishTimestamp = time.Now()
 		}
