@@ -248,7 +248,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					dur = float64(float64(subtaskItem.RequestTime) / float64(time.Millisecond))
 					line = append(line, strconv.FormatFloat(dur, 'f', -1, 64))
 
-					if subtaskItem.RequestTime == time.Duration(0) && moduleName == string(ds.AppModuleWorker) {
+					if subtaskItem.RequestTime == time.Duration(0)	 && moduleName == string(ds.AppModuleWorker) {
 						job_stat.AvgFailedSubtasks += float64(1)
 						failed_subtasks++
 					}

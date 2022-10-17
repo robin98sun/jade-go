@@ -66,16 +66,16 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 				}
 
 				// for larger fanouts, do whatever needed to negotiate
-				if 	budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock ||
-					budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock ||
+				if 	budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock ||
+					budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock ||
 					dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block || 
 					dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 					
-					if 	budgetNegotiation == scheduler.BudgetNegotiationTypeCDFNonBlock ||
+					if 	budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock ||
 						dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 						// for non-block negotiation, do not put into cache
 						// so nothing to do here
-					} else if budgetNegotiation == scheduler.BudgetNegotiationTypeCDFBlock ||
+					} else if budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock ||
 							  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
 					    // the cache is only used for blockable negotiation
 						budgetnegotationCache = scheduler.NewBudgetNegotiationResponseCache()

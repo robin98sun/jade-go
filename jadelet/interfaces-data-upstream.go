@@ -29,7 +29,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			msg.Node.Key(),
 		)
 		if msg.TaskKey != "" && msg.SubtaskKey != "" {
-			if msg.Status == scheduler.TaskStatusFailed {
+			if msg.Status == ds.TaskStatusFailed {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
 			j.log.Op.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
@@ -37,7 +37,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.Node.Key(),
 			)
 			// save result and stat
-			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, scheduler.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
+			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, ds.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
 			if subtask != nil && subtask.ResourceKey != "" {
 				j.DoneRequest(w, r, "message received")
 				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, msg.Node.Key())
@@ -56,11 +56,11 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					j.PerfCache.EnqueueEnvMetrics(subtask.NodeKey, metricsEnv)
 
 					// to see if the task is done
-					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, scheduler.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
+					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, ds.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
 
 					if isTaskDone {
 						// the query (task) is done
-						j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, scheduler.TaskStatusDone)
+						j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, ds.TaskStatusDone)
 						dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead := j.TaskCache.GetDispatchingItem(msg.TaskKey)
 						subtasks, pods := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "")
 
@@ -68,7 +68,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 						adjusted_tail_latency := j.PodCache.CalcTailForPods(pods, percentile, scheduler.PodQueueHistogramTypeAdjustedServiceResponseTime)
 						j.PerfCache.EnqueueResponse(dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_tail_latency, timestampReceving, subtasks)
 					} else {
-						j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, scheduler.TaskStatusDone)
+						j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, ds.TaskStatusDone)
 					}
 				}
 
