@@ -103,7 +103,10 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 				pod.GetKey(),
 				subtaskKey,
 			)
-			subtask.ResourceKey = pod.Key
+			realSubtaskKey := subtask.GetKey()
+			if subtaskKey != "" {
+				printf("[task cache] created subtask with new subtask key: %v, which originally should be %v, are they equal? %v", realSubtaskKey, subtaskKey, subtaskKey == realSubtaskKey)
+			}
 			if c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks == nil {
 				c.Cache[taskKey].dispatchedNodes[subnode.Key()].modules[moduleName].subtasks = make(map[string]*TaskCacheSubtaskItem)
 			}
@@ -114,7 +117,6 @@ func (c *TaskCache) CacheTaskForSubnode(taskKey string, subnode *ds.Node, realMo
 				ArriveTimestamp: time.Now(),
 			}
 
-			realSubtaskKey := subtask.GetKey()
 			printf("[task cache] created subtask [%v] in module [%v] for task [%v] on node [%v] in pod [%v]",realSubtaskKey, moduleName, taskKey, subnodeKey, pod.GetKey())
 		}
 	}
