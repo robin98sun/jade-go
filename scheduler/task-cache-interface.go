@@ -501,7 +501,7 @@ func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName str
 	return nil
 }
 
-func (c *TaskCache) DispatchedPodQueueItem(pod *ds.Pod, item *PodQueueItem, timestampSending time.Time) float64 {
+func (c *TaskCache) DispatchedSTQueueItem(pod *ds.Pod, item *STQueueItem, timestampSending time.Time) float64 {
 	if c == nil || len(c.Cache) == 0 {
 		return float64(-1)
 	}

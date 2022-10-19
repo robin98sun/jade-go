@@ -31,7 +31,7 @@ func (j *JADE) RegisterSubnode(w rest.ResponseWriter, r *rest.Request) {
 			// since it in nano seconds, it shall not be aggressive, 50000 is ok, it is only 0.005 milliseconds
 			// but 10 will start to hang and crash the system when infrastructure throught is higher than 3 * 5.56 per second for non-block ddl queueing 
 			// 2022-06-01
-			go j.routineForPodQueues(50000)
+			go j.routineForSTQueues(50000)
 		}
 	}
 }

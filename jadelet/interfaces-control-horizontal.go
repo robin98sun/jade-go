@@ -195,7 +195,7 @@ func (j *JADE) MultiplyCDFs(pods []string, dispatchItem *ds.TaskDispatchingItem)
 	}
 	var histogram_list []*histogram.Histogram
 	for _, workerPodKey := range pods {
-		podQueue := j.PodCache.GetPodQueue(workerPodKey)
+		podQueue := j.PodCache.GetSTQueue(workerPodKey)
 		if podQueue == nil {
 			j.log.Op.Printf("[inquiry] ERROR: the queue of pod [%v] for application %v is nil",
 				workerPodKey,

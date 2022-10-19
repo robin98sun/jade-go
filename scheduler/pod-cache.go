@@ -103,7 +103,7 @@ func NewPodCacheNodeItem() *PodCacheNodeItem {
 
 type PodCacheItem struct {
 	Application *ds.Application
-	Queue       *PodQueue
+	Queue       *STQueue
 	ModuleName  string
 	Allocation  *ds.AllocationUnit
 	Pod         *ds.Pod
@@ -128,7 +128,7 @@ func NewPodCacheItem(app *ds.Application, moduleName string, alloc *ds.Allocatio
 	inst := &PodCacheItem{
 		Application: app,
 		ModuleName:  moduleName,
-		Queue:       NewPodQueue(),
+		Queue:       NewSTQueue(),
 		Allocation:  alloc,
 		Pod:         pod,
 		IsIdle:      true,
@@ -218,7 +218,7 @@ func (p *PodCache) GetPodForApplication(nodeKey string, app *ds.Application, mod
 	return nil
 }
 
-func (p *PodCache) GetPodQueue(podkey string) *PodQueue {
+func (p *PodCache) GetSTQueue(podkey string) *STQueue {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -300,7 +300,7 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, mod
 }
 
 
-func (p *PodCache) CalcTailForPods(pod_keys []string, percentile float64, histType PodQueueHistogramType) float64 {
+func (p *PodCache) CalcTailForPods(pod_keys []string, percentile float64, histType STQueueHistogramType) float64 {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -312,11 +312,11 @@ func (p *PodCache) CalcTailForPods(pod_keys []string, percentile float64, histTy
 				key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 				if appModuleItem, e := nodeItem.AppModules[key]; e && len(appModuleItem.List) > 0 {
 					if podItem, e := appModuleItem.Cache[pod.GetKey()]; e {
-						if histType == PodQueueHistogramTypeServiceResponseTime {
+						if histType == STQueueHistogramTypeServiceResponseTime {
 							histogram_list = append(histogram_list, podItem.Queue.HistogramServiceTime)
-						} else if histType == PodQueueHistogramTypeServiceResponseTimeWithQueueingTime {
+						} else if histType == STQueueHistogramTypeServiceResponseTimeWithQueueingTime {
 							histogram_list = append(histogram_list, podItem.Queue.HistogramWithQueueingTime)
-						} else if histType == PodQueueHistogramTypeAdjustedServiceResponseTime {
+						} else if histType == STQueueHistogramTypeAdjustedServiceResponseTime {
 							histogram_list = append(histogram_list, podItem.Queue.HistogramAdjustedServiceTime)
 						}
 					}

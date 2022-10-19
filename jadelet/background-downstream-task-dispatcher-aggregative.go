@@ -11,7 +11,7 @@ import (
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
-func (j *JADE) routineForPodQueues(intervalNanoseconds int) {
+func (j *JADE) routineForSTQueues(intervalNanoseconds int) {
 	for {
 		time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 		podsInCache := j.PodCache.GetPods()
@@ -57,13 +57,13 @@ func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 	req := queueItem.Payload
 	j.log.Debug.Printf("[task dispatcher] dispatching subtask "+pod.ModuleName+" to pod{%v [%v:%v]}: %v", pod.GetKey(), pod.Addr, pod.Port, req)
 	
-	// inQueueTime := j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	// inQueueTime := j.TaskCache.DispatchedSTQueueItem(pod, queueItem, time.Now())
 	// if inQueueTime >= 0 {
 	// 	podCacheItem.Queue.Lock()
 	// 	podCacheItem.Queue.HistogramCommunicationTime.Enqueue(inQueueTime, 1)
 	// 	podCacheItem.Queue.Unlock()
 	// }
-	j.TaskCache.DispatchedPodQueueItem(pod, queueItem, time.Now())
+	j.TaskCache.DispatchedSTQueueItem(pod, queueItem, time.Now())
 	
 	workerSubtaskCacheItem := j.TaskCache.GetSubtaskItem(queueItem.TaskKey, queueItem.SubtaskKey)
 
@@ -302,7 +302,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							}
 							// histogram_list := []*histogram.Histogram{}
 							// for _, subtaskOnNode := range workerSubtasks {
-							// 	podQueue := j.PodCache.GetPodQueue(subtaskOnNode.Subtask.Pod)
+							// 	podQueue := j.PodCache.GetSTQueue(subtaskOnNode.Subtask.Pod)
 							// 	histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
 							// }
 							// j.log.Debug.Printf("[task dispatcher] calculating tail latency using product of %v histograms", len(histogram_list))
@@ -315,7 +315,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							// unloaded_tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
 							// j.PodCache.Unlock()
 
-							unloaded_tail_latency := j.PodCache.CalcTailForPods(pods_to_calculate_unloaded_tail, budgetEstimationPercentilePoint, scheduler.PodQueueHistogramTypeServiceResponseTime)
+							unloaded_tail_latency := j.PodCache.CalcTailForPods(pods_to_calculate_unloaded_tail, budgetEstimationPercentilePoint, scheduler.STQueueHistogramTypeServiceResponseTime)
 
 							j.log.Debug.Printf("[task dispatcher] tail latency of %v pods at percentile point %v is %v", len(pods_to_calculate_unloaded_tail), budgetEstimationPercentilePoint, unloaded_tail_latency)
 							
@@ -399,7 +399,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					task.Application.GetModule(string(ds.AppModuleWorker)).Input,
 					estimatedServiceTime,
 				)
-				queue := j.PodCache.GetPodQueue(worker.Subtask.ResourceKey)
+				queue := j.PodCache.GetSTQueue(worker.Subtask.ResourceKey)
 				if queue == nil {
 					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.ResourceKey)
 					continue
@@ -434,14 +434,14 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					j.log.Debug.Printf("[task dispatcher] the non-block budget negotiation phase is [%v]", phase)
 				}
 
-				targetQueue := scheduler.PodQueueTypeMain
+				targetQueue := scheduler.STQueueTypeMain
 				if isConfirmingBudget {
-					targetQueue = scheduler.PodQueueTypeMain
+					targetQueue = scheduler.STQueueTypeMain
 				} else if (task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
 					(task.QueuingMechanism == ds.TaskQueuingDDL && 
 					  budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock)) &&
 					phase != ds.BudgetNegotiationPhaseConfirm {
-					targetQueue = scheduler.PodQueueTypeShadow
+					targetQueue = scheduler.STQueueTypeShadow
 				}
 
 				queuingMech := task.QueuingMechanism

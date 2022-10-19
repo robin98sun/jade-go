@@ -8,25 +8,25 @@ import (
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
-type PodQueueType string
+type STQueueType string
 
 const (
-	PodQueueTypeMain 	PodQueueType  = "main"
-	PodQueueTypeShadow  PodQueueType  = "shadow"
+	STQueueTypeMain 	STQueueType  = "main"
+	STQueueTypeShadow  STQueueType  = "shadow"
 )
 
-type PodQueueHistogramType string
+type STQueueHistogramType string
 const(
-	PodQueueHistogramTypeServiceResponseTime PodQueueHistogramType = "service-response-time"
-	PodQueueHistogramTypeServiceResponseTimeWithQueueingTime PodQueueHistogramType = "service-response-time-with-queueing-time"
-	PodQueueHistogramTypeAdjustedServiceResponseTime PodQueueHistogramType = "adjusted-service-response-time"
+	STQueueHistogramTypeServiceResponseTime STQueueHistogramType = "service-response-time"
+	STQueueHistogramTypeServiceResponseTimeWithQueueingTime STQueueHistogramType = "service-response-time-with-queueing-time"
+	STQueueHistogramTypeAdjustedServiceResponseTime STQueueHistogramType = "adjusted-service-response-time"
 )
 
-type PodQueue struct {
+type STQueue struct {
 	Pod          	*ds.Pod
-	MainQueue       []*PodQueueItem
-	ShadowQueue  	[]*PodQueueItem
-	ItemsInQueue 	map[string]*PodQueueItem
+	MainQueue       []*STQueueItem
+	ShadowQueue  	[]*STQueueItem
+	ItemsInQueue 	map[string]*STQueueItem
 	mutex        *sync.Mutex
 	HistogramServiceTime *histogram.Histogram
 	HistogramWithQueueingTime *histogram.Histogram
@@ -38,15 +38,15 @@ type PodQueue struct {
 	
 }
 
-func NewPodQueue() *PodQueue {
+func NewSTQueue() *STQueue {
 	h_st := histogram.NewHistogram(10000, float64(0.1), 1)
 	h_wq := histogram.NewHistogram(10000, float64(0.1), 1)
 	h_ad := histogram.NewHistogram(10000, float64(0.1), 1)
-	return &PodQueue{
-		MainQueue:        []*PodQueueItem{},
-		ShadowQueue:  	  []*PodQueueItem{},
+	return &STQueue{
+		MainQueue:        []*STQueueItem{},
+		ShadowQueue:  	  []*STQueueItem{},
 		mutex:        	  &sync.Mutex{},
-		ItemsInQueue: 	  make(map[string]*PodQueueItem),
+		ItemsInQueue: 	  make(map[string]*STQueueItem),
 		HistogramServiceTime:  		  h_st,
 		HistogramWithQueueingTime:    h_wq,
 		HistogramAdjustedServiceTime: h_ad,
@@ -54,33 +54,33 @@ func NewPodQueue() *PodQueue {
 	}
 }
 
-func (p *PodQueue) Lock() {
+func (p *STQueue) Lock() {
 	p.mutex.Lock()
 }
 
-func (p *PodQueue) Unlock() {
+func (p *STQueue) Unlock() {
 	p.mutex.Unlock()
 }
 
 
-func (p *PodQueue) Clean() {
+func (p *STQueue) Clean() {
 	p.Lock()
 	defer p.Unlock()
 
 	p.dequeueClock = 0
-	p.MainQueue = []*PodQueueItem{}
-	p.ShadowQueue = []*PodQueueItem{}
-	p.ItemsInQueue = make(map[string]*PodQueueItem)
+	p.MainQueue = []*STQueueItem{}
+	p.ShadowQueue = []*STQueueItem{}
+	p.ItemsInQueue = make(map[string]*STQueueItem)
 }
 
-func (p *PodQueue) Length() int {
+func (p *STQueue) Length() int {
 	if p == nil {
 		return 0
 	}
 	return len(p.MainQueue)
 }
 
-type PodQueueItem struct {
+type STQueueItem struct {
 	Payload              interface{}
 	TaskKey              string
 	SubtaskKey           string
@@ -98,7 +98,7 @@ type PodQueueItem struct {
 	Priority             int
 }
 
-func (q *PodQueue) search_insertion_place(low int, high int, ddl time.Time, pri int) int {
+func (q *STQueue) search_insertion_place(low int, high int, ddl time.Time, pri int) int {
 	qlen := len(q.MainQueue)
 	if pri >= 0 {
 		if pri >= q.MainQueue[qlen-1].Priority {
@@ -147,13 +147,13 @@ func (q *PodQueue) search_insertion_place(low int, high int, ddl time.Time, pri 
 	return -1
 }
 
-func (q *PodQueue) Enqueue( 
-	podQueueType PodQueueType,
+func (q *STQueue) Enqueue( 
+	podQueueType STQueueType,
 	key string, taskKey string, subtaskKey string, payload interface{},
 	queueingMechanism ds.TaskQueuingMechanism, maxQueuingTime float64, priority int,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
-) (bool, *PodQueueItem, int) {
+) (bool, *STQueueItem, int) {
 	result := false
 	if payload == nil || key == "" {
 		return result, nil, 0
@@ -162,30 +162,30 @@ func (q *PodQueue) Enqueue(
 	defer q.Unlock()
 
 	theQueue := q.MainQueue
-	if podQueueType == PodQueueTypeShadow {
+	if podQueueType == STQueueTypeShadow {
 		theQueue = q.ShadowQueue
 	}
 	printf("[pod queue] enqueuing to [%v] queue", podQueueType)
 
 	if queueingMechanism == ds.TaskQueuingDDL_CDF_NonBlock &&
-	   podQueueType == PodQueueTypeMain {
+	   podQueueType == STQueueTypeMain {
 		if _, e := q.ItemsInQueue[key]; e {
 			// find the item in shadow queue
 			// and delete it from shadow queue
-			newShadowQueue := []*PodQueueItem{}
+			newShadowQueue := []*STQueueItem{}
 			for _, item := range q.ShadowQueue {
 				if item.Key != key {
 					newShadowQueue = append(newShadowQueue, item)
 				}
 			}
 			q.ShadowQueue = newShadowQueue
-			printf("[pod queue] the task still exists in the %v queue, now move it to the %v queue", PodQueueTypeShadow, PodQueueTypeMain)
+			printf("[pod queue] the task still exists in the %v queue, now move it to the %v queue", STQueueTypeShadow, STQueueTypeMain)
 			// but no need to delete from cache, since it will be updated anyway
 			// delete(q.ItemsInQueue, key)
 		} else {
 			// otherwise, it means the item has been dispatched already
 			// quit directly
-			printf("[pod queue] the task has been dispatched in the %v queue", PodQueueTypeShadow)
+			printf("[pod queue] the task has been dispatched in the %v queue", STQueueTypeShadow)
 			return result, nil, 0
 		}
 	} else {
@@ -194,7 +194,7 @@ func (q *PodQueue) Enqueue(
 			return result, nil, 0
 		}
 	}
-	newItem := &PodQueueItem{
+	newItem := &STQueueItem{
 		Payload:              payload,
 		ArrivalTime:          time.Now(),
 		Key:                  key,
@@ -239,10 +239,10 @@ func (q *PodQueue) Enqueue(
 			printf("[pod queue][%v] enqueuing the new item using queueingMechanism: %v, budget: %v, priority: %v", podKey, queueingMechanism, newItem.Budget, newItem.Priority)
 		}
 		qlen := len(theQueue)
-		if qlen == 0 || podQueueType == PodQueueTypeShadow{
+		if qlen == 0 || podQueueType == STQueueTypeShadow{
 			theQueue = append(theQueue, newItem)
 			if printf != nil {
-				if podQueueType == PodQueueTypeShadow {
+				if podQueueType == STQueueTypeShadow {
 					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
 				} else {
 					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO because the queue is empty, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
@@ -295,7 +295,7 @@ func (q *PodQueue) Enqueue(
 				// newQueue = append(newQueue, newItem)
 				// newQueue = append(newQueue, q.Queue[point:]...)
 				originalLength := len(theQueue)
-				newQueue := []*PodQueueItem{}
+				newQueue := []*STQueueItem{}
 				for i:=0; i<point; i++ {
 					newQueue = append(newQueue, theQueue[i])
 				}
@@ -331,9 +331,9 @@ func (q *PodQueue) Enqueue(
 	enqueueEnd := time.Now()
 	newItem.EnqueuingOverhead = enqueueEnd.Sub(enqueueStart)
 
-	if podQueueType == PodQueueTypeMain {
+	if podQueueType == STQueueTypeMain {
 		q.MainQueue = theQueue
-	} else if podQueueType == PodQueueTypeShadow {
+	} else if podQueueType == STQueueTypeShadow {
 		q.ShadowQueue = theQueue
 	}
 
@@ -346,23 +346,23 @@ func (q *PodQueue) Enqueue(
 	return result, newItem, index_in_queue
 }
 
-func (q *PodQueue) Dequeue(printf func(string, ...interface{})) *PodQueueItem {
+func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 	q.Lock()
 	defer q.Unlock()
-	var item *PodQueueItem
+	var item *STQueueItem
 
 	podKey := "PodKey=N/A"
 	if q.Pod != nil {
 		podKey = q.Pod.GetKey()
 	}
-	targetQueue := PodQueueTypeMain
+	targetQueue := STQueueTypeMain
 	if len(q.MainQueue) > 0 {
 		item = q.MainQueue[0]
 		q.MainQueue = q.MainQueue[1:]
 	} else if len(q.ShadowQueue) > 0 {
 		item = q.ShadowQueue[0]
 		q.ShadowQueue = q.ShadowQueue[1:]
-		targetQueue = PodQueueTypeShadow
+		targetQueue = STQueueTypeShadow
 	}
 	if item != nil {
 		delete(q.ItemsInQueue, item.Key)
