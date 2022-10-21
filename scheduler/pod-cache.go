@@ -126,17 +126,9 @@ func NewNodeScheduler(nodeKey string, app *ds.Application, moduleName string, po
 		Pods:        pods,
 		IsIdle:      true,
 		NodeKey:     nodeKey,
-		mutex:  	 &sync.Mutex{},
 	}
 	inst.Queue.Pods = pods
 	return inst
-}
-
-func (n *NodeScheduler) Lock() {
-	n.mutex.Lock()
-}
-func (n *NodeScheduler) Unlock() {
-	n.mutex.Unlock()
 }
 
 func (p *PodCache) SetPodIdle(pod *ds.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *NodeScheduler {
@@ -254,6 +246,7 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, mod
 	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
 		nodeItem.AppModules[key] = NewNodeScheduler(nodeKey, app, moduleName, []*ds.Pod{pod})
 		nodeItem.AppModules[key].Queue.Pods = []*ds.Pod{pod}
+		p.SchedulablePods = append(p.SchedulablePods, pod)
 	} else {
 		pod_exist := false
 		for _, pod_inst := range nodeScheduler.Pods {

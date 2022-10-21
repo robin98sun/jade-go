@@ -12,10 +12,15 @@ import (
 )
 
 func (j *JADE) routineForSTQueues(intervalNanoseconds int) {
+	lastWarnTime := time.Now()
 	for {
 		time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 		podsInCache := j.PodCache.GetSchedulablePods()
 		if len(podsInCache) == 0 {
+			if time.Now().Sub(lastWarnTime) > time.Second * 10 {
+				j.log.Perf.Printf("[pod queue routine] WARNING: there is no scedulable pods")
+				lastWarnTime = time.Now()
+			}
 			continue
 		}
 		startTime := time.Now()
@@ -44,8 +49,8 @@ func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 		// j.log.Printf("ERROR when dispatching subtask to pod[%v]: the pod is busy", pod.GetKey())
 		return
 	}
-	podCacheItem := j.PodCache.SetPodBusy(pod)
-	queueItem := podCacheItem.Queue.Dequeue(j.log.Debug.Printf)
+	nodeScheduler := j.PodCache.SetPodBusy(pod)
+	queueItem := nodeScheduler.Queue.Dequeue(j.log.Debug.Printf)
 	if queueItem == nil {
 		j.PodCache.SetPodIdle(pod, float64(-1), float64(-1), float64(-1), float64(-1))
 		j.PodCache.Unlock()
