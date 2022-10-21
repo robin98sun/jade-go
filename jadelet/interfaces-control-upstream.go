@@ -119,16 +119,14 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		})
 	} else {
 		j.log.Op.Printf("[provisioning collector] caching pod[%v] on node[%v] for task[%v], module[%v]", feedback.Pod.GetKey(), feedback.NodeKey, feedback.TaskKey, feedback.ModuleName)
-		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, string(ds.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
+		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, nil, string(ds.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey, true)
-		whetherEnqueue := true
-		if feedback.ModuleName == string(ds.AppModuleAggregator) {
-			whetherEnqueue = false
-		}
+
 		j.PodCache.SetPodForApplication(
 			feedback.NodeKey, taskItem.Task.Application,
-			feedback.ModuleName, taskItem.Task.Requirements.Allocations[feedback.ModuleName],
-			feedback.Pod, whetherEnqueue,
+			feedback.ModuleName, 
+			feedback.Pod,
+			taskItem.Task.Requirements.Allocations[feedback.ModuleName],
 		)
 		// check if the task is ready for dispatching
 		j.checkTaskStatus(feedback.TaskKey, false, nil)

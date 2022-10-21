@@ -295,11 +295,11 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							j.log.Debug.Printf("[task dispatcher] going to calculate tail latency")
 
 
-							pods_to_calculate_unloaded_tail := []string{}
+							// pods_to_calculate_unloaded_tail := []string{}
 
-							for _, subtaskOnNode := range workerSubtasks {
-								pods_to_calculate_unloaded_tail = append(pods_to_calculate_unloaded_tail, subtaskOnNode.Subtask.ResourceKey)
-							}
+							// for _, subtaskOnNode := range workerSubtasks {
+							// 	pods_to_calculate_unloaded_tail = append(pods_to_calculate_unloaded_tail, subtaskOnNode.Subtask.ResourceKey)
+							// }
 							// histogram_list := []*histogram.Histogram{}
 							// for _, subtaskOnNode := range workerSubtasks {
 							// 	podQueue := j.PodCache.GetSTQueue(subtaskOnNode.Subtask.Pod)
@@ -315,9 +315,13 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							// unloaded_tail_latency := histogram.CalcPercentileOfProduct(budgetEstimationPercentilePoint, histogram_list, false)
 							// j.PodCache.Unlock()
 
-							unloaded_tail_latency := j.PodCache.CalcTailForPods(pods_to_calculate_unloaded_tail, budgetEstimationPercentilePoint, scheduler.STQueueHistogramTypeServiceResponseTime)
+							unloaded_tail_latency := j.PodCache.CalcTailForNodes(
+								workerSubtasks, 
+								budgetEstimationPercentilePoint, 
+								scheduler.STQueueHistogramTypeServiceResponseTime,
+							)
 
-							j.log.Debug.Printf("[task dispatcher] tail latency of %v pods at percentile point %v is %v", len(pods_to_calculate_unloaded_tail), budgetEstimationPercentilePoint, unloaded_tail_latency)
+							j.log.Debug.Printf("[task dispatcher] tail latency of %v nodes at percentile point %v is %v", len(workerSubtasks), budgetEstimationPercentilePoint, unloaded_tail_latency)
 							
 							// could never happen, don't know why it is here
 							if unloaded_tail_latency < 0 {
@@ -399,11 +403,19 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					task.Application.GetModule(string(ds.AppModuleWorker)).Input,
 					estimatedServiceTime,
 				)
-				queue := j.PodCache.GetSTQueue(worker.Subtask.ResourceKey)
-				if queue == nil {
-					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask for pod[%v]: queue does not exist", worker.Subtask.ResourceKey)
+				nodeScheduler := j.PodCache.GetNodeSchedulerForModule(
+					worker.Node.GetKey(),
+					worker.Subtask.AppName, worker.Subtask.ModuleName,
+					nil,
+				)
+
+				if nodeScheduler == nil {
+					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask [%v] on node [%v]: queue does not exist", worker.Subtask.GetKey(), worker.Node.GetKey())
 					continue
 				}
+
+				queue := nodeScheduler.Queue
+
 				// enqueue the subtask
 				if estimatedServiceTime > 0 {
 					j.log.Debug.Printf("[task dispatcher] estimated service time: [%v], according to [%v] service time distribution model",
@@ -485,17 +497,21 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				(	task.QueuingMechanism == ds.TaskQueuingDDL && 
 					budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock)){
 				// just to collect the local cdf and check the remote CDFs
-				pods := []string{}
+				histogram_list := []*histogram.Histogram{}
 				for _, worker := range workerSubtasks {
-					pods = append(pods, worker.Subtask.ResourceKey)
+					subtask := worker.Subtask
+					nodeScheduler := j.PodCache.GetNodeSchedulerForModule(
+						subtask.NodeKey, subtask.AppName, subtask.ModuleName, nil,
+					)
+					histogram_list = append(histogram_list, nodeScheduler.Queue.HistogramServiceTime)
 				}
 
 				if  budgetnegotationCache != nil {
 					// as an initiator
-					go j.CheckBudgetNegotiationCache(task.GetKey(), budgetnegotationCache, pods, dispatchItem)
+					go j.CheckBudgetNegotiationCache(task.GetKey(), budgetnegotationCache, histogram_list, dispatchItem)
 				} else if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiationInitiator != nil {
 					// report to the initiator
-					go j.ReportCDFtoInitiator(pods, dispatchItem, dispatchItem.Options.BudgetNegotiationInitiator)
+					go j.ReportCDFtoInitiator(histogram_list, dispatchItem, dispatchItem.Options.BudgetNegotiationInitiator)
 				}
 
 			}
@@ -503,8 +519,8 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 	}
 }
 
-func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.BudgetNegotiationResponseCache, pods []string, dispatchItem *ds.TaskDispatchingItem) {
-	localResponse := j.MultiplyCDFs(pods, dispatchItem)
+func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.BudgetNegotiationResponseCache, histogram_list []*histogram.Histogram, dispatchItem *ds.TaskDispatchingItem) {
+	localResponse := j.MultiplyCDFs(histogram_list, dispatchItem)
 
 	for {
 
@@ -558,8 +574,8 @@ func (j *JADE) CheckBudgetNegotiationCache(taskId string, cache *scheduler.Budge
 
 }
 
-func (j *JADE) ReportCDFtoInitiator(pods []string, dispatchItem *ds.TaskDispatchingItem, initiator *ds.Node) {
-	localResponse := j.MultiplyCDFs(pods, dispatchItem)
+func (j *JADE) ReportCDFtoInitiator(histogram_list []*histogram.Histogram, dispatchItem *ds.TaskDispatchingItem, initiator *ds.Node) {
+	localResponse := j.MultiplyCDFs(histogram_list, dispatchItem)
 	j.log.Debug.Printf("[budget negotiation] non-block negotiation going to report CDF to the initiator[%v]", initiator)
 	payload := j.GeneratePayloadOfRequest(initiator, localResponse, nil, nil)
 	apiPath := "/$jade$/collectCDF"

@@ -3,7 +3,7 @@ package jadelet
 import (
 	"time"
 	// "uta.edu/aces/jade-go/kernel"
-	// "uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/scheduler"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"uta.edu/aces/jadesdk"
 )
@@ -52,7 +52,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 			if j.IsCoordinator() {
 				// allocate an aggregator pod if needed
 				aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
-				aggregatorPod := j.PodCache.GetPodForApplication(j.SelfNodeKey(), task.Application, string(ds.AppModuleAggregator), aggregatorAllocation)
+				aggregatorPod := j.PodCache.GetOnePodForModule(j.SelfNodeKey(), task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
 				if aggregatorPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					j.log.Debug.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
 					// provision an aggregator pod
@@ -95,9 +95,8 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 							j.Config.SelfNode.Key(),
 							task.Application,
 							string(ds.AppModuleAggregator),
-							task.Requirements.GetModule(string(ds.AppModuleAggregator)),
 							aggregatorPod,
-							false,
+							task.Requirements.GetModule(string(ds.AppModuleAggregator)),
 						)
 					}
 				}
@@ -122,7 +121,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 
 					j.log.Debug.Println("[task provision] got the aggregator pod for the task, preparing the aggregator address for its subtasks as 'reportTo'")
 
-					subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(ds.AppModuleAggregator), newTaskItem, aggregatorPod, "", task.SubtaskKey, j.log.Debug.Printf)
+					subtask := j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.Config.SelfNode, string(ds.AppModuleAggregator), newTaskItem, aggregatorPod, nil, "", task.SubtaskKey, j.log.Debug.Printf)
 
 					j.log.Debug.Printf("[task provision] saving %v neighbors in task cache", len(task.NeighborNodes))
 					if len(task.NeighborNodes) > 0 {
@@ -219,7 +218,7 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 
 func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggregator) {
 	tasksGoingToDispatch := make(map[string][]*DispatchItemWithAggregator) // nodekey: []*TaskDispatchingItem
-	readyTaskCache := make(map[string]*ds.Pod)                            // taskkey: *Pod
+	readyTaskCache := make(map[string]*scheduler.NodeScheduler)        // taskkey: *NodeScheduler
 	rejectTaskCache := make(map[string]*ds.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, disptachItem := range tasklist {
 		taskItem := disptachItem.DispatchingItem
@@ -258,12 +257,12 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			//		search pod on that node for this task
 			workerAllocation := task.Requirements.Allocations[string(ds.AppModuleWorker)]
 			aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
-			workerPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(ds.AppModuleWorker), workerAllocation)
-			aggregatorPod := j.PodCache.GetPodForApplication(nodekey, task.Application, string(ds.AppModuleAggregator), aggregatorAllocation)
+			workerScheduler := j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
+			aggregatorPod := j.PodCache.GetOnePodForModule(nodekey, task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
 				j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
-				if workerPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
+				if (workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					// provision a worker Pod for it
 					containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
 					containerSettings.SetISAInImage(j.Config.ISA)
@@ -288,7 +287,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
 						j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
 					} else {
-						workerPod = &ds.Pod{
+						workerPod := &ds.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
 							Namespace:  j.Config.SelfNode.Namespace,
 							PodName:    podName,
@@ -304,13 +303,13 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 							j.Config.SelfNode.Key(),
 							task.Application,
 							string(ds.AppModuleWorker),
-							task.Requirements.GetModule(string(ds.AppModuleWorker)),
 							workerPod,
-							true,
+							task.Requirements.GetModule(string(ds.AppModuleWorker)),
 						)
+						workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
 					}
 				}
-				if workerPod == nil {
+				if workerScheduler == nil || workerScheduler.IsEmpty() {
 					// reject if the worker pod can not be allocated
 					j.log.Debug.Printf("[task provision] rejecting task %v", task.GetKey())
 					rejectTaskCache[task.GetKey()] = taskItem
@@ -320,9 +319,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			if taskItem.Options != nil {
 				toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
 			}
-			j.log.Debug.Printf("[task provision] worker pod is nil? %v", workerPod==nil)
+			j.log.Debug.Printf("[task provision] worker pod is nil? %v", workerScheduler==nil || workerScheduler.IsEmpty())
 			j.log.Debug.Printf("[task provision] allocation requirements: %v", workerAllocation.Describe())
-			if workerPod != nil && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
+			if (workerScheduler != nil && !workerScheduler.IsEmpty()) && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
 				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
 				// 		 	 	and there should be a switch in the task data structure
 				//				to indicate whether wait for updates of existing pods:
@@ -330,11 +329,11 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
 				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, ds.AppModuleWorker)
 				if j.IsCoordinator() {
-					j.log.Debug.Printf("[task provision] Caching pod[%v] on node[%v] for task[%v]", workerPod.GetKey(), nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, workerPod, "", "", j.log.Debug.Printf)
+					j.log.Debug.Printf("[task provision] Caching subtask on node[%v] for task[%v]", nodekey, task.GetKey())
+					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, workerScheduler, "", "", j.log.Debug.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; !e {
-					readyTaskCache[task.GetKey()] = workerPod
+					readyTaskCache[task.GetKey()] = workerScheduler
 				}
 			} else if !j.IsSelfNode(nodekey) {
 				//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
@@ -349,10 +348,10 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				var subtask *ds.SubTask
 				if aggregatorPod == nil {
 					j.log.Debug.Printf("[task provision] Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, "", "", j.log.Debug.Printf)
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, nil, "", "", j.log.Debug.Printf)
 				} else {
 					j.log.Debug.Printf("[task provision] Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleAggregator), taskItem, aggregatorPod, "", "", j.log.Debug.Printf)
+					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleAggregator), taskItem, aggregatorPod, nil, "", "", j.log.Debug.Printf)
 				}
 				if _, e := readyTaskCache[task.GetKey()]; e {
 					delete(readyTaskCache, task.GetKey())
@@ -416,16 +415,16 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		}
 	}
 	// acknowledge good tasks as a worker node
-	for taskKey, pod := range readyTaskCache {
-		if pod == nil {continue}
+	for taskKey, nodeScheduler := range readyTaskCache {
+		if nodeScheduler == nil || nodeScheduler.IsEmpty() {continue}
 
-		if j.IsSelfNode(pod.NodeKey) {
-			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], pod key: %v", taskKey, pod.ModuleName, pod.AppKey, pod.GetKey())
+		if j.IsSelfNode(nodeScheduler.NodeKey) {
+			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], node key: %v", taskKey, nodeScheduler.ModuleName, nodeScheduler.Application.Key(), nodeScheduler.NodeKey)
 			j.feedbackProvisioning(NewTaskProvisioningResult(
 				j.Config.SelfNode.Key(),
 				taskKey,
-				pod.ModuleName,
-				pod,
+				nodeScheduler.ModuleName,
+				nodeScheduler.Pods[0],
 				"",
 			))
 		}

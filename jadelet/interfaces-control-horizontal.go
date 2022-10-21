@@ -150,7 +150,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 	// }
 
 	// var histogram_list []*histogram.Histogram
-	pods := []string{}
+	var histogram_list []*histogram.Histogram
 	if len(availableNodes) > 0 {
 		// for non-block negotiation, schedule the job immediately
 
@@ -161,54 +161,51 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
-			workerPod := j.PodCache.GetPodForApplication(nodekey, dispatchItem.Task.Application, string(ds.AppModuleWorker), nil )
-			if workerPod == nil {
+			workerScheduler := j.PodCache.GetNodeSchedulerForModule(nodekey, dispatchItem.Task.Application.Key(), string(ds.AppModuleWorker), nil )
+			if workerScheduler == nil || workerScheduler.IsEmpty() {
 				j.log.Op.Printf("[inquiry]ERROR: NO worker pod for application %v on node %v",
 					dispatchItem.Task.Application.Key(),
 					nodekey,
 				)
 				continue
 			}
-			j.log.Op.Printf("[inquiry] selected one pod [%v] for application %v on node %v",
-				workerPod.GetKey(),
+			j.log.Op.Printf("[inquiry] selected one node [%v] for application %v on node %v",
+				workerScheduler.NodeKey,
 				dispatchItem.Task.Application.Key(),
 				nodekey,
 			)
-			pods = append(pods, workerPod.GetKey())
-
-			
+			histogram_list = append(histogram_list, workerScheduler.Queue.HistogramServiceTime)
 		}
 		
 	}
-	response := j.MultiplyCDFs(pods, dispatchItem)
+	response := j.MultiplyCDFs(histogram_list, dispatchItem)
 
 	// finish the request
 	j.DoneRequest(w, r, response)
 }
 
 
-func (j *JADE) MultiplyCDFs(pods []string, dispatchItem *ds.TaskDispatchingItem) *scheduler.BudgetNegotiationResponse {
+func (j *JADE) MultiplyCDFs(histogram_list []*histogram.Histogram, dispatchItem *ds.TaskDispatchingItem) *scheduler.BudgetNegotiationResponse {
 	response := &scheduler.BudgetNegotiationResponse{
-		AvailableNodes: int64(len(pods)),
+		AvailableNodes: int64(len(histogram_list)),
 		TaskKey: dispatchItem.Task.GetKey(),
 		Node: j.Config.SelfNode.MiniNode(),
 	}
-	var histogram_list []*histogram.Histogram
-	for _, workerPodKey := range pods {
-		podQueue := j.PodCache.GetSTQueue(workerPodKey)
-		if podQueue == nil {
-			j.log.Op.Printf("[inquiry] ERROR: the queue of pod [%v] for application %v is nil",
-				workerPodKey,
-				dispatchItem.Task.Application.Key(),
-			)
-			continue
-		}
-		j.log.Op.Printf("[inquiry] got the queue of pod [%v] for application %v",
-			workerPodKey,
-			dispatchItem.Task.Application.Key(),
-		)
-		histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
-	}
+	// for _, workerPodKey := range pods {
+	// 	podQueue := j.PodCache.GetSTQueue(workerPodKey)
+	// 	if podQueue == nil {
+	// 		j.log.Op.Printf("[inquiry] ERROR: the queue of pod [%v] for application %v is nil",
+	// 			workerPodKey,
+	// 			dispatchItem.Task.Application.Key(),
+	// 		)
+	// 		continue
+	// 	}
+	// 	j.log.Op.Printf("[inquiry] got the queue of pod [%v] for application %v",
+	// 		workerPodKey,
+	// 		dispatchItem.Task.Application.Key(),
+	// 	)
+	// 	histogram_list = append(histogram_list, podQueue.HistogramServiceTime)
+	// }
 	if len(histogram_list) > 0 {
 		response.AvailableNodes = int64(len(histogram_list))
 		count := 20
@@ -236,7 +233,7 @@ func (j *JADE) MultiplyCDFs(pods []string, dispatchItem *ds.TaskDispatchingItem)
 	j.log.Op.Printf("[inquiry] selected %v histograms for application %v on %v nodes, response: %v",
 		len(histogram_list), 
 		dispatchItem.Task.Application.Key(),
-		len(pods),
+		len(histogram_list),
 		response,
 	)
 

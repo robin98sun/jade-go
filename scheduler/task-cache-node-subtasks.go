@@ -32,7 +32,7 @@ func (i *TaskCacheModuleItem) describe() map[string]interface{} {
 }
 
 type TaskCacheSubtaskItem struct {
-	subtask            *ds.SubTask
+	Subtask            *ds.SubTask
 	status             ds.TaskStatus
 	updates            interface{}
 	ArriveTimestamp    time.Time     `json:"arriveTimestemp,omitempty"`
@@ -63,11 +63,11 @@ type TaskCacheSubtaskItem struct {
 
 
 func (i *TaskCacheSubtaskItem) GetModuleName() string {
-	if i == nil || i.subtask == nil {
+	if i == nil || i.Subtask == nil {
 		return ""
 	}
 
-	return i.subtask.ModuleName
+	return i.Subtask.ModuleName
 }
 
 func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {
@@ -75,7 +75,7 @@ func (i *TaskCacheSubtaskItem) describe() map[string]interface{} {
 		return nil
 	}
 	desc := map[string]interface{}{
-		"subtask": i.subtask,
+		"subtask": i.Subtask,
 		"status":  i.status,
 		"updates": i.updates,
 	}

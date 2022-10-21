@@ -5,7 +5,7 @@ import (
 )
 
 type TaskCacheNodeItem struct {
-	node    *ds.Node
+	Node    *ds.Node
 	modules map[string]*TaskCacheModuleItem
 	status  ds.TaskStatus
 }
@@ -19,7 +19,7 @@ func (i *TaskCacheNodeItem) describe() map[string]interface{} {
 		modules[key] = item.describe()
 	}
 	desc := map[string]interface{}{
-		"node":    i.node,
+		"node":    i.Node,
 		"modules": modules,
 		"status":  i.status,
 	}

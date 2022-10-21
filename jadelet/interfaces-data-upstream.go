@@ -62,10 +62,10 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 						// the query (task) is done
 						j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, ds.TaskStatusDone)
 						dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead := j.TaskCache.GetDispatchingItem(msg.TaskKey)
-						subtasks, pods := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "")
+						subtasks, subtasks_on_nodes := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "")
 
 						percentile := dispatchItem.GetPercentile()
-						adjusted_tail_latency := j.PodCache.CalcTailForPods(pods, percentile, scheduler.STQueueHistogramTypeAdjustedServiceResponseTime)
+						adjusted_tail_latency := j.PodCache.CalcTailForNodes(subtasks_on_nodes, percentile, scheduler.STQueueHistogramTypeAdjustedServiceResponseTime)
 						j.PerfCache.EnqueueResponse(dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_tail_latency, timestampReceving, subtasks)
 					} else {
 						j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, ds.TaskStatusDone)

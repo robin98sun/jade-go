@@ -23,7 +23,8 @@ const(
 )
 
 type STQueue struct {
-	Pod          	*ds.Pod
+	NodeKey         string
+	Pods          	[]*ds.Pod
 	MainQueue       []*STQueueItem
 	ShadowQueue  	[]*STQueueItem
 	ItemsInQueue 	map[string]*STQueueItem
@@ -32,17 +33,17 @@ type STQueue struct {
 	HistogramWithQueueingTime *histogram.Histogram
 	HistogramAdjustedServiceTime *histogram.Histogram
 	// HistogramInQueueTime *histogram.Histogram
-	// HistogramCommunicationTime *histogram.Histogram
+	HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
-
-	
 }
 
-func NewSTQueue() *STQueue {
+func NewSTQueue(nodekey string) *STQueue {
 	h_st := histogram.NewHistogram(10000, float64(0.1), 1)
 	h_wq := histogram.NewHistogram(10000, float64(0.1), 1)
 	h_ad := histogram.NewHistogram(10000, float64(0.1), 1)
+	h_co := histogram.NewHistogram(10000, float64(0.1), 1)
 	return &STQueue{
+		NodeKey:          nodekey,
 		MainQueue:        []*STQueueItem{},
 		ShadowQueue:  	  []*STQueueItem{},
 		mutex:        	  &sync.Mutex{},
@@ -50,6 +51,7 @@ func NewSTQueue() *STQueue {
 		HistogramServiceTime:  		  h_st,
 		HistogramWithQueueingTime:    h_wq,
 		HistogramAdjustedServiceTime: h_ad,
+		HistogramCommunicationTime:   h_co,
 		dequeueClock: 0,
 	}
 }
@@ -212,13 +214,13 @@ func (q *STQueue) Enqueue(
 	index_in_queue := len(theQueue)
 
 	newItem.Deadline = newItem.ArrivalTime.Add(time.Duration(maxQueuingTime) * time.Millisecond)
-	podKey := "PodKey=N/A"
-	if q.Pod != nil {
-		podKey = q.Pod.GetKey()
-	}
+	// podKey := "PodKey=N/A"
+	// if q.Pod != nil {
+	// 	podKey = q.Pod.GetKey()
+	// }
 	if printf != nil {
 		printf("[pod queue][%v] an item is enqueuing at the queue clock %v, there are %v items in queue and %v in cache right now",
-			podKey,
+			newItem,
 			newItem.enqueueTime,
 			len(q.MainQueue) + len(q.ShadowQueue),
 			len(q.ItemsInQueue),
@@ -226,7 +228,7 @@ func (q *STQueue) Enqueue(
 	}
 	if queueingMechanism == ds.TaskQueuingFIFO {
 		if printf != nil {
-			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueingMechanism: %v", podKey, queueingMechanism)
+			printf("[pod queue][%v] enqueuing the new item using FIFO Queuing, queueingMechanism: %v", q.NodeKey, queueingMechanism)
 		}
 		theQueue = append(theQueue, newItem)
 	} else if 	queueingMechanism == ds.TaskQueuingDDL || 
@@ -236,16 +238,16 @@ func (q *STQueue) Enqueue(
 				queueingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
 				queueingMechanism == ds.TaskQueuingDDL_None  {
 		if printf != nil {
-			printf("[pod queue][%v] enqueuing the new item using queueingMechanism: %v, budget: %v, priority: %v", podKey, queueingMechanism, newItem.Budget, newItem.Priority)
+			printf("[pod queue][%v] enqueuing the new item using queueingMechanism: %v, budget: %v, priority: %v", q.NodeKey, queueingMechanism, newItem.Budget, newItem.Priority)
 		}
 		qlen := len(theQueue)
 		if qlen == 0 || podQueueType == STQueueTypeShadow{
 			theQueue = append(theQueue, newItem)
 			if printf != nil {
 				if podQueueType == STQueueTypeShadow {
-					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
+					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO, queueingMechanism: %v", q.NodeKey, podQueueType, queueingMechanism)
 				} else {
-					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO because the queue is empty, queueingMechanism: %v", podKey, podQueueType, queueingMechanism)
+					printf("[pod queue][%v] enqueued the new item at the end of the %v queue as FIFO because the queue is empty, queueingMechanism: %v", q.NodeKey, podQueueType, queueingMechanism)
 
 				}
 			}
@@ -288,7 +290,7 @@ func (q *STQueue) Enqueue(
 			if point < 0 {
 				theQueue = append(theQueue, newItem)
 				if printf != nil {
-					printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueingMechanism: %v", podKey, queueingMechanism)
+					printf("[pod queue][%v] enqueued the new item at the end of the queue like FIFO because reaching the end of the queue, queueingMechanism: %v", q.NodeKey, queueingMechanism)
 				}
 			} else {
 				// newQueue := q.Queue[0:point]
@@ -306,7 +308,7 @@ func (q *STQueue) Enqueue(
 				theQueue = newQueue
 				if printf != nil {
 					printf("[pod queue][%v] enqueued the new item at the index {%v} of the queue in front of {%v} existing items, queueingMechanism: %v", 
-						podKey, 
+						q.NodeKey, 
 						point, 
 						originalLength - point, 
 						queueingMechanism,
@@ -320,7 +322,7 @@ func (q *STQueue) Enqueue(
 	q.ItemsInQueue[key] = newItem
 	if printf != nil {
 		printf("[pod queue][%v] the item is enqueued at the queue clock %v, there are %v items in queue and %v in cache right now",
-			podKey,
+			q.NodeKey,
 			newItem.enqueueTime,
 			len(theQueue),
 			len(q.ItemsInQueue),
@@ -351,10 +353,6 @@ func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 	defer q.Unlock()
 	var item *STQueueItem
 
-	podKey := "PodKey=N/A"
-	if q.Pod != nil {
-		podKey = q.Pod.GetKey()
-	}
 	targetQueue := STQueueTypeMain
 	if len(q.MainQueue) > 0 {
 		item = q.MainQueue[0]
@@ -376,7 +374,7 @@ func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 		}
 		if printf != nil {
 			printf("[pod queue][%v] dequeued an item from [%v] at queue clock %v, which waited %v previous items, and queueing time is %v",
-				podKey, targetQueue,
+				q.NodeKey, targetQueue,
 				q.dequeueClock,
 				item.QueueLength,
 				item.DispatchTime.Sub(item.ArrivalTime)/time.Millisecond,
@@ -390,7 +388,7 @@ func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 		}
 		if printf != nil {
 			printf("[pod queue][%v] after dequeuing the item from [%v], the queue clock changed to %v, and there are %v items in queue right now",
-				podKey, targetQueue,
+				q.NodeKey, targetQueue,
 				q.dequeueClock,
 				len(q.MainQueue) + len(q.ShadowQueue),
 			)

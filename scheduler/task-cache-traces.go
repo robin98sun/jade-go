@@ -144,7 +144,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 					line = append(line, strconv.FormatInt(taskItem.Fanout, 10))
 
 					// [3]
-					line = append(line, subtaskItem.subtask.ModuleName)
+					line = append(line, subtaskItem.Subtask.ModuleName)
 
 					// timestamps
 					timeArr := []time.Time{}
@@ -363,7 +363,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						
 						// Pod_ID
 						// [37]
-						line = append(line, subtaskItem.subtask.ResourceKey)
+						line = append(line, subtaskItem.Subtask.ResourceKey)
 						
 						// Task_ID
 						// [38]
@@ -375,7 +375,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 						
 						// Subtask_ID
 						// [40]
-						line = append(line, subtaskItem.subtask.GetKey())
+						line = append(line, subtaskItem.Subtask.GetKey())
 						
 						// Subtask_status
 						// [41]
