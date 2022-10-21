@@ -262,52 +262,62 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			// if the node itself is also a worker, then allcate a worker pod for it
 			if j.IsSelfNode(nodekey) {
 				j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
-				if (workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
-					// provision a worker Pod for it
-					containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
-					containerSettings.SetISAInImage(j.Config.ISA)
-					podName, nodePort, err := j.Provisioner.ProvisionTask(
-						j.Kube, j.Config.SelfNode,
-						j.newEnv(
-							reportTo.Node,
-							task.Application.Name,
-							task.Application.Version,
-							string(ds.AppModuleWorker),
-							task.GetKey(),
-						),
-						task.Application, string(ds.AppModuleWorker),
-						containerSettings,
-						task.Requirements.GetModule(string(ds.AppModuleWorker)),
-						1,
-					)
+				if ((workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist) ||
+				   (taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0) {
 
-					if err != nil {
-						j.log.Debug.Println("[task provision] ERROR when provisioning", string(ds.AppModuleWorker), "for task", task.GetKey())
-						// Update self-node inside the pod
-					} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
-						j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
-					} else {
-						workerPod := &ds.Pod{
-							NodeKey:    j.Config.SelfNode.Key(),
-							Namespace:  j.Config.SelfNode.Namespace,
-							PodName:    podName,
-							Addr:       j.Config.SelfNode.Addr,
-							Port:       nodePort,
-							// Allocation: task.Requirements.GetModule(string(ds.AppModuleWorker)),
-							AppKey:     task.Application.Key(),
-							Container:  task.Application.GetModule(string(ds.AppModuleWorker)),
-							ModuleName: string(ds.AppModuleWorker),
-						}
-						workerPod.GetKey()
-						j.PodCache.SetPodForApplication(
-							j.Config.SelfNode.Key(),
-							task.Application,
-							string(ds.AppModuleWorker),
-							workerPod,
+				   	replica_count := 1
+				   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
+				   		replica_count = taskItem.Options.ForceToProvisionReplica
+				   	}
+				   	for r:=0; r<replica_count; r++ {
+				   		// provision a worker Pod for it
+						containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
+						containerSettings.SetISAInImage(j.Config.ISA)
+						podName, nodePort, err := j.Provisioner.ProvisionTask(
+							j.Kube, j.Config.SelfNode,
+							j.newEnv(
+								reportTo.Node,
+								task.Application.Name,
+								task.Application.Version,
+								string(ds.AppModuleWorker),
+								task.GetKey(),
+							),
+							task.Application, string(ds.AppModuleWorker),
+							containerSettings,
 							task.Requirements.GetModule(string(ds.AppModuleWorker)),
+							1,
 						)
-						workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
-					}
+
+						if err != nil {
+							j.log.Debug.Println("[task provision] ERROR when provisioning", string(ds.AppModuleWorker), "for task", task.GetKey())
+							// Update self-node inside the pod
+						} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
+							j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
+						} else {
+							workerPod := &ds.Pod{
+								NodeKey:    j.Config.SelfNode.Key(),
+								Namespace:  j.Config.SelfNode.Namespace,
+								PodName:    podName,
+								Addr:       j.Config.SelfNode.Addr,
+								Port:       nodePort,
+								// Allocation: task.Requirements.GetModule(string(ds.AppModuleWorker)),
+								AppKey:     task.Application.Key(),
+								Container:  task.Application.GetModule(string(ds.AppModuleWorker)),
+								ModuleName: string(ds.AppModuleWorker),
+							}
+							workerPod.GetKey()
+							j.PodCache.SetPodForApplication(
+								j.Config.SelfNode.Key(),
+								task.Application,
+								string(ds.AppModuleWorker),
+								workerPod,
+								task.Requirements.GetModule(string(ds.AppModuleWorker)),
+							)
+							if r == 0 {
+								workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
+							}
+						}
+				   	}
 				}
 				if workerScheduler == nil || workerScheduler.IsEmpty() {
 					// reject if the worker pod can not be allocated
