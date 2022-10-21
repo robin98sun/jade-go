@@ -119,7 +119,7 @@ func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingIte
 
 	for taskKey, dispatchItem := range tasklist {
 		resultBytes, _ := json.MarshalIndent(dispatchItem.Options, "", "  ")
-		j.log.Println("received task option:", string(resultBytes))
+		j.log.Debug.Printf("received task option:", string(resultBytes))
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem
