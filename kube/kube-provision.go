@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	ds "uta.edu/aces/jadesdk/data_structure"
-	"encoding/json"
+	// "encoding/json"
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
@@ -92,13 +92,14 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	}
 
 	k.log.Println("Deploying pods...")
-	result, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
+	_, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		k.log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
 	}
-	resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	k.log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
+
+	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
+	// k.log.Println("deployment:", deploymentName, ", result:", string(resultBytes))
 
 	// deploy node port service for the pod
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
