@@ -269,7 +269,9 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
 				   		replica_count = taskItem.Options.ForceToProvisionReplica
 				   	}
+				   	j.log.Debug.Printf("[task provision] %v replica to provision", replica_count)
 				   	for r:=0; r<replica_count; r++ {
+				   		j.log.Debug.Printf("[task provision] provisioning no.%v replica...", r+1)
 				   		// provision a worker Pod for it
 						containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
 						containerSettings.SetISAInImage(j.Config.ISA)
@@ -316,6 +318,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 							if r == 0 {
 								workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
 							}
+				   			j.log.Debug.Printf("[task provision] no.%v replica is provisioned", r+1)
 						}
 				   	}
 				}
