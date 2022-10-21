@@ -230,3 +230,10 @@ func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) GetJobIdList(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.TaskCache.GetJobIdList())
 }
+
+func (j *JADE) ShowScalablePods(w rest.ResponseWriter, r *rest.Request) {
+
+
+
+	w.WriteJson(j.PodCache.DescribeScalablePods())
+}

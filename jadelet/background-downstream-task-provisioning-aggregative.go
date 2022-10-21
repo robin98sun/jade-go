@@ -268,6 +268,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				   	replica_count := 1
 				   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
 				   		replica_count = taskItem.Options.ForceToProvisionReplica
+				   		j.log.Debug.Printf("[task provision] read replica count from option: %v", replica_count)
 				   	}
 				   	j.log.Debug.Printf("[task provision] %v replica to provision", replica_count)
 				   	for r:=0; r<replica_count; r++ {

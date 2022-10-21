@@ -91,6 +91,7 @@ func main() {
 		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
 		rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
 		rest.Get("/debug/perfcache", j.ShowPerfCache),
+		rest.Get("/debug/scalablePods", j.ShowScalablePods),
 	)
 	if err != nil {
 		log.Fatal(err)

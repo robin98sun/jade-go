@@ -22,6 +22,42 @@ func (p *PodCache) Unlock() {
 	p.mutex.Unlock()
 }
 
+func (p *PodCache) DescribeScalablePods() interface{} {
+
+	p.Lock()
+	defer p.Unlock()
+
+	result := make(map[string]interface{})
+
+	counted_total_pods := 0
+	counted_scalable_pods := 0
+
+	for nodekey, nodeItem := range p.Nodes {
+		nodeStat := make(map[string]interface{})
+		for appModuleKey, nodeScheduler := range nodeItem.AppModules {
+			appStat := make(map[string]interface{})
+
+			counted_total_pods += len(nodeScheduler.Pods)
+			counted_scalable_pods += len(nodeScheduler.Queue.Pods)
+
+			appStat["pods"] = len(nodeScheduler.Pods)
+			appStat["scalable_pods"] = len(nodeScheduler.Queue.Pods)
+
+			nodeStat[appModuleKey] = appStat
+		}
+		result[nodekey] = nodeStat
+	}
+
+	result["counted_total_pods"] = counted_total_pods
+	result["counted_scalable_pods"] = counted_scalable_pods
+
+	result["total_pods"] = len(p.Pods)
+	result["scalable_pods"] = len(p.SchedulablePods)
+	
+	return nil
+}
+
+
 func (p *PodCache) GetPod(podkey string) *ds.Pod {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
