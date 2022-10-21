@@ -54,7 +54,7 @@ func (p *PodCache) DescribeScalablePods() interface{} {
 	result["total_pods"] = len(p.Pods)
 	result["scalable_pods"] = len(p.SchedulablePods)
 	
-	return nil
+	return result
 }
 
 
