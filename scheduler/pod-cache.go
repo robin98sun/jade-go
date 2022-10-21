@@ -282,7 +282,7 @@ func (p *PodCache) CalcTailForNodes(subtasks []*ds.SubtaskOnNode, percentile flo
 		subtask := subtaskOnNode.Subtask
 		node := subtaskOnNode.Node
 		if nodeItem, e := p.Nodes[node.GetKey()]; e {
-			appModuleKey := p.GetKeyFromApplicationAndModule(subtask.AppName, subtask.ModuleName)
+			appModuleKey := p.GetKeyFromApplicationAndModule(subtask.AppKey, subtask.ModuleName)
 			if nodeScheduler, e := nodeItem.AppModules[appModuleKey]; e {
 				if histType == STQueueHistogramTypeServiceResponseTime {
 					histogram_list = append(histogram_list, nodeScheduler.Queue.HistogramServiceTime)

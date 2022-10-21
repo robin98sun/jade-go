@@ -147,7 +147,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					Node: neighborNode,
 					Subtask: ds.NewSubtask(
 						task.GetKey(),
-						task.Application.Name,
+						task.Application.Key(),
 						string(ds.AppModuleAggregator),
 						neighborNode.GetKey(),
 						"", "",
@@ -405,7 +405,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				)
 				nodeScheduler := j.PodCache.GetNodeSchedulerForModule(
 					worker.Node.GetKey(),
-					worker.Subtask.AppName, worker.Subtask.ModuleName,
+					worker.Subtask.AppKey, worker.Subtask.ModuleName,
 					nil,
 				)
 
@@ -501,7 +501,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				for _, worker := range workerSubtasks {
 					subtask := worker.Subtask
 					nodeScheduler := j.PodCache.GetNodeSchedulerForModule(
-						subtask.NodeKey, subtask.AppName, subtask.ModuleName, nil,
+						subtask.NodeKey, subtask.AppKey, subtask.ModuleName, nil,
 					)
 					histogram_list = append(histogram_list, nodeScheduler.Queue.HistogramServiceTime)
 				}
