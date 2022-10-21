@@ -9,6 +9,7 @@ import (
 type PodCache struct {
 	Nodes                      map[string]*PodCacheNodeItem // nodekey: cacheItem
 	Pods                       map[string]*ds.Pod
+	SchedulablePods            []*ds.Pod
 	IsBackgroundRoutineStarted bool
 	mutex                      *sync.Mutex
 }
@@ -84,6 +85,7 @@ type NodeScheduler struct {
 	Pods        []*ds.Pod
 	NodeKey     string
 	IsIdle      bool
+	mutex 		*sync.Mutex
 }
 
 func (i *NodeScheduler) IsEmpty() bool {
@@ -105,6 +107,17 @@ func (p *PodCache) GetAllPods() []*ds.Pod {
 	return pod_list
 }
 
+func (p *PodCache) GetSchedulablePods() []*ds.Pod {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	pod_list := []*ds.Pod {}
+	if len(p.SchedulablePods) > 0 {
+		pod_list = append(pod_list, p.SchedulablePods...)
+	}
+	return pod_list
+}
+
 func NewNodeScheduler(nodeKey string, app *ds.Application, moduleName string, pods []*ds.Pod) *NodeScheduler {
 	inst := &NodeScheduler{
 		Application: app,
@@ -113,9 +126,17 @@ func NewNodeScheduler(nodeKey string, app *ds.Application, moduleName string, po
 		Pods:        pods,
 		IsIdle:      true,
 		NodeKey:     nodeKey,
+		mutex:  	 &sync.Mutex{},
 	}
 	inst.Queue.Pods = pods
 	return inst
+}
+
+func (n *NodeScheduler) Lock() {
+	n.mutex.Lock()
+}
+func (n *NodeScheduler) Unlock() {
+	n.mutex.Unlock()
 }
 
 func (p *PodCache) SetPodIdle(pod *ds.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *NodeScheduler {
@@ -206,22 +227,6 @@ func (p *PodCache) GetOnePodForModule(nodeKey string, appKey string, moduleName 
 	return nil
 }
 
-// func (p *PodCache) GetSTQueue(podkey string) *STQueue {
-
-// 	p.mutex.Lock()
-// 	defer p.mutex.Unlock()
-
-// 	if pod, e := p.Pods[podkey]; e {
-// 		if nodeItem, e := p.Nodes[pod.NodeKey]; e {
-// 			key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
-// 			if podItem, e := nodeItem.AppModules[key]; e {
-// 				return podItem.Queue
-// 			}
-// 		}
-// 	}
-	
-// 	return nil
-// }
 
 func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName string) string {
 	return appKey + ":" + moduleName
@@ -246,18 +251,23 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, mod
 	nodeItem := p.Nodes[nodeKey]
 	key := p.GetKeyFromApplicationAndModule(app.Key(), moduleName)
 
-	if podItem, e := nodeItem.AppModules[key]; !e {
+	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
 		nodeItem.AppModules[key] = NewNodeScheduler(nodeKey, app, moduleName, []*ds.Pod{pod})
+		nodeItem.AppModules[key].Queue.Pods = []*ds.Pod{pod}
 	} else {
 		pod_exist := false
-		for _, pod_inst := range podItem.Pods {
+		for _, pod_inst := range nodeScheduler.Pods {
 			if pod_inst.GetKey() == pod.GetKey() {
 				pod_exist = true
 				break
 			}
 		}
 		if !pod_exist {
-			podItem.Pods = append(podItem.Pods, pod)
+			nodeScheduler.Pods = append(nodeScheduler.Pods, pod)
+			if len(nodeScheduler.Queue.Pods) == 0 {
+				nodeScheduler.Queue.Pods = []*ds.Pod{pod}
+				p.SchedulablePods = append(p.SchedulablePods, pod)
+			}
 		}
 	}
 

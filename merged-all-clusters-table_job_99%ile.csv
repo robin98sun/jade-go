@@ -1,7 +1,0 @@
-speed, arrival-rate, Round-Index, workload%:worker-response-time, , , , 99%ile:job:job-response-time, , , , , , , , , , , , , 
-speed, arrival-rate, Round-Index, workload%:worker-response-time:fifo, workload%:worker-response-time:prq, workload%:worker-response-time:ddl:none, , task[0]:99%ile:job:job-response-time:[fifo], task[1]:99%ile:job:job-response-time:[fifo], task[2]:99%ile:job:job-response-time:[fifo], , task[0]:99%ile:job:job-response-time:[prq], task[1]:99%ile:job:job-response-time:[prq], task[2]:99%ile:job:job-response-time:[prq], , task[0]:99%ile:job:job-response-time:[ddl:none], task[1]:99%ile:job:job-response-time:[ddl:none], task[2]:99%ile:job:job-response-time:[ddl:none], , 
-5.0, 27.78, 0, 48.7, 41.47, 46.239999999999995, , 297.173936, 418.545086, 502.235274, , 310.884104, 439.400027, 602.88147, , 312.962355, 487.198035, 606.430223, , 
-4.0, 22.224, 1, 45.15, 46.08, 45.07, , 324.725698, 419.1095, 526.560865, , 302.383293, 423.426794, 763.351908, , 322.340044, 432.817928, 568.918864, , 
-3.0, 16.668, 2, 36.75, 33.28999999999999, 38.36, , 426.252217, 526.865576, 698.799127, , 337.859619, 426.601646, 788.311693, , 328.846989, 651.716929, 863.867778, , 
-2.0, 11.112, 3, 25.24, 29.21, 28.43, , 198.617631, 503.857556, 548.260962, , 249.630238, 502.209487, 518.024436, , 254.722427, 406.704156, 490.129038, , 
-1.0, 5.556, 4, 16.52, 17.669999999999998, 14.93, , 309.639578, 383.456612, 399.621321, , 376.153262, 285.342727, 421.929101, , 267.522223, 351.398503, 345.821895, , 

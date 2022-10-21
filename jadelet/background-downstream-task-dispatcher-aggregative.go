@@ -14,7 +14,7 @@ import (
 func (j *JADE) routineForSTQueues(intervalNanoseconds int) {
 	for {
 		time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
-		podsInCache := j.PodCache.GetPods()
+		podsInCache := j.PodCache.GetSchedulablePods()
 		if len(podsInCache) == 0 {
 			continue
 		}
@@ -23,7 +23,6 @@ func (j *JADE) routineForSTQueues(intervalNanoseconds int) {
 		for _, pod := range podsInCache {
 			if j.PodCache.IsPodIdle(pod) {
 				go j.dispatchSubtask(pod)
-				// time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 			}
 		}
 		j.PodCache.Unlock()
