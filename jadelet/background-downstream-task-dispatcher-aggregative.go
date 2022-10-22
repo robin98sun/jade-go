@@ -145,7 +145,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 			}
 			var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 				
-			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(ds.AppModuleAggregator), "", j.Config.SelfNode.Key())
+			neighborNodes := j.TaskCache.GetNeighborNodesRegardingNode(taskKey, string(ds.AppModuleAggregator), "", j.Config.SelfNode.Key(), true)
 			for _, neighborNode := range neighborNodes {
 				subtaskItem := &ds.SubtaskOnNode{
 					Node: neighborNode,

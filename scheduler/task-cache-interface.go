@@ -485,12 +485,15 @@ func (c *TaskCache) GetSubtasksRegardingNode(taskKey string, moduleName string, 
 	return subtasks
 }
 
-func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string) map[string]*ds.Node {
+func (c *TaskCache) GetNeighborNodesRegardingNode(taskKey string, moduleName string, exceptNodeKey string, exclusiveNodeKey string, lock bool) map[string]*ds.Node {
 	if c == nil || c.Cache == nil {
 		return nil
 	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	if lock {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+	}
+
 	if taskItem, e := c.Cache[taskKey]; e {
 		for _, nodeItem := range taskItem.dispatchedNodes {
 			if exclusiveNodeKey != "" && exclusiveNodeKey != nodeItem.Node.Key() {

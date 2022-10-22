@@ -67,6 +67,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 		TaskCount int
 		SuccessTasks int
 		Nodes map [string]*NodeStat
+		Neighbors map [string]*NodeStat
 		MaximumFailedSubtasks int
 		AvgFailedSubtasks float64
 		TimeGapSinceLastSuccessSubtask time.Duration
@@ -107,9 +108,16 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 				node_stat.Hits - node_stat.SuccessSubtasks, fault_rate,
 			)
 		}
+
+		for neighborKey, neighbor_stat := range job_stat.Neighbors {
+			printf("    neighbor[%v] hits: %v",
+				neighborKey, neighbor_stat.Hits,
+			)
+		}
 	}
 	job_stat := JobStat{
 		Nodes: map[string]*NodeStat{},
+		Neighbors: map[string]*NodeStat{},
 	}
 
 	// iterate among tasks
@@ -123,7 +131,16 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 
 		task_success_status_has_been_checked := false
 		failed_subtasks := 0
-		
+
+		neighborNodes := c.GetNeighborNodesRegardingNode(taskItem.task.Task.GetKey(), string(ds.AppModuleAggregator), "", "", false)
+		for neighborKey, _ := range neighborNodes {
+			if _, e := job_stat.Neighbors[neighborKey]; !e {
+				job_stat.Neighbors[neighborKey] = &NodeStat{}	
+			}
+			job_stat.Neighbors[neighborKey].Hits++
+			
+		}
+
 		for nodeKey, dispatchedNode := range taskItem.dispatchedNodes {
 			for moduleName, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
