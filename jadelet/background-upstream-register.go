@@ -40,7 +40,7 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 	// }
 
 	if (tn != nil && !tn.IsAddrEmpty()) {
-		j.log.Op.Printf("registering to %v node", nodeType)
+		j.log.Heartbeat.Printf("registering to %v node", nodeType)
 
 		// j.log.Printf("trying to register to upper node for the [%v]th time", retryCnt+1)
 
@@ -75,10 +75,10 @@ func (j *JADE) RegisterToNode(nodeType JadeNodeType, retryPointer int64) {
 		)
 
 	} else {
-		j.log.Op.Printf("Can NOT register to %v node because it is empty in the configuration for now", nodeType)
+		j.log.Heartbeat.Printf("Can NOT register to %v node because it is empty in the configuration for now", nodeType)
 	}
 
 	
-	j.log.Op.Printf("going to redo the registration to %v in %v seconds", nodeType, retryInterval)
+	j.log.Heartbeat.Printf("going to redo the registration to %v in %v seconds", nodeType, retryInterval)
 	j.retryRegister(nodeType, fmt.Sprintf("heartbeat to %v node", nodeType), retryInterval, int64(0))
 }

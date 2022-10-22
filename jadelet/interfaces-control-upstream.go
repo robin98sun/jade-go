@@ -50,9 +50,9 @@ func (j *JADE) registerNode(nodeType JadeNodeType, payload *RequestPayload) {
 		nodeCache = j.Neighbors
 	}
 	if _, exists := nodeCache[nodekey]; exists {
-		j.log.Op.Printf("updating information for existing %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
+		j.log.Heartbeat.Printf("updating information for existing %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
 	} else {
-		j.log.Op.Printf("registering information for new %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
+		j.log.Heartbeat.Printf("registering information for new %v[%v] with %v capabilities", nodeType, nodekey, len(payload.Capabilities))
 	}
 
 	// Save the sub node in its sub node array
