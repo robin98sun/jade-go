@@ -219,6 +219,7 @@ func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggregator) {
 	tasksGoingToDispatch := make(map[string][]*DispatchItemWithAggregator) // nodekey: []*TaskDispatchingItem
 	readyTaskCache := make(map[string]*scheduler.NodeScheduler)        // taskkey: *NodeScheduler
+	readyTaskReplicaCount := make(map[string]int)        			   // taskkey: int
 	rejectTaskCache := make(map[string]*ds.TaskDispatchingItem)        // taskKey: *TaskDispatchingItem
 	for _, disptachItem := range tasklist {
 		taskItem := disptachItem.DispatchingItem
@@ -322,6 +323,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				   			j.log.Debug.Printf("[task provision] no.%v replica is provisioned", r+1)
 						}
 				   	}
+				   	readyTaskReplicaCount[task.GetKey()] = replica_count
 				}
 				if workerScheduler == nil || workerScheduler.IsEmpty() {
 					// reject if the worker pod can not be allocated
@@ -433,14 +435,23 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 		if nodeScheduler == nil || nodeScheduler.IsEmpty() {continue}
 
 		if j.IsSelfNode(nodeScheduler.NodeKey) {
-			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], node key: %v", taskKey, nodeScheduler.ModuleName, nodeScheduler.Application.Key(), nodeScheduler.NodeKey)
-			j.feedbackProvisioning(NewTaskProvisioningResult(
-				j.Config.SelfNode.Key(),
-				taskKey,
-				nodeScheduler.ModuleName,
-				nodeScheduler.Pods[0],
-				"",
-			))
+			replica_count := 0
+			if x, e := readyTaskReplicaCount[taskKey]; e {
+				replica_count = x
+			}
+			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], node key: %v, provisioned pods replica count: %v", taskKey, nodeScheduler.ModuleName, nodeScheduler.Application.Key(), nodeScheduler.NodeKey, replica_count)
+			if replica_count <= len(nodeScheduler.Pods) {
+				for i := len(nodeScheduler.Pods) - replica_count; i<len(nodeScheduler.Pods); i++ {
+					j.log.Debug.Printf("[task provision] ack no.%v newly provisioned pod", i)
+					j.feedbackProvisioning(NewTaskProvisioningResult(
+						j.Config.SelfNode.Key(),
+						taskKey,
+						nodeScheduler.ModuleName,
+						nodeScheduler.Pods[i],
+						"",
+					))
+				}
+			}
 		}
 	}
 	if j.IsCoordinator() {
