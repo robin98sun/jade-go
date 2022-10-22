@@ -245,158 +245,169 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			availableNodes = []string{j.SelfNodeKey()}
 		}
 
+		neighborNodesCount := 0
 		if len(availableNodes) == 0 && originalDispatchItem != nil && len(originalDispatchItem.Task.NeighborNodes) > 0 {
+			neighborNodesCount = len(originalDispatchItem.Task.NeighborNodes)
 			if _, e := readyTaskCache[task.GetKey()]; !e {
 				readyTaskCache[task.GetKey()] = nil
 				j.log.Debug.Printf("[task provision] accept the task even without available subnodes because of %v neighbor nodes", len(originalDispatchItem.Task.NeighborNodes))
 			}
 		} 
 
-		// 2. for each available sub-nodes:
-		for _, nodekey := range availableNodes {
-			j.log.Debug.Printf("[task provision] provision available node[%v]", nodekey)
-			//		search pod on that node for this task
-			workerAllocation := task.Requirements.Allocations[string(ds.AppModuleWorker)]
-			aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
-			workerScheduler := j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
-			aggregatorPod := j.PodCache.GetOnePodForModule(nodekey, task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
-			// if the node itself is also a worker, then allcate a worker pod for it
-			if j.IsSelfNode(nodekey) {
-				j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
-				if ((workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist) ||
-				   (taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0) {
+		if len(availableNodes) + neighborNodesCount == 0 {
+			// remove the cached aggregator subtask, since there is no work to do
+			aggregatorSubtaskKey := disptachItem.AggregatorSubtask.GetKey()
+			j.TaskCache.NullifyTask(task.GetKey(), aggregatorSubtaskKey)
+			rejectTaskCache[task.GetKey()] = taskItem
+		} else {
 
-				   	replica_count := 1
-				   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
-				   		replica_count = taskItem.Options.ForceToProvisionReplica
-				   		j.log.Debug.Printf("[task provision] read replica count from option: %v", replica_count)
-				   	}
-				   	j.log.Debug.Printf("[task provision] %v replica to provision", replica_count)
-				   	for r:=0; r<replica_count; r++ {
-				   		j.log.Debug.Printf("[task provision] provisioning no.%v replica...", r+1)
-				   		// provision a worker Pod for it
-						containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
-						containerSettings.SetISAInImage(j.Config.ISA)
-						podName, nodePort, err := j.Provisioner.ProvisionTask(
-							j.Kube, j.Config.SelfNode,
-							j.newEnv(
-								reportTo.Node,
-								task.Application.Name,
-								task.Application.Version,
-								string(ds.AppModuleWorker),
-								task.GetKey(),
-							),
-							task.Application, string(ds.AppModuleWorker),
-							containerSettings,
-							task.Requirements.GetModule(string(ds.AppModuleWorker)),
-							1,
-						)
+			// 2. for each available sub-nodes:
+			for _, nodekey := range availableNodes {
+				j.log.Debug.Printf("[task provision] provision available node[%v]", nodekey)
+				//		search pod on that node for this task
+				workerAllocation := task.Requirements.Allocations[string(ds.AppModuleWorker)]
+				aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
+				workerScheduler := j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
+				aggregatorPod := j.PodCache.GetOnePodForModule(nodekey, task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
+				// if the node itself is also a worker, then allcate a worker pod for it
+				if j.IsSelfNode(nodekey) {
+					j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
+					if ((workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist) ||
+					   (taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0) {
 
-						if err != nil {
-							j.log.Debug.Println("[task provision] ERROR when provisioning", string(ds.AppModuleWorker), "for task", task.GetKey())
-							// Update self-node inside the pod
-						} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
-							j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
-						} else {
-							workerPod := &ds.Pod{
-								NodeKey:    j.Config.SelfNode.Key(),
-								Namespace:  j.Config.SelfNode.Namespace,
-								PodName:    podName,
-								Addr:       j.Config.SelfNode.Addr,
-								Port:       nodePort,
-								// Allocation: task.Requirements.GetModule(string(ds.AppModuleWorker)),
-								AppKey:     task.Application.Key(),
-								Container:  task.Application.GetModule(string(ds.AppModuleWorker)),
-								ModuleName: string(ds.AppModuleWorker),
-							}
-							workerPod.GetKey()
-							j.PodCache.SetPodForApplication(
-								j.Config.SelfNode.Key(),
-								task.Application,
-								string(ds.AppModuleWorker),
-								workerPod,
+					   	replica_count := 1
+					   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
+					   		replica_count = taskItem.Options.ForceToProvisionReplica
+					   		j.log.Debug.Printf("[task provision] read replica count from option: %v", replica_count)
+					   	}
+					   	j.log.Debug.Printf("[task provision] %v replica to provision", replica_count)
+					   	for r:=0; r<replica_count; r++ {
+					   		j.log.Debug.Printf("[task provision] provisioning no.%v replica...", r+1)
+					   		// provision a worker Pod for it
+							containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
+							containerSettings.SetISAInImage(j.Config.ISA)
+							podName, nodePort, err := j.Provisioner.ProvisionTask(
+								j.Kube, j.Config.SelfNode,
+								j.newEnv(
+									reportTo.Node,
+									task.Application.Name,
+									task.Application.Version,
+									string(ds.AppModuleWorker),
+									task.GetKey(),
+								),
+								task.Application, string(ds.AppModuleWorker),
+								containerSettings,
 								task.Requirements.GetModule(string(ds.AppModuleWorker)),
+								1,
 							)
-							if r == 0 {
-								workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
+
+							if err != nil {
+								j.log.Debug.Println("[task provision] ERROR when provisioning", string(ds.AppModuleWorker), "for task", task.GetKey())
+								// Update self-node inside the pod
+							} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
+								j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
+							} else {
+								workerPod := &ds.Pod{
+									NodeKey:    j.Config.SelfNode.Key(),
+									Namespace:  j.Config.SelfNode.Namespace,
+									PodName:    podName,
+									Addr:       j.Config.SelfNode.Addr,
+									Port:       nodePort,
+									// Allocation: task.Requirements.GetModule(string(ds.AppModuleWorker)),
+									AppKey:     task.Application.Key(),
+									Container:  task.Application.GetModule(string(ds.AppModuleWorker)),
+									ModuleName: string(ds.AppModuleWorker),
+								}
+								workerPod.GetKey()
+								j.PodCache.SetPodForApplication(
+									j.Config.SelfNode.Key(),
+									task.Application,
+									string(ds.AppModuleWorker),
+									workerPod,
+									task.Requirements.GetModule(string(ds.AppModuleWorker)),
+								)
+								if r == 0 {
+									workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
+								}
+					   			j.log.Debug.Printf("[task provision] no.%v replica is provisioned", r+1)
 							}
-				   			j.log.Debug.Printf("[task provision] no.%v replica is provisioned", r+1)
-						}
-				   	}
-				   	readyTaskReplicaCount[task.GetKey()] = replica_count
+					   	}
+					   	readyTaskReplicaCount[task.GetKey()] = replica_count
+					}
+					if workerScheduler == nil || workerScheduler.IsEmpty() {
+						// reject if the worker pod can not be allocated
+						j.log.Debug.Printf("[task provision] rejecting task %v", task.GetKey())
+						rejectTaskCache[task.GetKey()] = taskItem
+					}
 				}
-				if workerScheduler == nil || workerScheduler.IsEmpty() {
-					// reject if the worker pod can not be allocated
-					j.log.Debug.Printf("[task provision] rejecting task %v", task.GetKey())
-					rejectTaskCache[task.GetKey()] = taskItem
+				toUpdateNetwork := false
+				if taskItem.Options != nil {
+					toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
 				}
+				j.log.Debug.Printf("[task provision] worker pod is nil? %v", workerScheduler==nil || workerScheduler.IsEmpty())
+				j.log.Debug.Printf("[task provision] allocation requirements: %v", workerAllocation.Describe())
+				if (workerScheduler != nil && !workerScheduler.IsEmpty()) && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
+					// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
+					// 		 	 	and there should be a switch in the task data structure
+					//				to indicate whether wait for updates of existing pods:
+					//				for the sake of saving network overhead
+					// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
+					// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, ds.AppModuleWorker)
+					if j.IsCoordinator() {
+						j.log.Debug.Printf("[task provision] Caching subtask on node[%v] for task[%v]", nodekey, task.GetKey())
+						j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, workerScheduler, "", "", j.log.Debug.Printf)
+					}
+					if _, e := readyTaskCache[task.GetKey()]; !e {
+						readyTaskCache[task.GetKey()] = workerScheduler
+					}
+				} else if !j.IsSelfNode(nodekey) {
+					//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
+					//		c. Otherwise If no any other kind of pod in the pod-cache,
+					// 			then dispatch the task to that node, to see what kind of pod it returns,
+					//			(this is the only case that a worker node could receive the entire task,
+					// 				but, to update runtime structure changes, the task still shall be dispatched
+					//				to the worker nodes even though there already has a worker pod-queue for that worker node)
+					// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
+					// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
+					j.log.Debug.Printf("[task provision] Found an aggregator pod or unknown type pod on node[%v]", nodekey)	
+					var subtask *ds.SubTask
+					if aggregatorPod == nil {
+						j.log.Debug.Printf("[task provision] Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
+						subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, nil, "", "", j.log.Debug.Printf)
+					} else {
+						j.log.Debug.Printf("[task provision] Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
+						subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleAggregator), taskItem, aggregatorPod, nil, "", "", j.log.Debug.Printf)
+					}
+					if _, e := readyTaskCache[task.GetKey()]; e {
+						delete(readyTaskCache, task.GetKey())
+					}
+					newDispatchItem := &DispatchItemWithAggregator {
+						DispatchingItem: disptachItem.DispatchingItem.CopyForSubtask(true),
+						AggregatorPod: disptachItem.AggregatorPod,
+						AggregatorSubtask: disptachItem.AggregatorSubtask,
+					}
+					if subtask != nil {
+						newDispatchItem.DispatchingItem.Task.SubtaskKey = subtask.GetKey()
+					}
+					if _, e := tasksGoingToDispatch[nodekey]; !e {
+						tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{newDispatchItem}
+					} else {
+						tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], newDispatchItem)
+					}
+				}
+				// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
+				// 				I. If any sub-node responded, the task-cache could be updated,
+				//						and a pod-queue for that sub-node could finally be decided,
+				//						but still it’s not the time to enqueue the sub-task
+				// 				II. It is until all the sub-nodes responded, the sub-tasks won’t be enqueued,
+				//						because the aggregator pod haven’t be setup, or in other words,
+				//						the aggregator pod haven’t be ready to receive feedbacks from worker sub-nodes
+				// 		e. When all the dispatched tasks to the sub-nodes have responded,
+				//				and the results are all accepted with a worker or an aggregator pod,
+				// 				I. the task could be dispatched to the reducer, including the pods on the sub-nodes
+				// 				II. The worker sub-tasks could be enqueued into corresponding pod-queues
 			}
-			toUpdateNetwork := false
-			if taskItem.Options != nil {
-				toUpdateNetwork = taskItem.Options.ForceUpdateNetworkStructure
-			}
-			j.log.Debug.Printf("[task provision] worker pod is nil? %v", workerScheduler==nil || workerScheduler.IsEmpty())
-			j.log.Debug.Printf("[task provision] allocation requirements: %v", workerAllocation.Describe())
-			if (workerScheduler != nil && !workerScheduler.IsEmpty()) && (!toUpdateNetwork || j.IsSelfNode(nodekey)) {
-				// 		a. if there is a woker pod in the pod-cache, then enqueue the subtask for that pod
-				// 		 	 	and there should be a switch in the task data structure
-				//				to indicate whether wait for updates of existing pods:
-				//				for the sake of saving network overhead
-				// need to wait for all the pods of sub-nodes are decided, to enqueue the subtask into the pod
-				// j.PodCache.EnqueueSubtaskForPod(nodekey, workerPod, task, ds.AppModuleWorker)
-				if j.IsCoordinator() {
-					j.log.Debug.Printf("[task provision] Caching subtask on node[%v] for task[%v]", nodekey, task.GetKey())
-					j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, workerScheduler, "", "", j.log.Debug.Printf)
-				}
-				if _, e := readyTaskCache[task.GetKey()]; !e {
-					readyTaskCache[task.GetKey()] = workerScheduler
-				}
-			} else if !j.IsSelfNode(nodekey) {
-				//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
-				//		c. Otherwise If no any other kind of pod in the pod-cache,
-				// 			then dispatch the task to that node, to see what kind of pod it returns,
-				//			(this is the only case that a worker node could receive the entire task,
-				// 				but, to update runtime structure changes, the task still shall be dispatched
-				//				to the worker nodes even though there already has a worker pod-queue for that worker node)
-				// 				I. If the sub-node return a worker pod, then create an item in the pod-queue for that worker pod
-				// 				II. Otherwise if it is an aggregator pod, then simply cache the aggregator pod, no queue for it
-				j.log.Debug.Printf("[task provision] Found an aggregator pod or unknown type pod on node[%v]", nodekey)	
-				var subtask *ds.SubTask
-				if aggregatorPod == nil {
-					j.log.Debug.Printf("[task provision] Caching empty pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleWorker), taskItem, nil, nil, "", "", j.log.Debug.Printf)
-				} else {
-					j.log.Debug.Printf("[task provision] Caching aggregator pod on node[%v] for task[%v]", nodekey, task.GetKey())
-					subtask = j.TaskCache.CacheTaskForSubnode(task.GetKey(), j.GetNodeInControl(nodekey), string(ds.AppModuleAggregator), taskItem, aggregatorPod, nil, "", "", j.log.Debug.Printf)
-				}
-				if _, e := readyTaskCache[task.GetKey()]; e {
-					delete(readyTaskCache, task.GetKey())
-				}
-				newDispatchItem := &DispatchItemWithAggregator {
-					DispatchingItem: disptachItem.DispatchingItem.CopyForSubtask(true),
-					AggregatorPod: disptachItem.AggregatorPod,
-					AggregatorSubtask: disptachItem.AggregatorSubtask,
-				}
-				if subtask != nil {
-					newDispatchItem.DispatchingItem.Task.SubtaskKey = subtask.GetKey()
-				}
-				if _, e := tasksGoingToDispatch[nodekey]; !e {
-					tasksGoingToDispatch[nodekey] = []*DispatchItemWithAggregator{newDispatchItem}
-				} else {
-					tasksGoingToDispatch[nodekey] = append(tasksGoingToDispatch[nodekey], newDispatchItem)
-				}
-			}
-			// 		d. Then cache the task into task-cache, to wait for responses from sub-nodes
-			// 				I. If any sub-node responded, the task-cache could be updated,
-			//						and a pod-queue for that sub-node could finally be decided,
-			//						but still it’s not the time to enqueue the sub-task
-			// 				II. It is until all the sub-nodes responded, the sub-tasks won’t be enqueued,
-			//						because the aggregator pod haven’t be setup, or in other words,
-			//						the aggregator pod haven’t be ready to receive feedbacks from worker sub-nodes
-			// 		e. When all the dispatched tasks to the sub-nodes have responded,
-			//				and the results are all accepted with a worker or an aggregator pod,
-			// 				I. the task could be dispatched to the reducer, including the pods on the sub-nodes
-			// 				II. The worker sub-tasks could be enqueued into corresponding pod-queues
+
 		}
 	}
 

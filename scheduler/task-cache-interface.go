@@ -445,6 +445,32 @@ func (c *TaskCache) FailTask(taskKey string) {
 	}
 }
 
+func (c *TaskCache) NullifyTask(taskKey string, aggregatorSubtaskKey string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if taskItem, e := c.Cache[taskKey]; e {
+		taskItem.status = ds.TaskStatusDone
+		if taskItem.FinishTimestamp.IsZero() {
+			taskItem.FinishTimestamp = time.Now()
+		}
+		found := false
+		for _, nodeItem := range taskItem.dispatchedNodes {
+			for _, moduleItem := range nodeItem.modules {
+				if _, e := moduleItem.subtasks[aggregatorSubtaskKey]; e {
+					delete(moduleItem.subtasks, aggregatorSubtaskKey)
+					found = true
+					break
+				}
+			}
+
+			if found {break}
+		}
+		if _, e := taskItem.task.Task.Subtasks[aggregatorSubtaskKey]; e {
+			delete(taskItem.task.Task.Subtasks, aggregatorSubtaskKey)
+		}
+	}
+}
+
 // type SubtaskOnNode struct {
 // 	Subtask *ds.SubTask
 // 	Node    *ds.Node
