@@ -442,7 +442,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			j.log.Debug.Printf("[task provision] Acknowledging good task[%v] after propagating for module[%v] of application[%v], node key: %v, provisioned pods replica count: %v", taskKey, nodeScheduler.ModuleName, nodeScheduler.Application.Key(), nodeScheduler.NodeKey, replica_count)
 			if replica_count <= len(nodeScheduler.Pods) {
 				for i := len(nodeScheduler.Pods) - replica_count; i<len(nodeScheduler.Pods); i++ {
-					j.log.Debug.Printf("[task provision] ack no.%v newly provisioned pod", i)
+					j.log.Debug.Printf("[task provision] ack no.%v newly provisioned pod", i+1)
 					j.feedbackProvisioning(NewTaskProvisioningResult(
 						j.Config.SelfNode.Key(),
 						taskKey,

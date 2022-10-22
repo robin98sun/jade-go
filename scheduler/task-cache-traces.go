@@ -123,6 +123,7 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 
 		task_success_status_has_been_checked := false
 		failed_subtasks := 0
+		
 		for nodeKey, dispatchedNode := range taskItem.dispatchedNodes {
 			for moduleName, moduleItem := range dispatchedNode.modules {
 				for _, subtaskItem := range moduleItem.subtasks {
