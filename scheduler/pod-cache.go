@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"math"
 	"sync"
 	"uta.edu/aces/jade-go/histogram"
 	ds "uta.edu/aces/jadesdk/data_structure"
@@ -308,6 +309,35 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, mod
 		p.Pods = make(map[string]*ds.Pod)
 	}
 	p.Pods[pod.GetKey()] = pod
+}
+
+func (p *PodCache) SetReplicaPerNode(nodeKey string, appKey string, moduleName string, replicaCount int) int {
+	// p.LockMeta()
+	// defer p.UnlockMeta()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.Nodes == nil {
+		p.Nodes = make(map[string]*PodCacheNodeItem)
+	}
+	if _, e := p.Nodes[nodeKey]; !e {
+		return 0
+	}
+	nodeItem := p.Nodes[nodeKey]
+	key := p.GetKeyFromApplicationAndModule(appKey, moduleName)
+
+	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
+		return 0
+	} else {
+		if replicaCount == len(nodeScheduler.Queue.Pods) {
+			return replicaCount
+		} else {
+			nodeScheduler.Queue.Pods = nodeScheduler.Pods[0: int(math.Max(float64(replicaCount),0))]
+			return len(nodeScheduler.Queue.Pods)
+		}
+	}
+	return 0
+
 }
 
 

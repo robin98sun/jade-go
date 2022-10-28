@@ -188,7 +188,6 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 			))
 		}
 	}
-	
 }
 
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
@@ -259,6 +258,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			aggregatorSubtaskKey := disptachItem.AggregatorSubtask.GetKey()
 			j.TaskCache.NullifyTask(task.GetKey(), aggregatorSubtaskKey)
 			rejectTaskCache[task.GetKey()] = taskItem
+			j.log.Debug.Printf("[task provision] nullified task[%v] for no work to do", task.GetKey())
 		} else {
 
 			// 2. for each available sub-nodes:
@@ -359,6 +359,15 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					}
 					if _, e := readyTaskCache[task.GetKey()]; !e {
 						readyTaskCache[task.GetKey()] = workerScheduler
+					}
+					// allocate replica
+					if taskItem.Options != nil && taskItem.Options.ReplicaPerNode > 0 {
+						j.PodCache.SetReplicaPerNode(
+							nodekey, 
+							task.Application.Key(),
+							string(ds.AppModuleWorker),
+							taskItem.Options.ReplicaPerNode,
+						)
 					}
 				} else if !j.IsSelfNode(nodekey) {
 					//    b. if there is a aggregator pod in the pod-cache, then dispatch the task to that node
