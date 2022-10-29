@@ -328,6 +328,8 @@ func (p *PodCache) SetReplicaPerNode(nodeKey string, appKey string, moduleName s
 
 	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
 		return 0
+	} else if len(nodeScheduler.Pods) == 0 {
+		return 0
 	} else {
 		if replicaCount == len(nodeScheduler.Queue.Pods) {
 			return replicaCount
