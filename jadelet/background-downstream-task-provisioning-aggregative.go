@@ -273,11 +273,11 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 				if j.IsSelfNode(nodekey) {
 					j.log.Debug.Printf("[task provision] [%v] is a self-node", nodekey)
 					if ((workerScheduler == nil || workerScheduler.IsEmpty()) && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist) ||
-					   (taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0) {
+					   (taskItem.Options != nil && taskItem.Options.ProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ProvisionReplicaPerNode > 0) {
 
 					   	replica_count := 1
-					   	if taskItem.Options != nil && taskItem.Options.ForceToProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ForceToProvisionReplica > 0 {
-					   		replica_count = taskItem.Options.ForceToProvisionReplica
+					   	if taskItem.Options != nil && taskItem.Options.ProvisionModuleName == string(ds.AppModuleWorker) && taskItem.Options.ProvisionReplicaPerNode > 0 {
+					   		replica_count = taskItem.Options.ProvisionReplicaPerNode
 					   		j.log.Debug.Printf("[task provision] read replica count from option: %v", replica_count)
 					   	}
 					   	j.log.Debug.Printf("[task provision] %v replica to provision", replica_count)
@@ -361,12 +361,12 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 						readyTaskCache[task.GetKey()] = workerScheduler
 					}
 					// allocate replica
-					if taskItem.Options != nil && taskItem.Options.ReplicaPerNode > 0 {
+					if taskItem.Options != nil && taskItem.Options.SchedulableReplicaPerNode > 0 {
 						j.PodCache.SetReplicaPerNode(
 							nodekey, 
 							task.Application.Key(),
 							string(ds.AppModuleWorker),
-							taskItem.Options.ReplicaPerNode,
+							taskItem.Options.SchedulableReplicaPerNode,
 						)
 					}
 				} else if !j.IsSelfNode(nodekey) {
