@@ -70,7 +70,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 						task.Application, string(ds.AppModuleAggregator),
 						containerSettings,
 						task.Requirements.GetModule(string(ds.AppModuleAggregator)),
-						1,
+						1, 5,
 					)
 					//
 					if err != nil {
@@ -298,7 +298,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 								task.Application, string(ds.AppModuleWorker),
 								containerSettings,
 								task.Requirements.GetModule(string(ds.AppModuleWorker)),
-								1,
+								1, 5,
 							)
 
 							if err != nil {
