@@ -52,6 +52,7 @@ func (p *PodCache) DescribeScalablePods() interface{} {
 	result["counted_scalable_pods"] = counted_scalable_pods
 
 	result["total_pods"] = len(p.Pods)
+	result["scalable_pods"] = len(p.GetSchedulablePods())
 	
 	return result
 }
@@ -143,8 +144,6 @@ func (p *PodCache) GetAllPods() []*ds.Pod {
 }
 
 func (p *PodCache) GetSchedulablePods() []*ds.Pod {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 
 	pod_list := []*ds.Pod {}
 	for _, nodeItem := range p.Nodes {
