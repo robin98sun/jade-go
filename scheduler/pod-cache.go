@@ -3,6 +3,7 @@ package scheduler
 import (
 	"math"
 	"sync"
+	"strings"
 	"uta.edu/aces/jade-go/histogram"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
@@ -52,7 +53,7 @@ func (p *PodCache) DescribeScalablePods() interface{} {
 	result["counted_scalable_pods"] = counted_scalable_pods
 
 	result["total_pods"] = len(p.Pods)
-	result["scalable_pods"] = len(p.GetSchedulablePods())
+	result["scalable_worker_pods"] = len(p.GetSchedulablePods(string(ds.AppModuleWorker)))
 	
 	return result
 }
@@ -143,13 +144,15 @@ func (p *PodCache) GetAllPods() []*ds.Pod {
 	return pod_list
 }
 
-func (p *PodCache) GetSchedulablePods() []*ds.Pod {
+func (p *PodCache) GetSchedulablePods(moduleName string) []*ds.Pod {
 
 	pod_list := []*ds.Pod {}
 	for _, nodeItem := range p.Nodes {
-		for _, nodeScheduler := range nodeItem.AppModules {
-			if len(nodeScheduler.Queue.Pods) > 0 {
-				pod_list = append(pod_list, nodeScheduler.Queue.Pods...)
+		for key, nodeScheduler := range nodeItem.AppModules {
+			if p.IsKeyForModule(key, string(ds.AppModuleWorker)) {
+				if len(nodeScheduler.Queue.Pods) > 0 {
+					pod_list = append(pod_list, nodeScheduler.Queue.Pods...)
+				}
 			}
 		}
 	}
@@ -257,9 +260,18 @@ func (p *PodCache) GetOnePodForModule(nodeKey string, appKey string, moduleName 
 	return nil
 }
 
+func (p *PodCache) IsKeyForModule(key string, moduleName string) bool {
+	parts := strings.Split(key, "::")
+	if len(parts) > 1 {
+		if parts[len(parts)-1] == moduleName {
+			return true
+		}
+	}
+	return false
+}
 
 func (p *PodCache) GetKeyFromApplicationAndModule(appKey string, moduleName string) string {
-	return appKey + ":" + moduleName
+	return appKey + "::" + moduleName
 }
 
 func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, moduleName string, pod *ds.Pod, alloc *ds.AllocationUnit) {

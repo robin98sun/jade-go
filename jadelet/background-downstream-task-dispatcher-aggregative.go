@@ -17,7 +17,7 @@ func (j *JADE) routineForSTQueues(intervalNanoseconds int) {
 		time.Sleep(time.Duration(intervalNanoseconds) * time.Nanosecond)
 
 		j.PodCache.Lock()
-		podsInCache := j.PodCache.GetSchedulablePods()
+		podsInCache := j.PodCache.GetSchedulablePods(string(ds.AppModuleWorker))
 
 		if len(podsInCache) == 0 {
 			j.PodCache.Unlock()
