@@ -18,7 +18,10 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	namespace string, image string, port int,
 	allocation *ds.AllocationUnit,
 	envVars []map[string]string,
-	replicas int) (string, int, error) {
+	replicaIndex int) (string, int, error) {
+
+	replicaCount := 1
+
 	environmentVariables := []map[string]string{}
 	if envVars != nil {
 		environmentVariables = envVars
@@ -39,6 +42,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
 		"jade-app-module":  moduleName,
+		"jade-app-replica-index": strconv.Itoa(replicaCount),
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	deployment := &unstructured.Unstructured{
@@ -51,7 +55,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 				"labels":    labels,
 			},
 			"spec": map[string]interface{}{
-				"replicas": replicas,
+				"replicas": replicaCount,
 				"selector": map[string]interface{}{
 					"matchLabels": labels,
 				},

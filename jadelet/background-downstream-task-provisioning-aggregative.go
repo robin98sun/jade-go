@@ -298,7 +298,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 								task.Application, string(ds.AppModuleWorker),
 								containerSettings,
 								task.Requirements.GetModule(string(ds.AppModuleWorker)),
-								1, 5,
+								r, 5,
 							)
 
 							if err != nil {
