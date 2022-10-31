@@ -10,6 +10,8 @@ func (j *JADE) HTTPCommunicate(
 ) (interface{}, int, []byte, error) {
 	return j.sdk.HTTPCommunicate(
 		operationName, targetNode.Protocol, method, path,
-		targetNode.GetSDKNode(), payload, retryCnt, retryLimitation,
+		// targetNode.GetSDKNode(), 
+		targetNode, 
+		payload, retryCnt, retryLimitation,
 	)
 }
