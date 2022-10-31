@@ -259,11 +259,13 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus d
 			} else {
 				for moduleName, moduleItem := range nodeItem.modules {
 					checkModule := desiredStatus
+					subtaskIdList := []string{}
 					if len(moduleItem.subtasks) == 0 {
 						checkModule = ds.TaskStatusInvalid
 						checkNode = ds.TaskStatusInvalid
 					} else {
-						for _, subtaskItem := range moduleItem.subtasks {
+						for subtaskKey, subtaskItem := range moduleItem.subtasks {
+							subtaskIdList = append(subtaskIdList, subtaskKey)
 							if subtaskItem.status != desiredStatus {
 								checkModule = ds.TaskStatusInvalid
 								checkNode = ds.TaskStatusInvalid
@@ -278,11 +280,11 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus d
 							allWorkersDone = true
 						}
 						if printf != nil {
-							printf("[task cache] task[%v] module[%v] on node[%v] is {%v}", taskKey, moduleName, nodeItem.Node.Key(), desiredStatus)
+							printf("[task cache] module[%v] on node[%v] (subtasks: %v) is {%v}", moduleName, nodeItem.Node.Desc(), subtaskIdList, desiredStatus)
 						}
 					} else {
 						if printf != nil {
-							printf("[task cache] task[%v] module[%v] on node[%v] is NOT {%v}", taskKey, moduleName, nodeItem.Node.Key(), desiredStatus)
+							printf("[task cache] module[%v] on node[%v] (subtasks: %v) is NOT {%v}", moduleName, nodeItem.Node.Desc(), subtaskIdList, desiredStatus)
 						}
 						checkNode = ds.TaskStatusInvalid
 						checkResult = ds.TaskStatusInvalid

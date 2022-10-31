@@ -26,10 +26,10 @@ func (j *JADE) dispatchNeighborTask(neighborNode *ds.Node, dispatchItem *ds.Task
 		[]*ds.TaskDispatchingItem{dispatchItem},
 		nil, nil,
 	)
-	j.log.Debug.Println("dispatching tasks to neighbor node", neighborNode.GetKey())
+	j.log.Debug.Println("dispatching tasks to neighbor node", neighborNode.Desc())
 	_, _, _, err := j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 1)
 	if err != nil {
-		j.log.Debug.Printf("ERROR when dispatching tasks to neighbor node [%v]: %v", neighborNode.GetKey(), err)
+		j.log.Debug.Printf("ERROR when dispatching tasks to neighbor node [%v]: %v", neighborNode.Desc(), err)
 
 	}
 }

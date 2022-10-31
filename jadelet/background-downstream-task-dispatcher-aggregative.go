@@ -247,9 +247,9 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 							j.log.Debug.Printf("[task dispatcher] non-block budget negotiation phase: %v", phase)
 						}
 						if !isConfirmingBudget {
-							j.log.Debug.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+							j.log.Debug.Printf("[task dispatcher] initiating subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.Desc(), newDispatchItem.DescribeReportTo())
 						} else {
-							j.log.Debug.Printf("[task dispatcher] confirming budget for subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.GetKey(), newDispatchItem.DescribeReportTo())
+							j.log.Debug.Printf("[task dispatcher] confirming budget for subtask %v for neighbor %v has been dispatched, the reportTo of the dispatching message is: %v",  neighborItem.Subtask.GetKey(), neighborItem.Node.Desc(), newDispatchItem.DescribeReportTo())
 
 						}
 					}
@@ -380,7 +380,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 					continue
 				}
 				j.log.Debug.Printf("[task dispatcher] enqueuing subtask for pod[%v] on node[%v], which is going to report to {%v}",
-					worker.Subtask.ResourceKey, worker.Node.Key(),
+					worker.Subtask.ResourceKey, worker.Node.Desc(),
 					dispatchItem.GetReportToForModule(string(ds.AppModuleWorker)).Desc(),
 				)
 				// backdoor for fake service time
@@ -401,7 +401,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 						estimatedServiceTime = float64(options.EstimatedMeanServiceTime)
 					} else if options.EstimatedServiceTimeModel == "custom" && i < len(options.ServiceTimeList) {
 						estimatedServiceTime = float64(options.ServiceTimeList[i])
-						j.log.Debug.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.ResourceKey, worker.Node.Key())
+						j.log.Debug.Printf("[task dispatcher][debugging] using [%v]th slot (value=%v) in the service time list for pod[%v] on node[%v]", i, estimatedServiceTime, worker.Subtask.ResourceKey, worker.Node.Desc())
 					}
 				}
 				// generate request payload for the subtask
@@ -417,7 +417,7 @@ func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatch
 				)
 
 				if nodeScheduler == nil {
-					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask [%v] on node [%v]: queue does not exist", worker.Subtask.GetKey(), worker.Node.GetKey())
+					j.log.Debug.Printf("[task dispatcher] ERROR when enqueuing subtask [%v] on node [%v]: queue does not exist", worker.Subtask.GetKey(), worker.Node.Desc())
 					continue
 				}
 

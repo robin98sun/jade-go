@@ -26,7 +26,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 		// j.log.Println("[app message collector] Received application message:", string(bs))
 		j.log.Op.Printf("[app message collector] Received application message which claims for subtask[%v] of task[%v], from pod[%v]:",
 			msg.SubtaskKey, msg.TaskKey,
-			msg.Node.Key(),
+			msg.Node.Desc(),
 		)
 		if msg.TaskKey != "" && msg.SubtaskKey != "" {
 			if msg.Status == ds.TaskStatusFailed {
@@ -34,13 +34,13 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			}
 			j.log.Op.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
 				msg.SubtaskKey, msg.TaskKey,
-				msg.Node.Key(),
+				msg.Node.Desc(),
 			)
 			// save result and stat
 			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, ds.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
 			if subtask != nil && subtask.ResourceKey != "" {
 				j.DoneRequest(w, r, "message received")
-				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v]", subtask.GetKey(), subtask.TaskKey, subtask.ResourceKey)
+				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v], status in message: %v", subtask.GetKey(), subtask.TaskKey, subtask.ResourceKey, msg.Status)
 				if msg.Status != string(ds.TaskStatusDone) {
 					j.log.Debug.Printf("[app message collector] ERROR: subtask[%v] on pod[%v] is not done: %v", subtask.GetKey(), subtask.ResourceKey, msg.Status)
 				}
@@ -83,7 +83,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 		}
 		j.log.Op.Printf("[app message collector] ERROR: the subtask[%v] of task[%v] claimed by a message from pod[%v] is not recognized",
 			msg.SubtaskKey, msg.TaskKey,
-			msg.Node.Key(),
+			msg.Node.Desc(),
 		)
 		j.PeacefulFatalRequest(w, r, "invalid subtask")
 
