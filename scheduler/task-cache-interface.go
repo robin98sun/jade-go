@@ -151,7 +151,7 @@ func (c *TaskCache) SaveNeighborNode(subnode *ds.Node, taskKey string, moduleNam
 	}
 }
 
-func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status ds.TaskStatus, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
+func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status string, msg *jadesdk.ReportMessage, retryCount int64, timestampReceiving time.Time,
 ) (*ds.SubTask, float64, float64, float64, float64) {
 	if c == nil {
 		return nil, float64(-1), float64(-1), float64(-1), float64(-1)
@@ -173,7 +173,7 @@ func (c *TaskCache) SaveResultFromApp(taskKey string, subtaskKey string, status 
 
 	subtaskItem := c.Cache[taskKey].dispatchedNodes[subtask.NodeKey].modules[subtask.ModuleName].subtasks[subtaskKey]
 
-	subtaskItem.status = status
+	subtaskItem.status = ds.TaskStatus(status)
 	// if status != TaskStatusDone {
 	// 	printf("[task cache] WARNING: update from app is not DONE but {%v} for subtask {%v} of task {%v}", status, subtaskKey, taskKey)
 	// }
@@ -278,11 +278,11 @@ func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus d
 							allWorkersDone = true
 						}
 						if printf != nil {
-							printf("[task cache] module[%v] on node[%v] is {%v}", moduleName, nodeItem.Node.Desc(), desiredStatus)
+							printf("[task cache] module[%v] on node[%v] (%vxST) is {%v}", moduleName, nodeItem.Node.Desc(), len(moduleItem.subtasks), desiredStatus)
 						}
 					} else {
 						if printf != nil {
-							printf("[task cache] module[%v] on node[%v] is NOT {%v}", moduleName, nodeItem.Node.Desc(), desiredStatus)
+							printf("[task cache] module[%v] on node[%v] (%vxST) is NOT {%v}", moduleName, nodeItem.Node.Desc(), len(moduleItem.subtasks), desiredStatus)
 						}
 						checkNode = ds.TaskStatusInvalid
 						checkResult = ds.TaskStatusInvalid

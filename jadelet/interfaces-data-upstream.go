@@ -29,7 +29,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 			msg.Node.Desc(),
 		)
 		if msg.TaskKey != "" && msg.SubtaskKey != "" {
-			if msg.Status == ds.TaskStatusFailed {
+			if msg.Status == string(ds.TaskStatusFailed) {
 				j.TaskCache.FailTask(msg.TaskKey)
 			}
 			j.log.Op.Printf("[app message collector] processing result for subtask[%v] of task[%v] claimed by pod{%v}",
@@ -37,7 +37,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				msg.Node.Desc(),
 			)
 			// save result and stat
-			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, ds.TaskStatus(msg.Status), msg, retryCount, timestampReceving)
+			subtask, serviceRequestTime, communicationTime, queueingTime, budget := j.TaskCache.SaveResultFromApp(msg.TaskKey, msg.SubtaskKey, msg.Status, msg, retryCount, timestampReceving)
 			if subtask != nil && subtask.ResourceKey != "" {
 				j.DoneRequest(w, r, "message received")
 				j.log.Op.Printf("[app message collector] verified message for subtask[%v] of task[%v] from pod[%v], status in message: %v", subtask.GetKey(), subtask.TaskKey, subtask.ResourceKey, msg.Status)

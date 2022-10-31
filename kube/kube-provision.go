@@ -42,7 +42,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
 		"jade-app-module":  moduleName,
-		"jade-app-replica-index": strconv.Itoa(replicaIndex),
+		"jade-app-replica-index": "replica-"+strconv.Itoa(replicaIndex),
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	deployment := &unstructured.Unstructured{
