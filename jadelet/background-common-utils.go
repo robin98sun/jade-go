@@ -3,8 +3,12 @@ package jadelet
 import (
 	"strconv"
 	// "uta.edu/aces/jade-go/kernel"
+<<<<<<< HEAD
 	// "uta.edu/aces/scheduler/task"
 	// "uta.edu/aces/jadesdk"
+=======
+	// "uta.edu/aces/jade-go/scheduler"
+>>>>>>> refactoring
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
@@ -27,8 +31,12 @@ func (j *JADE) dispatchNeighborTask(neighborNode *ds.Node, dispatchItem *ds.Task
 		[]*ds.TaskDispatchingItem{dispatchItem},
 		nil, nil,
 	)
-	j.log.Debug.Println("dispatching tasks to  neighbor node", neighborNode.GetKey())
-	j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 10)
+	j.log.Debug.Println("dispatching tasks to neighbor node", neighborNode.Desc())
+	_, _, _, err := j.HTTPCommunicate("dispatch tasks", "POST", "/$jade$/taskReceiver", neighborNode, payload, 0, 1)
+	if err != nil {
+		j.log.Debug.Printf("ERROR when dispatching tasks to neighbor node [%v]: %v", neighborNode.Desc(), err)
+
+	}
 }
 
 

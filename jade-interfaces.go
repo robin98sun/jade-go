@@ -11,6 +11,10 @@ import (
 
 	// Sub packages
 	"uta.edu/aces/jade-go/jadelet"
+<<<<<<< HEAD
+=======
+	// "uta.edu/aces/jade-go/kernel"
+>>>>>>> refactoring
 	ds "uta.edu/aces/jadesdk/data_structure"
 
 	// others
@@ -77,6 +81,7 @@ func main() {
 		// rest.Put("/stopPerfEventListener", j.StopPerfEventListener),
 
 		// for debugging
+<<<<<<< HEAD
 		// rest.Get("/debug/jadelet", j.ShowJadelet),
 		// rest.Get("/debug/configurations", j.ShowConfigurations),
 		// rest.Get("/debug/pod", j.ShowPodInfo),
@@ -99,6 +104,30 @@ func main() {
 		// rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
 		// rest.Get("/debug/perfcache", j.ShowPerfCache),
 
+=======
+		rest.Get("/debug/jadelet", j.ShowJadelet),
+		rest.Get("/debug/configurations", j.ShowConfigurations),
+		rest.Get("/debug/pod", j.ShowPodInfo),
+		rest.Get("/debug/service", j.ShowService),
+		rest.Get("/debug/clusterIP", j.ShowClusterIP),
+		rest.Get("/debug/externalIP", j.ShowExternalIP),
+		rest.Get("/debug/node", j.ShowNode),
+		rest.Get("/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/debug/neighbors", j.ShowNeighbors),
+		rest.Post("/debug/collectTraces", j.ShowTraces),
+		rest.Post("/debug/collectPerfEventsTraces", j.ShowPerfEventsTraces),
+		rest.Post("/debug/collectTaskPerfTraces", j.ShowTaskPerfTraces),
+		rest.Get("/debug/podCache", j.ShowPodCache),
+		rest.Get("/debug/taskCache", j.ShowTaskCache),
+		rest.Get("/debug/subnodeCapabilityCache", j.ShowCapabilityCacheSubnodes),
+		rest.Get("/debug/neighborCapabilityCache", j.ShowCapabilityCacheNeighbors),
+		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
+		rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
+		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
+		rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
+		rest.Get("/debug/perfcache", j.ShowPerfCache),
+		rest.Get("/debug/scalablePods", j.ShowScalablePods),
+>>>>>>> refactoring
 	)
 	if err != nil {
 		log.Fatal(err)

@@ -3,10 +3,28 @@ package jadelet
 import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
+<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
 	"uta.edu/aces/scheduler/task"
 	"uta.edu/aces/jade-go/kernel"
+=======
+	// "uta.edu/aces/jade-go/scheduler"
+	// "uta.edu/aces/jade-go/kernel"
+>>>>>>> refactoring:jadelet/interfaces-control-entrance.go
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
+
+type TaskReceiverResponse struct {
+	DataPlaneTasksCount int  `json:"dataPlaneTasks,omitempty"`
+	ControlPlaneTasksCount int  `json:"controlPlaneTasks,omitempty"`
+	TaskIDList      []string `json:"taskIDList,omitempty"`
+	DiscoveryTime   float64 `json:"discoveryTime,omitempty"`
+	NegotiationTime float64 `json:"negotiationTime,omitempty"`
+	MatchTime       float64 `json:"matchTime,omitempty"`
+	PopulateTime    float64 `json:"populateTime,omitempty"`
+	NeighborCount   int     `json:"neighbors,omitempty"`
+	PackageSize     int     `json:"packageSize,omitempty"`
+	StrugglingNodes float64     `json:"struggling_nodes,omitempty"`
+}
 
 // TaskReceiver task receiver
 func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
@@ -29,37 +47,98 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 		taskList := reqInst.Payload
+<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
 		validTasks := make(map[string]*ds.TaskDispatchingItem)
 		res := &struct {
 			ValidTasksCount int      `json:"validTasksCount,omitempty"`
 			TaskIDList      []string `json:"taskIDList,omitempty"`
 		}{}
+=======
+
+		dataPlaneTasks := make(map[string]*ds.TaskDispatchingItem)
+		controlPlaneTasks := map[string]*ds.TaskDispatchingItem{}
+
+		res := &TaskReceiverResponse{}
+		
+>>>>>>> refactoring:jadelet/interfaces-control-entrance.go
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
 				taskItem.Arrived()
 				taskItem.GenTag()
-				validTasks[taskItem.Task.GetKey()] = taskItem
+				if taskItem.Options != nil && taskItem.Options.IsControlPlaneTask && taskItem.Options.ControlPlaneOptions != nil {
+
+					controlPlaneTasks[taskItem.Task.GetKey()] = taskItem					
+				} else {
+
+					dataPlaneTasks[taskItem.Task.GetKey()] = taskItem
+				}
 				res.TaskIDList = append(res.TaskIDList, taskItem.Task.GetKey())
 			} else {
 				j.log.Op.Println("WARN: received an invalid task")
 				res.TaskIDList = append(res.TaskIDList, "")
 			}
 		}
-		if len(validTasks) > 0 {
-			j.ClassifyTasks(validTasks)
+		j.log.Op.Printf("received %v data plane tasks, %v control plane tasks", len(dataPlaneTasks), len(controlPlaneTasks))
+		if len(dataPlaneTasks) > 0 {
+			j.ClassifyDataPlaneTasks(dataPlaneTasks)
 		}
 
-		res.ValidTasksCount = len(validTasks)
+		if len(controlPlaneTasks) > 0 {
+			avg_discovery_time := float64(0)
+			avg_negotiation_time := float64(0)
+			avg_neighbor_count := 0
+			avg_match_time := float64(0)
+			avg_populate_time := float64(0)
+			avg_package_size := 0
+			avg_struggling_nodes := float64(0)
+			for _, taskItem := range controlPlaneTasks {
+				neighborCount, total_time, discovery_time, matching_time, populating_time, package_size, struggling_nodes := j.processControlPlaneTask(taskItem)
+				negotiation_time := total_time - discovery_time
+				avg_discovery_time += discovery_time
+				avg_negotiation_time += negotiation_time
+				avg_neighbor_count += neighborCount
+				avg_match_time += matching_time
+				avg_populate_time += populating_time
+				avg_package_size += package_size
+				avg_struggling_nodes += float64(struggling_nodes)
+			}
+			avg_discovery_time /= float64(len(controlPlaneTasks))
+			avg_negotiation_time /= float64(len(controlPlaneTasks))
+			avg_neighbor_count /= len(controlPlaneTasks)
+			avg_match_time /= float64(len(controlPlaneTasks))
+			avg_populate_time /= float64(len(controlPlaneTasks))
+			avg_package_size /= len(controlPlaneTasks)
+			avg_struggling_nodes /= float64(len(controlPlaneTasks))
+			res.DiscoveryTime = avg_discovery_time
+			res.NegotiationTime = avg_negotiation_time
+			res.NeighborCount = avg_neighbor_count
+			res.MatchTime = avg_match_time
+			res.PopulateTime = avg_populate_time
+			res.PackageSize = avg_package_size
+			res.StrugglingNodes = avg_struggling_nodes
+		}
+
+		res.DataPlaneTasksCount = len(dataPlaneTasks)
+		res.ControlPlaneTasksCount = len(controlPlaneTasks)
 		j.DoneRequest(w, r, res)
 	}
 
 }
 
 
+<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
 func (j *JADE) ClassifyTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 	collaborativeTasks := map[string]*ds.TaskDispatchingItem{}
 	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
+=======
+func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingItem) {
+	collaborativeTasks := map[string]*ds.TaskDispatchingItem{}
+	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
+
+>>>>>>> refactoring:jadelet/interfaces-control-entrance.go
 	for taskKey, dispatchItem := range tasklist {
+		resultBytes, _ := json.MarshalIndent(dispatchItem.Options, "", "  ")
+		j.log.Debug.Printf("received task option:", string(resultBytes))
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem
@@ -69,15 +148,31 @@ func (j *JADE) ClassifyTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 			if _, aggregatorExists := task.Application.Modules[string(ds.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(ds.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
+<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
 					// j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
+=======
+					j.log.Op.Printf("the autonomous task is an aggregative task")
+					j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
+>>>>>>> refactoring:jadelet/interfaces-control-entrance.go
 				}
 			}
 		}
 	}
+<<<<<<< HEAD:jadelet/legacy/interfaces-control-entrance.go
 	// if len(aggregativeTasks) > 0 {
 	// 	go j.evaluateAggregativeTasks(aggregativeTasks)
 	// }
 	// if len(collaborativeTasks) > 0 {
 	// 	go j.evaluateCollaborativeTasks(collaborativeTasks)
 	// }
+=======
+	if len(aggregativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v aggregative tasks", len(aggregativeTasks))
+		go j.evaluateAggregativeTasks(aggregativeTasks)
+	}
+	if len(collaborativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v collaborative tasks", len(aggregativeTasks))
+		go j.evaluateCollaborativeTasks(collaborativeTasks)
+	}
+>>>>>>> refactoring:jadelet/interfaces-control-entrance.go
 }

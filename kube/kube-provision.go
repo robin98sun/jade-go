@@ -9,6 +9,10 @@ import (
 	"strconv"
 	"strings"
 	ds "uta.edu/aces/jadesdk/data_structure"
+<<<<<<< HEAD
+=======
+	// "encoding/json"
+>>>>>>> refactoring
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
@@ -17,7 +21,10 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	namespace string, image string, port int,
 	allocation *ds.AllocationUnit,
 	envVars []map[string]string,
-	replicas int) (string, int, error) {
+	replicaIndex int) (string, int, error) {
+
+	replicaCount := 1
+
 	environmentVariables := []map[string]string{}
 	if envVars != nil {
 		environmentVariables = envVars
@@ -28,7 +35,11 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if len(deploymentName) > 36 {
 		deploymentName = deploymentName[0:36]
 	}
+<<<<<<< HEAD
 	deploymentName =  deploymentName + "-" + ds.RandomString()
+=======
+	deploymentName =  strings.ToLower(deploymentName + "-" + ds.RandomString())
+>>>>>>> refactoring
 
 	labels := map[string]string{
 		"jade-env":         envName,
@@ -38,6 +49,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-node":        hostname,
 		"jade-app-version": appversion,
 		"jade-app-module":  moduleName,
+		"jade-app-replica-index": "replica-"+strconv.Itoa(replicaIndex),
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	deployment := &unstructured.Unstructured{
@@ -50,7 +62,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 				"labels":    labels,
 			},
 			"spec": map[string]interface{}{
-				"replicas": replicas,
+				"replicas": replicaCount,
 				"selector": map[string]interface{}{
 					"matchLabels": labels,
 				},
@@ -96,8 +108,9 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		k.log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
 	}
+
 	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
-	// k.log.Println("deployment:", deploymentName, ",result:", string(resultBytes))
+	// k.log.Println("deployment:", deploymentName, ", result:", string(resultBytes))
 
 	// deploy node port service for the pod
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)

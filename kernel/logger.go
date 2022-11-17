@@ -6,8 +6,9 @@ import (
 
 type Logger struct {
 	Debug *Printer
-	Perf *Printer
+	Perf  *Printer
 	Op    *Printer
+	Heartbeat *Printer
 }
 
 func NewLogger() *Logger {
@@ -19,6 +20,9 @@ func NewLogger() *Logger {
 			Enabled: false,
 		},
 		Op: &Printer{
+			Enabled: false,
+		},
+		Heartbeat: &Printer{
 			Enabled: false,
 		},
 	}

@@ -13,6 +13,7 @@ import (
 	"uta.edu/aces/scheduler"
 	rm "uta.edu/aces/resource_manager"
 	"uta.edu/aces/jadesdk"
+	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
@@ -34,7 +35,7 @@ type JADE struct {
 	Subnodes        map[string]*ds.Node  `json:"subnodes"`
 	Neighbors       map[string]*ds.Node  `json:"neighbors"`
 	RegisterStatus  string                   `json:"registerStatus"`
-	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
+	// CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	subnodeCapabilityCache *kernel.CapabilityCache
 	// subnodeCapacityCache   *kernel.CapacityCache
 	neighborCapabilityCache *kernel.CapabilityCache
@@ -284,3 +285,5 @@ func (j *JADE) GeneratePayloadOfRequest(targetNode *ds.Node, thePayload interfac
 	}
 	return &payload
 }
+
+
