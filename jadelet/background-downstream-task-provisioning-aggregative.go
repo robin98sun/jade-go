@@ -6,7 +6,6 @@ import (
 	"uta.edu/aces/jade-go/scheduler"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"uta.edu/aces/jadesdk"
-	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type DispatchItemWithAggregator struct {
@@ -22,10 +21,10 @@ type SubtasksForAggregator struct {
 	SubtaskList []string
 }
 
+
 // evaluateTasks evaluate tasks and return a list of accepted task IDs
 func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingItem) {
 	rejectTaskCache := make(map[string]*ds.TaskDispatchingItem) // taskKey: *TaskDispatchingItem
-
 	ackAggregatorPods := make(map[string]*ds.Pod) // taskKey: *ds.Pod
 	ackAggregatorSubtasks := make(map[string]string) // taskKey: subtaskKey
 	// first, check or allocate itself's pod

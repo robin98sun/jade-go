@@ -47,6 +47,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		controlPlaneTasks := map[string]*ds.TaskDispatchingItem{}
 
 		res := &TaskReceiverResponse{}
+		
 		for _, taskItem := range taskList {
 			if taskItem.Task != nil && taskItem.Task.Valid() {
 				taskItem.Arrived()
@@ -128,14 +129,12 @@ func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingIte
 			if _, aggregatorExists := task.Application.Modules[string(ds.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(ds.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
-
 					j.log.Op.Printf("the autonomous task is an aggregative task")
 					j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
 				}
 			}
 		}
 	}
-
 	if len(aggregativeTasks) > 0 {
 		j.log.Op.Printf("evaluating %v aggregative tasks", len(aggregativeTasks))
 		go j.evaluateAggregativeTasks(aggregativeTasks)

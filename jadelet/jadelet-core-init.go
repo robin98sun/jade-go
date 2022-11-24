@@ -5,10 +5,10 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
-	// "uta.edu/aces/scheduler"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
-
 )
 
 // Init to do initializing work
@@ -23,7 +23,6 @@ func (j *JADE) Init() {
 	j.Subnodes = make(map[string]*ds.Node)
 	j.Neighbors = make(map[string]*ds.Node)
 	j.subnodeCapabilityCache = kernel.NewCapabilityCache()
-
 	// j.subnodeCapacityCache = kernel.NewCapacityCache()
 	j.neighborCapabilityCache = kernel.NewCapabilityCache()
 	// j.neighborCapacityCache = kernel.NewCapacityCache()

@@ -2,6 +2,7 @@ package jadelet
 
 import (
 	"time"
+	// "sort"
 	"encoding/json"
 	// "uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/histogram"
@@ -10,6 +11,7 @@ import (
 	// "uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"math"
+	// "sync"
 )
 
 func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchingItem) {
@@ -26,7 +28,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 		eligibleNeighbors, _, _, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
-		var budgetnegotationCache *task.BudgetNegotiationResponseCache
+		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
 
@@ -58,9 +60,8 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 				if len(eligibleNeighbors) == 1 {
 					dispatchItem.Task.QueuingMechanism = ds.TaskQueuingDDL_None
 					// if dispatchItem.Options != nil  {
-					// 	dispatchItem.Options.BudgetNegotiation = task.BudgetNegotiationTypeNone
+					// 	dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
 					// }
-
 					budgetNegotiation = ds.BudgetNegotiationTypeNone
 				}
 
@@ -77,9 +78,9 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 					} else if budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock ||
 							  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
 					    // the cache is only used for blockable negotiation
-						budgetnegotationCache = task.NewBudgetNegotiationResponseCache()
+						budgetnegotationCache = scheduler.NewBudgetNegotiationResponseCache()
 						for _, neighbor := range eligibleNeighbors {
-							budgetnegotationCache.Responses[neighbor.Key()] = &task.BudgetNegotiationResponseCacheItem{
+							budgetnegotationCache.Responses[neighbor.Key()] = &scheduler.BudgetNegotiationResponseCacheItem{
 								Neighbor: neighbor,
 								IsDone: false,
 								RequestSentAt: time.Now(),
@@ -279,7 +280,7 @@ func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingIt
 		j.log.Debug.Println("[budget negotiation] ERROR when inquirying eligible neighbor:", err.Error())
 	} else {
 		resInst :=  &struct{
-			Payload *task.BudgetNegotiationResponse `json:"payload,omitempty"`
+			Payload *scheduler.BudgetNegotiationResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {
@@ -294,7 +295,6 @@ func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingIt
 	cache.SetResponse(neighbor, nil)
 	return nil
 }
-
 
 func (j *JADE) fetchEligibleAutonomyServiceDomains(query *ds.Requirements) *InqueryNeighborResponse {
 	payload := j.GeneratePayloadOfRequest(j.Config.RegistryNode, query, nil, nil)

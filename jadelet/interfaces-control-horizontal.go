@@ -94,7 +94,7 @@ func (j *JADE) CollectCDF(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	reqInst := &struct {
-		Payload *task.BudgetNegotiationResponse
+		Payload *scheduler.BudgetNegotiationResponse
 	}{}
 	err = json.Unmarshal(content, reqInst)
 	if err != nil {
@@ -145,7 +145,7 @@ func (j *JADE) NeighborInquiry(w rest.ResponseWriter, r *rest.Request) {
 
 	availableNodes := j.selectAvaiableNodes(JadeNodeTypeSubnode, dispatchItem.Task.Requirements)
 
-	// response := &task.BudgetNegotiationResponse{
+	// response := &scheduler.BudgetNegotiationResponse{
 	// 	AvailableNodes: int64(0),
 	// }
 

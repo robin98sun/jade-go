@@ -10,8 +10,8 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
-	// "uta.edu/aces/scheduler"
-	// rm "uta.edu/aces/resource_manager"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
@@ -41,12 +41,12 @@ type JADE struct {
 	// neighborCapacityCache   *kernel.CapacityCache
 	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
-
-	Scheduler    	*scheduler.Buffet
-	ResourceManager *rm.ResourceManager
-
+	TaskCache       *scheduler.TaskCache `json:"taskCache"`
+	PodCache        *scheduler.PodCache  `json:"podCache"`
+	PerfCache 		*perfstat.PerfCache `json:"perfCache"`
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
+	dist            *scheduler.Dist
 	registryMutex 	*sync.Mutex
 }
 
