@@ -9,10 +9,7 @@ import (
 	"strconv"
 	"strings"
 	ds "uta.edu/aces/jadesdk/data_structure"
-<<<<<<< HEAD
-=======
 	// "encoding/json"
->>>>>>> refactoring
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
@@ -35,11 +32,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if len(deploymentName) > 36 {
 		deploymentName = deploymentName[0:36]
 	}
-<<<<<<< HEAD
-	deploymentName =  deploymentName + "-" + ds.RandomString()
-=======
 	deploymentName =  strings.ToLower(deploymentName + "-" + ds.RandomString())
->>>>>>> refactoring
 
 	labels := map[string]string{
 		"jade-env":         envName,

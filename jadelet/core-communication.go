@@ -1,10 +1,6 @@
 package jadelet
 
 import (
-<<<<<<< HEAD
-	// "uta.edu/aces/jade-go/kernel"
-=======
->>>>>>> refactoring
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 

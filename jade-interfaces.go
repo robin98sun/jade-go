@@ -11,10 +11,7 @@ import (
 
 	// Sub packages
 	"uta.edu/aces/jade-go/jadelet"
-<<<<<<< HEAD
-=======
 	// "uta.edu/aces/jade-go/kernel"
->>>>>>> refactoring
 	ds "uta.edu/aces/jadesdk/data_structure"
 
 	// others

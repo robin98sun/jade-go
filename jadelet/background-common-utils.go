@@ -3,12 +3,7 @@ package jadelet
 import (
 	"strconv"
 	// "uta.edu/aces/jade-go/kernel"
-<<<<<<< HEAD
-	// "uta.edu/aces/scheduler/task"
-	// "uta.edu/aces/jadesdk"
-=======
 	// "uta.edu/aces/jade-go/scheduler"
->>>>>>> refactoring
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 

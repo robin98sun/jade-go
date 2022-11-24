@@ -2,16 +2,10 @@ package provisioner
 
 import (
 	"strings"
-<<<<<<< HEAD
-	"uta.edu/aces/jade-go/kube"
-	ds "uta.edu/aces/jadesdk/data_structure"
-	"uta.edu/aces/jade-go/kernel"
-=======
 	"time"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
->>>>>>> refactoring
 )
 
 type Provisioner struct {
@@ -24,20 +18,11 @@ func NewProvisioner(logger *kernel.Logger) *Provisioner {
 	}
 }
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> refactoring
 func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *ds.Node,
 	envVars []map[string]string, app *ds.Application,
 	moduleName string, container *ds.Container,
 	allocationLimits *ds.AllocationUnit,
-<<<<<<< HEAD
-	replicas int) (string, int, error) {
-=======
 	replicaIndex int, retryLimit int) (string, int, error) {
->>>>>>> refactoring
 	// deploymentName
 	deploymentName := purifyString(node.Hostname) +"-"+ purifyString(app.Name) 
 	deploymentName += "-" + purifyString(app.Owner)
