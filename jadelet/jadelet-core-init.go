@@ -9,6 +9,7 @@ import (
 	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
+	cl "uta.edu/aces/jade-go/control_loop"
 )
 
 // Init to do initializing work
@@ -30,7 +31,15 @@ func (j *JADE) Init() {
 	// j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
+	
+	// Performance monitoring and Control Loop
+	chanAverageSLOViolationRatio := make(chan float64)
+	j.ControlLoop = cl.NewControlLoop(chanAverageSLOViolationRatio)
+
 	j.PerfCache = perfstat.NewPerfCache()
+	j.PerfCache.SubscribeAverageSLOViolationRatio(chanAverageSLOViolationRatio)
+
+	// others
 	j.dist = scheduler.NewDist()
 	// read environment variables into config
 	j.Config = ds.ReadConfFromEnv()

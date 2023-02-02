@@ -8,11 +8,12 @@ import (
 )
 
 
-type SubtaskPerfVector struct {
+type TaskPerfVector struct {
 	ArrivalClock                    uint64
 	ResponseClock					uint64
 	DispatchItem 			 		*ds.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
+	TaskResponseTime 				float64
 	TailLatency  			 		float64
 	Fanout       			 		int
 	DeadlineViolationCount 	 		int
@@ -34,12 +35,17 @@ type SubtaskPerfVector struct {
 
 	mutex *sync.Mutex
 
+	TaskCategoryItem *TaskCategoryItem
+
+	Before *TaskPerfVector
+	After *TaskPerfVector
+
 }
 
-func NewSubtaskPerfVector(
+func NewTaskPerfVector(
 	dispatchItem *ds.TaskDispatchingItem,
-) *SubtaskPerfVector {
-	vector := &SubtaskPerfVector{
+) *TaskPerfVector {
+	vector := &TaskPerfVector{
 		DispatchItem: dispatchItem,
 		SubtaskPerf: make(map[string]*SubtaskPerfItem),
 		mutex: &sync.Mutex{},
@@ -48,14 +54,14 @@ func NewSubtaskPerfVector(
 	return vector
 }
 
-func (v *SubtaskPerfVector) GetTaskKey() string {
+func (v *TaskPerfVector) GetTaskKey() string {
 	if v != nil && v.DispatchItem != nil && v.DispatchItem.Task != nil {
 		return v.DispatchItem.Task.GetKey()
 	}
 	return "N/A"
 }
 
-func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
+func (v *TaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.TaskCacheSubtaskItem) {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
@@ -108,7 +114,7 @@ func (v *SubtaskPerfVector) IncarnateSubtasks(subtasks map[string][]*scheduler.T
 	}
 }
 
-func (v *SubtaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, provisionOverhead float64, aggregationOverhead float64) []*Event {
+func (v *TaskPerfVector) GetEventsOfStrugglingQueues(taskLatencySLO float64, provisionOverhead float64, aggregationOverhead float64) []*Event {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 

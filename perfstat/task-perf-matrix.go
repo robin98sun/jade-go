@@ -8,21 +8,21 @@ import (
 )
 
 
-type SubtaskPerfMatrix struct {
+type TaskPerfMatrix struct {
 	Length  int
-	VectorsOfSubtaskPerf []*SubtaskPerfVector
+	VectorsOfSubtaskPerf []*TaskPerfVector
 	TaskKeys map[string]bool
 	mutex   *sync.Mutex
 }
 
-func NewSubtaskPerfMatrix(length int) *SubtaskPerfMatrix {
-	return &SubtaskPerfMatrix{
+func NewTaskPerfMatrix(length int) *TaskPerfMatrix {
+	return &TaskPerfMatrix{
 		Length: length,
 		mutex: &sync.Mutex{},
 	}
 }
 
-func (m *SubtaskPerfMatrix) TaskExist(taskKey string) bool {
+func (m *TaskPerfMatrix) TaskExist(taskKey string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -35,7 +35,7 @@ func (m *SubtaskPerfMatrix) TaskExist(taskKey string) bool {
 	return false
 }
 
-func (m *SubtaskPerfMatrix) GetVector(taskKey string) *SubtaskPerfVector {
+func (m *TaskPerfMatrix) GetVector(taskKey string) *TaskPerfVector {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -50,7 +50,7 @@ func (m *SubtaskPerfMatrix) GetVector(taskKey string) *SubtaskPerfVector {
 	return nil
 }
 
-func (m *SubtaskPerfMatrix) Enqueue(vector *SubtaskPerfVector) *SubtaskPerfVector {
+func (m *TaskPerfMatrix) Enqueue(vector *TaskPerfVector) *TaskPerfVector {
 	
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -64,7 +64,7 @@ func (m *SubtaskPerfMatrix) Enqueue(vector *SubtaskPerfVector) *SubtaskPerfVecto
 
 	// enqueue the vector
 	if m.VectorsOfSubtaskPerf == nil {
-		m.VectorsOfSubtaskPerf = []*SubtaskPerfVector{}
+		m.VectorsOfSubtaskPerf = []*TaskPerfVector{}
 	}
 
 	m.VectorsOfSubtaskPerf = append(m.VectorsOfSubtaskPerf, vector)
@@ -77,7 +77,7 @@ func (m *SubtaskPerfMatrix) Enqueue(vector *SubtaskPerfVector) *SubtaskPerfVecto
 	return nil
 }
 
-func (m *SubtaskPerfMatrix) Dequeue() *SubtaskPerfVector {
+func (m *TaskPerfMatrix) Dequeue() *TaskPerfVector {
 	if len(m.VectorsOfSubtaskPerf) == 0 {
 		return nil
 	}
@@ -89,7 +89,7 @@ func (m *SubtaskPerfMatrix) Dequeue() *SubtaskPerfVector {
 	return itemDequeued
 }
 
-func (m *SubtaskPerfMatrix) GetNodeKeys() map[string]int{
+func (m *TaskPerfMatrix) GetNodeKeys() map[string]int{
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	
@@ -110,7 +110,7 @@ func (m *SubtaskPerfMatrix) GetNodeKeys() map[string]int{
 	return nodes
 }
 
-func (m *SubtaskPerfMatrix) GetDeadlineViolation(nodekey string) (int, float64) {
+func (m *TaskPerfMatrix) GetDeadlineViolation(nodekey string) (int, float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -129,7 +129,7 @@ func (m *SubtaskPerfMatrix) GetDeadlineViolation(nodekey string) (int, float64) 
 	return count, cumulativeTime
 }
 
-func (m *SubtaskPerfMatrix) GetDeadlineViolationForAllNodes() (map[string]int, map[string]float64) {
+func (m *TaskPerfMatrix) GetDeadlineViolationForAllNodes() (map[string]int, map[string]float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 

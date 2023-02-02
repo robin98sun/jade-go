@@ -11,7 +11,7 @@ import (
 
 type TaskCategoryItem struct {
 	HistogramPipeOfTaskResponseTime []*histogram.Histogram
-	MatrixPipeOfSubtaskPerf []*SubtaskPerfMatrix
+	MatrixPipeOfSubtaskPerf []*TaskPerfMatrix
 	ArrivalRateTracker *ArrivalRateTracker
 	HistCount   int
 	HistLength  int
@@ -19,6 +19,8 @@ type TaskCategoryItem struct {
 	SliceCount  int
 	PercentilePoint float64
 	TailLatencySLO float64
+	TaskCount int
+	SLOViolationCount int
 	mutex   *sync.Mutex
 }
 
@@ -38,7 +40,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 		PercentilePoint: percentile,
 		TailLatencySLO: slo,
 		HistogramPipeOfTaskResponseTime: []*histogram.Histogram{},
-		MatrixPipeOfSubtaskPerf: []*SubtaskPerfMatrix{},
+		MatrixPipeOfSubtaskPerf: []*TaskPerfMatrix{},
 		ArrivalRateTracker: NewArrivalRateTracker(sliceLength),
 		mutex: &sync.Mutex{},
 	}
@@ -52,14 +54,16 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	return tci
 }
 
-func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *ds.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) {
-	vector := NewSubtaskPerfVector(dispatchItem)
+func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *ds.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *TaskPerfVector {
+	vector := NewTaskPerfVector(dispatchItem)
 	vector.ArrivalClock = currentClock
 
 	dequeuedVector := vector
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
+
+	t.TaskCount++
 
 	vector.InstantOverallArrivalRateAtBeginning = instantOverallArrivalRate
 	_, vector.InstantTaskArrivalRateAtBeginning = t.ArrivalRateTracker.Enqueue(arrivalTime)
@@ -74,9 +78,14 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	}
 
 	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
-		newMatrix := NewSubtaskPerfMatrix(t.SliceLength)
+		newMatrix := NewTaskPerfMatrix(t.SliceLength)
 		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
 		newMatrix.Enqueue(dequeuedVector)
+	} else if dequeuedVector != nil {
+		t.TaskCount--
+		if dequeuedVector.TaskResponseTime > t.TailLatencySLO {
+			t.SLOViolationCount--
+		}
 	}
 
 	vector.MostRecentCumulativePerfVectorAtBeginning = cumulativePerfVector
@@ -84,9 +93,13 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 	if dispatchItem != nil && dispatchItem.Options!=nil && dispatchItem.Options.DispatchingRatePerSecond > 0 {
 		vector.DispatchingRate = dispatchItem.Options.DispatchingRatePerSecond 
 	}
+
+	vector.TaskCategoryItem = t
+
+	return vector
 }
 
-func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64,provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *SubtaskPerfVector {
+func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem,taskResponseTime float64, unloaded_tail_latency float64, queueing_budget float64,provision_overhead float64, aggregation_overhead float64, adjusted_unloaded_tail_latency float64,subtasks map[string][]*scheduler.TaskCacheSubtaskItem, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *TaskPerfVector {
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -121,6 +134,7 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem,
 		if matrix.TaskExist(taskKey) {
 			vector := matrix.GetVector(taskKey)
 			vector.IncarnateSubtasks(subtasks)
+			vector.TaskResponseTime = taskResponseTime
 			vector.TailLatency = tail
 			vector.UnloadedTailLatency = unloaded_tail_latency
 			vector.QueueingBudget = queueing_budget

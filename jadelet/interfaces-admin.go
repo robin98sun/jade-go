@@ -3,7 +3,7 @@ package jadelet
 import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
-	// "uta.edu/aces/jade-go/kernel"
+	cl "uta.edu/aces/jade-go/control_loop"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"runtime"
 	"encoding/json"
@@ -163,8 +163,6 @@ func (j *JADE) CleanAndResetQueues(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) ShowPerfCache(w rest.ResponseWriter, r *rest.Request) {
 	if j.PerfCache != nil {
-		j.PerfCache.Lock()
-		defer j.PerfCache.Unlock()
 		j.log.Op.Printf("getting perf cache")
 		res, _ := json.MarshalIndent(j.PerfCache, "", " ")
 		j.DoneRequest(w, r, res)
@@ -181,5 +179,38 @@ func (j *JADE) StartPerfEventListener(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) StopPerfEventListener(w rest.ResponseWriter, r *rest.Request) {
 	j.PerfCache.PerfEventMatrices.StopListener()
 	j.DoneRequest(w, r, "OK")
+}
+
+func (j *JADE) SetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+
+		j.log.Op.Printf("updating perf cache parameters")
+		params := &struct{
+			Parameters *cl.ControlLoopParameters
+			Type string
+		}{}
+		err := r.DecodeJsonPayload(params)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		j.ControlLoop.Parameters = params.Parameters
+		if params != nil && params.Parameters != nil {
+			j.PerfCache.SetIterationTimeScaleInMilliseconds(params.Parameters.IterationTimeScaleInMilliseconds)
+			j.PerfCache.SetMaximumTaskAmount(params.Parameters.MaximumTaskAmount)
+		}
+
+		j.DoneRequest(w, r, "OK")
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
+}
+
+func (j *JADE) GetPerfCacheParameters(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+		w.WriteJson(j.ControlLoop.Parameters)
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
 }
 
