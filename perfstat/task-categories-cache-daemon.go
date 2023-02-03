@@ -21,7 +21,7 @@ func (p *TaskCategoriesCache) daemon() {
 
 		// calculate the average slo violation ratio
 
-		if p.TaskCount > 0 {
+		if p.TaskCount > 0 && len(p.chanAverageSLORatios) > 0 {
 			rv := float64(0)
 			rs := float64(0)
 			tn := float64(p.TaskCount)
@@ -49,11 +49,13 @@ func (p *TaskCategoriesCache) daemon() {
 				delete(p.TaskCategories, key)
 			}
 
+			// notify the receivers
 			for _, c := range p.chanAverageSLORatios {
-				c <- AverageTaskSLORatios{
+				r := AverageTaskSLORatios{
 					Violation: rv,
 					Surplus: rs,
 				}
+				c <- r
 			}
 
 		}
