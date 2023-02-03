@@ -94,13 +94,17 @@ func (l *ControlLoop) daemon() {
 	}
 }
 
+func (l *ControlLoop) actionIsDone() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.isInAction = false
+}
+
 func (l *ControlLoop) ScaleUp(currentViolationRatio float64) {
 
 
 
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	l.isInAction = false
+	l.actionIsDone()
 }
 
 
@@ -108,9 +112,7 @@ func (l *ControlLoop) ScaleDown(currentSurplusRatio float64) {
 
 
 
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	l.isInAction = false
+	l.actionIsDone()
 }
 
 

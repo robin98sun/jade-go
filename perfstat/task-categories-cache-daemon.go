@@ -3,6 +3,7 @@ package perfstat
 import(
 	"time"
 	"math"
+	"math/rand"
 )
 
 func (p *TaskCategoriesCache) daemon() {	
@@ -11,7 +12,7 @@ func (p *TaskCategoriesCache) daemon() {
 		INTERVAL = p.DaemonIntervalInMilliseconds
 	}
 	for {
-		time.Sleep(time.Duration(p.DaemonIntervalInMilliseconds) * time.Millisecond)
+		time.Sleep(time.Duration(INTERVAL+rand.Intn(INTERVAL/20)) * time.Millisecond)
 
 		p.mutex.Lock()
 

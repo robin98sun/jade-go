@@ -3,6 +3,7 @@ package perfstat
 import (
 	"time"
 	"strconv"
+	"math/rand"
 )
 
 
@@ -14,7 +15,7 @@ func (m *PerfEventMatrixPipe) daemon() {
 		INTERVAL = m.DaemonIntervalInMilliseconds
 	}
 	for {
-		time.Sleep(time.Duration(INTERVAL) * time.Millisecond)
+		time.Sleep(time.Duration(INTERVAL+rand.Intn(INTERVAL/20)) * time.Millisecond)
 
 		startTime := time.Now()
 
