@@ -19,15 +19,13 @@ func (p *TaskCategoriesCache) daemon() {
 			p.UnsafeRemoveTailTask()
 		}
 
-		// calculate the average slo violation ratio
-
+		// calculate the average slo violation and surplus ratios
 		if p.TaskCount > 0 && len(p.chanAverageSLORatios) > 0 {
 			rv := float64(0)
 			rs := float64(0)
 			tn := float64(p.TaskCount)
 
-			emptyCategories := []string{}
-			for categoryKey, taskCategoryItem := range p.TaskCategories {
+			for _, taskCategoryItem := range p.TaskCategories {
 				if taskCategoryItem.TaskCount > 0 {
 					tc := float64(taskCategoryItem.TaskCount)
 					tv := float64(taskCategoryItem.SLOExceedingCount)
@@ -40,13 +38,7 @@ func (p *TaskCategoriesCache) daemon() {
 					w := tc / tn
 					rv += math.Max(0, tv/tc - pct) * w
 					rs += math.Max(0, pct - tv/tc) * w
-				} else {
-					emptyCategories = append(emptyCategories, categoryKey)
 				}
-			}
-
-			for _, key := range emptyCategories {
-				delete(p.TaskCategories, key)
 			}
 
 			// notify the receivers
@@ -58,6 +50,19 @@ func (p *TaskCategoriesCache) daemon() {
 				c <- r
 			}
 
+		}
+
+		// remove empty categories
+		if len(p.TaskCategories) > 0 {
+			emptyCategories := []string{}
+			for categoryKey, taskCategoryItem := range p.TaskCategories {
+				if taskCategoryItem.TaskCount <= 0 {
+					emptyCategories = append(emptyCategories, categoryKey)
+				}
+			}
+			for _, key := range emptyCategories {
+				delete(p.TaskCategories, key)
+			}
 		}
 
 		p.increaseClock()
