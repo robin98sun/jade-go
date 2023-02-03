@@ -1,14 +1,9 @@
 package control_loop
 
 import (
-	// // "uta.edu/aces/jade-go/histogram"
 	"uta.edu/aces/jade-go/perfstat"
 	"sync"
-	// "time"
-	// "strconv"
-	// "sort"
-	// "uta.edu/aces/jadesdk"
-	// ds "uta.edu/aces/jadesdk/data_structure"
+	"math"
 )
 
 
@@ -16,7 +11,9 @@ type ControlLoop struct {
 	Parameters *ControlLoopParameters
 	mutex *sync.Mutex
 
-	chanAverageSLOViolationRatio chan float64
+	chanAverageSLORatios chan perfstat.AverageTaskSLORatios
+	lastActionClock uint64
+	isInAction bool
 }
 
 
@@ -25,23 +22,95 @@ type ControlLoopParameters struct {
 	MaximumTaskAmount int `json:"maximumTaskAmount,omitempty"`
 	HistoryTimeWindowSize int `json:"historyTimeWindowSize,omitempty"`
 	CalmDownTimeWindowSize int `json:"calmDownTimeWindowSize,omitempty"`
-	AverageSLOViolationRatio float64 `json:"averageSLOViolationRatio,omitempty"`
-	QueueingDeadlineViolationRatio float64 `json:"queueingDeadlineViolationRatio,omitempty"`
-	QueueingDeadlineSurplusRatio float64 `json:"queueingDeadlineSurplusRatio,omitempty"`
+	ThresholdAverageSLOViolationRatio float64 `json:"thresholdAverageSLOViolationRatio,omitempty"`
+	ThresholdAverageSLOSurplusRatio float64 `json:"thresholdAverageSLOSurplusRatio,omitempty"`
+	ThresholdQueueingDeadlineViolationRatio float64 `json:"thresholdQueueingDeadlineViolationRatio,omitempty"`
+	ThresholdQueueingDeadlineSurplusRatio float64 `json:"thresholdQueueingDeadlineSurplusRatio,omitempty"`
 }
 
 func NewControlLoop(c chan perfstat.AverageTaskSLORatios) *ControlLoop {
-	return &ControlLoop{
+	loop := &ControlLoop{
 		mutex: &sync.Mutex{},
 		Parameters: &ControlLoopParameters{},
+		chanAverageSLORatios: c,
+	}
+	go loop.daemon()
+	return loop
+}
+
+func (l *ControlLoop) isSetup() bool {
+	if l.Parameters != nil {
+		if l.Parameters.HistoryTimeWindowSize > 0 {
+			if l.Parameters.CalmDownTimeWindowSize > 0 {
+				if l.Parameters.ThresholdAverageSLOViolationRatio > 0 {
+					if l.Parameters.ThresholdAverageSLOSurplusRatio > 0 {
+						if l.Parameters.ThresholdQueueingDeadlineViolationRatio > 0 {
+							if l.Parameters.ThresholdQueueingDeadlineSurplusRatio > 0 {
+								return true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (l *ControlLoop) isOutofCalmdownWindow (clock uint64) bool {
+
+	if clock > l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) {
+		return true
+	} else if l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 > 0 {
+		if clock < l.lastActionClock {
+			if clock > l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (l *ControlLoop) daemon() {
+	for {
+		taskSLORatios :=  <-l.chanAverageSLORatios
+		
+		l.mutex.Lock()
+		if l.isSetup() && !l.isInAction && l.isOutofCalmdownWindow(taskSLORatios.Clock) {
+
+			if taskSLORatios.Violation >= l.Parameters.ThresholdAverageSLOViolationRatio {
+				l.isInAction = true
+				l.lastActionClock = taskSLORatios.Clock
+				go l.ScaleUp(taskSLORatios.Violation)
+			} else if taskSLORatios.Surplus <= l.Parameters.ThresholdAverageSLOSurplusRatio {
+				l.isInAction = true
+				l.lastActionClock = taskSLORatios.Clock
+				go l.ScaleDown(taskSLORatios.Surplus)
+			}
+
+		}
+		l.mutex.Unlock()
 	}
 }
 
-func (c *ControlLoop) Lock() {
-	c.mutex.Lock()
+func (l *ControlLoop) ScaleUp(currentViolationRatio float64) {
+
+
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.isInAction = false
 }
 
-func (c *ControlLoop) Unlock() {
-	c.mutex.Unlock()
+
+func (l *ControlLoop) ScaleDown(currentSurplusRatio float64) {
+
+
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.isInAction = false
 }
+
 

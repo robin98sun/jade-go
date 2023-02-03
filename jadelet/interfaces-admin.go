@@ -198,6 +198,7 @@ func (j *JADE) SetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) 
 		if params != nil && params.Parameters != nil {
 			j.PerfCache.SetIterationTimeScaleInMilliseconds(params.Parameters.IterationTimeScaleInMilliseconds)
 			j.PerfCache.SetMaximumTaskAmount(params.Parameters.MaximumTaskAmount)
+			j.PerfCache.SetHistoryTimeWindowSize(params.Parameters.HistoryTimeWindowSize)
 		}
 
 		j.DoneRequest(w, r, "OK")

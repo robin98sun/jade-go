@@ -3,14 +3,13 @@ package perfstat
 import(
 	"sync"
 	"time"
-	"math"
 	"uta.edu/aces/jade-go/scheduler"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type TaskCategoriesCache struct {
 	mutex *sync.Mutex 
-	clock uint64
+	clock *Clock
 
 	MaximumTaskAmount int
 	DaemonIntervalInMilliseconds int
@@ -26,26 +25,19 @@ type TaskCategoriesCache struct {
 	chanAverageSLORatios []chan AverageTaskSLORatios
 }
 
-func NewTaskCategoriesCache() *TaskCategoriesCache {
+func NewTaskCategoriesCache(clock *Clock) *TaskCategoriesCache {
 
 	c := &TaskCategoriesCache{
+		clock: clock,
 		mutex: &sync.Mutex{},
 		TaskCategories: make(map[string]*TaskCategoryItem),
 		chanAverageSLORatios: []chan AverageTaskSLORatios {},
+		DaemonIntervalInMilliseconds: 100,
 	}
 
 	go c.daemon()
 
 	return c
-}
-
-func (p *TaskCategoriesCache) increaseClock() uint64 {
-	if p.clock == math.MaxUint64 {
-		p.clock = 0
-	} else {
-		p.clock++
-	}
-	return p.clock
 }
 
 func (p *TaskCategoriesCache) Clear() {
@@ -113,7 +105,7 @@ func (p *TaskCategoriesCache) EnqueueArrivalTime(dispatchItem *ds.TaskDispatchin
 	categoryItem := p.TaskCategories[taskTag]
 	
 	taskVector := categoryItem.ReserveForResponse(arrivalClock, dispatchItem, arrivalTime, instantOverallArrivalRate, instantCumulativePerfVector)
-	taskVector.ArrivalTaskClock = p.clock
+	taskVector.ArrivalTaskClock = p.clock.CurrentClock()
 
 	if p.TaskHead != nil {
 		taskVector.After = p.TaskHead
@@ -145,7 +137,7 @@ func (p *TaskCategoriesCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingIt
 	categoryItem := p.TaskCategories[taskTag]
 
 	perfVector := categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, instantCumulativePerfVector)
-	perfVector.ResponseTaskClock = p.clock
+	perfVector.ResponseTaskClock = p.clock.CurrentClock()
 
 	p.mutex.Unlock()
 

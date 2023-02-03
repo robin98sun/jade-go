@@ -2,14 +2,12 @@ package perfstat
 
 import (
 	"sync"
-	"time"
 	"math"
-	"strconv"
-	// "log"
 	"uta.edu/aces/jadesdk"
 )
 
 type PerfEventMatrixPipe struct {
+	clock *Clock
 	Pipe []*PerfEventMatrix
 	PipeLength int
 	MatrixLength int
@@ -17,7 +15,6 @@ type PerfEventMatrixPipe struct {
 	EventBuffer []*Event
 	BasePercentile float64
 	QueueClocks map[string]uint64
-	EventClock uint64
 	Snapshots []*PerfEventVector
 	ListenerStarted bool
 	MostRecentMatrix *PerfEventMatrix
@@ -26,8 +23,9 @@ type PerfEventMatrixPipe struct {
 	chanAverageSLOViolationRatio []chan float64
 }
 
-func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
+func NewPerfEventMatrixPipe(clock *Clock, pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
 	pipe := &PerfEventMatrixPipe{
+		clock: clock,
 		Pipe: []*PerfEventMatrix{},
 		PipeLength: pipeLength,
 		MatrixLength: matrixLength,
@@ -35,9 +33,9 @@ func NewPerfEventMatrixPipe(pipeLength int, matrixLength int, basePercentile flo
 		EventBuffer: []*Event{},
 		BasePercentile: basePercentile,
 		QueueClocks: map[string]uint64{},
-		EventClock: 0,
 		Snapshots: []*PerfEventVector{},
 		chanAverageSLOViolationRatio: []chan float64{},
+		DaemonIntervalInMilliseconds: 100,
 	}
 
 	go pipe.daemon()
@@ -94,22 +92,6 @@ func (m *PerfEventMatrixPipe) GetInstantCumulativePerfVector() *PerfEventVector 
 	}
 
 	return m.Pipe[0].GetInstantCumulativePerfVector()
-}
-
-
-func (m *PerfEventMatrixPipe) GetEventClock() uint64 {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.EventClock
-}
-
-func (m *PerfEventMatrixPipe) increaseEventClock() uint64 {
-	if m.EventClock == math.MaxUint64 {
-		m.EventClock = 0
-	} else {
-		m.EventClock++
-	}
-	return m.EventClock
 }
 
 func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey string, serviceResponseTime float64) {
@@ -219,113 +201,6 @@ func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(queueKey string, envMetrics *ja
 
 }
 
-
-func (m *PerfEventMatrixPipe) daemon() {
-
-
-	INTERVAL := 100
-	if m.DaemonIntervalInMilliseconds > 0 {
-		INTERVAL = m.DaemonIntervalInMilliseconds
-	}
-	for {
-		time.Sleep(time.Duration(INTERVAL) * time.Millisecond)
-
-		startTime := time.Now()
-
-		m.mutex.Lock()
-
-		if m.DaemonIntervalInMilliseconds > 0 && m.DaemonIntervalInMilliseconds != INTERVAL {
-			INTERVAL = m.DaemonIntervalInMilliseconds
-		}
-
-		if !m.ListenerStarted {
-			m.mutex.Unlock()
-			continue
-		}
-
-		currentClock := m.EventClock
-
-		m.increaseEventClock()
-
-		vector := NewPerfEventVector()
-		vector.EventClock = currentClock
-		vector.Interval = float64(INTERVAL)
-
-		if len(m.EventBuffer) > 0 {
-			for _, event := range m.EventBuffer {
-				if event.EventType == EventTypeQueuePerformance {
-					if m.QueueClocks == nil {
-						m.QueueClocks = map[string]uint64{}
-					}
-					m.QueueClocks[event.QueuePerf.QueueKey] = currentClock
-
-					if scale, e := vector.QueueSlice[event.QueuePerf.QueueKey]; e {
-						scale.Add(event.QueuePerf)
-					} else {
-						vector.QueueSlice[event.QueuePerf.QueueKey] = event.QueuePerf.Copy()
-					}
-				} else if event.EventType == EventTypeTaskPerformance {
-					vector.TaskSLOViolationCount += event.TaskPerf.SLOViolationCount
-					vector.NormalizedTaskSLOViolationCount += event.TaskPerf.NormalizedSLOViolationCount
-					vector.TaskCount += event.TaskPerf.Count
-
-					label := strconv.FormatFloat(event.TaskPerf.Percentile, 'f', -1, 64)
-					if taskClass, e := vector.TaskClasses[label]; e {
-						taskClass.Add(event.TaskPerf)
-					} else {
-						vector.TaskClasses[label] = event.TaskPerf.Copy()
-					}
-				} else if event.EventType == EventTypeEnvPerformance {
-					if envPerf, e := vector.InstantEnvPerf[event.EnvPerf.QueueKey]; e {
-						envPerf.Add(event.EnvPerf)
-					} else {
-						vector.InstantEnvPerf[event.EnvPerf.QueueKey] = event.EnvPerf.Copy()
-					}
-				}
-
-				if event.Callback != nil {
-					go (*event.Callback)(currentClock)
-				}
-				
-			}
-			m.EventBuffer = []*Event{}
-		}
-
-		dequeued := vector
-		for i:=0; i<len(m.Pipe); i++ {
-			if dequeued == nil {
-				break
-			}
-			dequeued = m.Pipe[i].Enqueue(dequeued)
-		}
-		if dequeued != nil && (m.PipeLength <= 0 || len(m.Pipe) < m.PipeLength){
-			newMatrix := NewPerfEventMatrix(m.MatrixLength)
-			newMatrix.Enqueue(dequeued)
-			m.Pipe = append(m.Pipe, newMatrix)
-		}
-		if len(m.Pipe) == 1 {
-			m.MostRecentMatrix = m.Pipe[0]
-		}
-
-		if m.MostRecentMatrix != nil {
-			snapshot := m.MostRecentMatrix.GetInstantCumulativePerfVector()
-			m.Snapshots = append(m.Snapshots, snapshot)
-			if m.MatrixLength > 0 && m.PipeLength > 0 {
-				if len(m.Snapshots) > m.MatrixLength * m.PipeLength {
-					m.Snapshots = m.Snapshots[1:]
-				}
-			}
-
-			endTime := time.Now()
-			vector.ProcessingTime = float64(endTime.Sub(startTime))/float64(time.Millisecond)
-			snapshot.Interval = vector.Interval
-			snapshot.ProcessingTime = vector.ProcessingTime
-		}
-
-		m.mutex.Unlock()
-
-	}
-}
 
 
 

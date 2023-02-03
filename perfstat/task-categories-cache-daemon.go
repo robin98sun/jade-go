@@ -5,17 +5,27 @@ import(
 	"math"
 )
 
-func (p *TaskCategoriesCache) daemon() {
+func (p *TaskCategoriesCache) daemon() {	
+	INTERVAL := 100
+	if p.DaemonIntervalInMilliseconds > 0 {
+		INTERVAL = p.DaemonIntervalInMilliseconds
+	}
 	for {
-		p.mutex.Lock()
 		time.Sleep(time.Duration(p.DaemonIntervalInMilliseconds) * time.Millisecond)
 
+		p.mutex.Lock()
+
+		if p.DaemonIntervalInMilliseconds > 0 && p.DaemonIntervalInMilliseconds != INTERVAL {
+			INTERVAL = p.DaemonIntervalInMilliseconds
+		}
+
+		currentClock := p.clock.CurrentClock()
 
 		for p.HistoryTimeWindowSize > 0 &&  p.TaskTail != nil &&
-			(p.TaskTail.ArrivalTaskClock < p.clock - uint64(p.HistoryTimeWindowSize) || 
-				( p.clock < uint64(p.HistoryTimeWindowSize) && 
-				  p.TaskTail.ArrivalTaskClock > p.clock && 
-				  p.TaskTail.ArrivalTaskClock < math.MaxUint64 - uint64(p.HistoryTimeWindowSize) - p.clock )) {
+			(p.TaskTail.ArrivalTaskClock <  currentClock - uint64(p.HistoryTimeWindowSize) || 
+				( currentClock < uint64(p.HistoryTimeWindowSize) && 
+				  p.TaskTail.ArrivalTaskClock > currentClock && 
+				  p.TaskTail.ArrivalTaskClock < math.MaxUint64 - uint64(p.HistoryTimeWindowSize) - currentClock )) {
 			p.UnsafeRemoveTailTask()
 		}
 
@@ -44,6 +54,7 @@ func (p *TaskCategoriesCache) daemon() {
 			// notify the receivers
 			for _, c := range p.chanAverageSLORatios {
 				r := AverageTaskSLORatios{
+					Clock: currentClock,
 					Violation: rv,
 					Surplus: rs,
 				}
@@ -65,7 +76,6 @@ func (p *TaskCategoriesCache) daemon() {
 			}
 		}
 
-		p.increaseClock()
 		p.mutex.Unlock()
 	}
 }

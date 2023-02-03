@@ -21,14 +21,19 @@ type PerfCache struct {
 	ArrivalRateTracker *ArrivalRateTracker
 	
 	PerfEventMatrices *PerfEventMatrixPipe
+
+	Clock *Clock
+
 }
 
 
 func NewPerfCache() *PerfCache {
+	clock := NewClock()
 	return &PerfCache{
-		TaskCategories: NewTaskCategoriesCache(),
+		TaskCategories: NewTaskCategoriesCache(clock),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
-		PerfEventMatrices: NewPerfEventMatrixPipe(EVENTPipeLength, EVENTMatrixSize, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(clock, EVENTPipeLength, EVENTMatrixSize, 0.99),
+		Clock: clock,
 	}
 }
 
@@ -36,10 +41,11 @@ func (p *PerfCache) Clear() {
 
 	p.TaskCategories.Clear()
 	p.ArrivalRateTracker = NewArrivalRateTracker(10)
-	p.PerfEventMatrices = NewPerfEventMatrixPipe(EVENTPipeLength, EVENTMatrixSize, 0.99)
+	p.PerfEventMatrices = NewPerfEventMatrixPipe(p.Clock, EVENTPipeLength, EVENTMatrixSize, 0.99)
 }
 
 type AverageTaskSLORatios struct {
+	Clock     uint64
 	Violation float64
 	Surplus   float64
 }
@@ -55,12 +61,14 @@ func (p *PerfCache) SetMaximumTaskAmount(maximumTaskAmount int) {
 func (p *PerfCache) SetIterationTimeScaleInMilliseconds(timeScale int) {
 	p.TaskCategories.SetIterationTimeScaleInMilliseconds(timeScale)
 	p.PerfEventMatrices.SetIterationTimeScaleInMilliseconds(timeScale)
+	p.Clock.SetIterationTimeScaleInMilliseconds(timeScale)
 }
 
 func (p *PerfCache) SetHistoryTimeWindowSize(winodwSize int) {
 	p.TaskCategories.SetHistoryTimeWindowSize(winodwSize)
 	p.PerfEventMatrices.SetHistoryTimeWindowSize(winodwSize)
 }
+
 
 func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
 	p.PerfEventMatrices.AppendQueueDeadlineViolationEvent(queueKey, deadlineViolationTime)
@@ -77,7 +85,7 @@ func (p *PerfCache) EnqueueEnvMetrics(queueKey string, metrics *jadesdk.MetricsE
 func (p *PerfCache) EnqueueArrivalTime(dispatchItem *ds.TaskDispatchingItem, arrivalTime time.Time) {
 	
 
-	arrivalClock := p.PerfEventMatrices.GetEventClock()
+	arrivalClock := p.Clock.CurrentClock()
 
 	_, instantOverallArrivalRate := p.ArrivalRateTracker.Enqueue(arrivalTime)
 
