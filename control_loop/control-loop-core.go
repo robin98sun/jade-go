@@ -2,7 +2,7 @@ package control_loop
 
 import (
 	// // "uta.edu/aces/jade-go/histogram"
-	// "uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
 	"sync"
 	// "time"
 	// "strconv"
@@ -30,7 +30,7 @@ type ControlLoopParameters struct {
 	QueueingDeadlineSurplusRatio float64 `json:"queueingDeadlineSurplusRatio,omitempty"`
 }
 
-func NewControlLoop(chanAverageSLOViolationRatio chan float64) *ControlLoop {
+func NewControlLoop(c chan perfstat.AverageTaskSLORatios) *ControlLoop {
 	return &ControlLoop{
 		mutex: &sync.Mutex{},
 		Parameters: &ControlLoopParameters{},

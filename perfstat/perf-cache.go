@@ -39,8 +39,13 @@ func (p *PerfCache) Clear() {
 	p.PerfEventMatrices = NewPerfEventMatrixPipe(EVENTPipeLength, EVENTMatrixSize, 0.99)
 }
 
-func (p *PerfCache) SubscribeAverageSLOViolationRatio(c chan float64) {
-	p.PerfEventMatrices.SubscribeAverageSLOViolationRatio(c)
+type AverageTaskSLORatios struct {
+	Violation float64
+	Surplus   float64
+}
+
+func (p *PerfCache) SubscribeAverageSLORatios(r chan AverageTaskSLORatios) {
+	p.TaskCategories.SubscribeAverageSLORatios(r)
 }
 
 func (p *PerfCache) SetMaximumTaskAmount(maximumTaskAmount int) {
@@ -50,6 +55,11 @@ func (p *PerfCache) SetMaximumTaskAmount(maximumTaskAmount int) {
 func (p *PerfCache) SetIterationTimeScaleInMilliseconds(timeScale int) {
 	p.TaskCategories.SetIterationTimeScaleInMilliseconds(timeScale)
 	p.PerfEventMatrices.SetIterationTimeScaleInMilliseconds(timeScale)
+}
+
+func (p *PerfCache) SetHistoryTimeWindowSize(winodwSize int) {
+	p.TaskCategories.SetHistoryTimeWindowSize(winodwSize)
+	p.PerfEventMatrices.SetHistoryTimeWindowSize(winodwSize)
 }
 
 func (p *PerfCache) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
@@ -92,7 +102,7 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem, unload
 
 	if perfVector != nil {
 		callback := func(responseClock uint64) {
-			perfVector.ResponseClock = responseClock
+			perfVector.ResponseEventClock = responseClock
 		}
 		p.PerfEventMatrices.AppendTaskPerfEvent(
 			dispatchItem.GetTailLatencySLOInMilliseconds(),
@@ -106,7 +116,7 @@ func (p *PerfCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem, unload
 }
 
 
-func (p *PerfCache) CollectTraces(traceType string, printf func(string, ...interface{})) [][]string {
+func (p *PerfCache) CollectTaskTraces(traceType string, printf func(string, ...interface{})) [][]string {
 
 	queueSet := p.PerfEventMatrices.GetQueueClocks()
 	return p.TaskCategories.CollectTraces(traceType, queueSet, printf)

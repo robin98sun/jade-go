@@ -20,7 +20,7 @@ type TaskCategoryItem struct {
 	PercentilePoint float64
 	TailLatencySLO float64
 	TaskCount int
-	SLOViolationCount int
+	SLOExceedingCount int
 	mutex   *sync.Mutex
 }
 
@@ -30,7 +30,8 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 	histLength := 10000
 	histCount := 1
 	sliceLength := 10
-	sliceCount := 10000
+	// sliceCount := 100000
+	sliceCount := 0
 
 	tci := &TaskCategoryItem{
 		HistCount: histCount,
@@ -56,7 +57,7 @@ func NewTaskCategoryItem(percentile float64, slo float64) *TaskCategoryItem {
 
 func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem *ds.TaskDispatchingItem, arrivalTime time.Time, instantOverallArrivalRate float64, cumulativePerfVector *PerfEventVector) *TaskPerfVector {
 	vector := NewTaskPerfVector(dispatchItem)
-	vector.ArrivalClock = currentClock
+	vector.ArrivalEventClock = currentClock
 
 	dequeuedVector := vector
 
@@ -77,14 +78,14 @@ func (t *TaskCategoryItem) ReserveForResponse(currentClock uint64, dispatchItem 
 		}
 	}
 
-	if dequeuedVector != nil && len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount {
+	if dequeuedVector != nil && (t.SliceCount <= 0 || len(t.MatrixPipeOfSubtaskPerf) < t.SliceCount) {
 		newMatrix := NewTaskPerfMatrix(t.SliceLength)
 		t.MatrixPipeOfSubtaskPerf = append(t.MatrixPipeOfSubtaskPerf, newMatrix)
 		newMatrix.Enqueue(dequeuedVector)
 	} else if dequeuedVector != nil {
 		t.TaskCount--
 		if dequeuedVector.TaskResponseTime > t.TailLatencySLO {
-			t.SLOViolationCount--
+			t.SLOExceedingCount--
 		}
 	}
 
@@ -132,7 +133,7 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem,
 	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
 		matrix := t.MatrixPipeOfSubtaskPerf[i]
 		if matrix.TaskExist(taskKey) {
-			vector := matrix.GetVector(taskKey)
+			_, vector := matrix.GetVector(taskKey)
 			vector.IncarnateSubtasks(subtasks)
 			vector.TaskResponseTime = taskResponseTime
 			vector.TailLatency = tail
@@ -150,5 +151,44 @@ func (t *TaskCategoryItem) EnqueueResponse(dispatchItem *ds.TaskDispatchingItem,
 	}
 
 	return nil
+}
+
+func (t *TaskCategoryItem) RemoveTask(task *TaskPerfVector) bool{
+
+	if task == nil {return false}
+
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	taskKey := task.GetTaskKey()
+
+	matrixIdx := -1
+	for i:= 0; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
+		matrix := t.MatrixPipeOfSubtaskPerf[i]
+		idx := matrix.RemoveVector(taskKey)
+		if idx >= 0 {
+			t.TaskCount--
+			if task.TaskResponseTime > t.TailLatencySLO {
+				t.SLOExceedingCount--
+			}
+			matrixIdx = i
+		}
+	}
+
+	if matrixIdx >= 0 {
+		matrix := t.MatrixPipeOfSubtaskPerf[matrixIdx]
+		if matrix.GetVectorCount() == 0 {
+			tmpList := []*TaskPerfMatrix{}
+			for i:=0; i<matrixIdx; i++ {
+				tmpList = append(tmpList, t.MatrixPipeOfSubtaskPerf[i])
+			}
+			for i:=matrixIdx+1; i<len(t.MatrixPipeOfSubtaskPerf); i++ {
+				tmpList = append(tmpList, t.MatrixPipeOfSubtaskPerf[i])
+			}
+			t.MatrixPipeOfSubtaskPerf = tmpList
+		}
+		return true
+	}
+	return false
 }
 

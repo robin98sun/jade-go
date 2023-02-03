@@ -33,11 +33,11 @@ func (j *JADE) Init() {
 	j.PodCache = scheduler.NewPodCache()
 	
 	// Performance monitoring and Control Loop
-	chanAverageSLOViolationRatio := make(chan float64)
-	j.ControlLoop = cl.NewControlLoop(chanAverageSLOViolationRatio)
+	c := make(chan perfstat.AverageTaskSLORatios)
+	j.ControlLoop = cl.NewControlLoop(c)
 
 	j.PerfCache = perfstat.NewPerfCache()
-	j.PerfCache.SubscribeAverageSLOViolationRatio(chanAverageSLOViolationRatio)
+	j.PerfCache.SubscribeAverageSLORatios(c)
 
 	// others
 	j.dist = scheduler.NewDist()

@@ -51,11 +51,16 @@ func (m *PerfEventMatrixPipe) SetIterationTimeScaleInMilliseconds(timeScale int)
 	m.DaemonIntervalInMilliseconds = timeScale
 }
 
-func (m *PerfEventMatrixPipe) SubscribeAverageSLOViolationRatio(c chan float64) {
+func (m *PerfEventMatrixPipe) SetHistoryTimeWindowSize(winodwSize int) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	m.chanAverageSLOViolationRatio = append(m.chanAverageSLOViolationRatio, c)
+	newPipeLength := winodwSize / m.MatrixLength
+	if newPipeLength < m.PipeLength {
+		m.Pipe = m.Pipe[0:newPipeLength]
+	}
+	m.PipeLength = newPipeLength
+
 }
 
 func (m *PerfEventMatrixPipe) GetQueueClocks() map[string]uint64 {

@@ -9,8 +9,10 @@ import (
 
 
 type TaskPerfVector struct {
-	ArrivalClock                    uint64
-	ResponseClock					uint64
+	ArrivalTaskClock                uint64
+	ResponseTaskClock			    uint64
+	ArrivalEventClock               uint64
+	ResponseEventClock			    uint64
 	DispatchItem 			 		*ds.TaskDispatchingItem
 	SubtaskPerf  			 		map[string]*SubtaskPerfItem
 	TaskResponseTime 				float64

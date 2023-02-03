@@ -22,6 +22,13 @@ func NewTaskPerfMatrix(length int) *TaskPerfMatrix {
 	}
 }
 
+func (m *TaskPerfMatrix) GetVectorCount() int {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	return len(m.VectorsOfSubtaskPerf)
+}
+
 func (m *TaskPerfMatrix) TaskExist(taskKey string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -35,19 +42,50 @@ func (m *TaskPerfMatrix) TaskExist(taskKey string) bool {
 	return false
 }
 
-func (m *TaskPerfMatrix) GetVector(taskKey string) *TaskPerfVector {
+func (m *TaskPerfMatrix) GetVector(taskKey string) (int, *TaskPerfVector) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if m.VectorsOfSubtaskPerf == nil {
-		return nil
+		return -1, nil
 	}
-	for _, vector := range m.VectorsOfSubtaskPerf {
+	for i, vector := range m.VectorsOfSubtaskPerf {
 		if vector.GetTaskKey() == taskKey {
-			return vector
+			return i, vector
 		}
 	}
-	return nil
+	return -1, nil
+}
+
+func (m *TaskPerfMatrix) RemoveVector(taskKey string) int {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.TaskKeys != nil {
+		if value, e := m.TaskKeys[taskKey]; e && value {
+			idx := -1
+			for i, vector := range m.VectorsOfSubtaskPerf {
+				if vector.GetTaskKey() == taskKey {
+					idx = i
+					break
+				}
+			}
+			if idx >= 0 {
+
+				tmpList := []*TaskPerfVector{}
+				for i:= 0; i<idx; i++ {
+					tmpList = append(tmpList, m.VectorsOfSubtaskPerf[i])
+				}
+				for i:= idx+1; i<len(m.VectorsOfSubtaskPerf); i++ {
+					tmpList = append(tmpList, m.VectorsOfSubtaskPerf[i])
+				}
+				m.VectorsOfSubtaskPerf = tmpList
+				delete(m.TaskKeys, taskKey)
+				return idx
+			}
+		}
+	}
+	return -1
 }
 
 func (m *TaskPerfMatrix) Enqueue(vector *TaskPerfVector) *TaskPerfVector {

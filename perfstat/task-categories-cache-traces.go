@@ -80,8 +80,8 @@ func (p *TaskCategoriesCache) CollectTraces(traceType string, queueSet map[strin
 				vector := matrix.VectorsOfSubtaskPerf[j]
 				tail := vector.TailLatency
 				line := []string{
-					strconv.FormatUint(vector.ArrivalClock, 10),
-					strconv.FormatUint(vector.ResponseClock, 10),
+					strconv.FormatUint(vector.ArrivalEventClock, 10),
+					strconv.FormatUint(vector.ResponseEventClock, 10),
 					strconv.Itoa(vector_index_overall),
 					taskTag,
 					strconv.Itoa(matrix_index),
