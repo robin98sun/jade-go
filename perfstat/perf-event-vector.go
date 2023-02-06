@@ -22,6 +22,8 @@ type QueuePerfItem struct {
 	Success				   int
 	Budget                 float64
 	DeadlineViolationTime  float64
+	DeadlineViolationRatio float64
+	DeadlineSurplusRatio   float64
 	ServiceResponseTime    float64
 	DeadlineViolationCount int
 	MaximumResponseCount   int
@@ -37,6 +39,8 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 		Hits: i.Hits,
 		Success: i.Success,
 		DeadlineViolationTime: i.DeadlineViolationTime,
+		DeadlineViolationRatio: i.DeadlineViolationRatio,
+		DeadlineSurplusRatio: i.DeadlineSurplusRatio,
 		ServiceResponseTime: i.ServiceResponseTime,
 		DeadlineViolationCount: i.DeadlineViolationCount,
 		MaximumResponseCount: i.MaximumResponseCount,
@@ -52,6 +56,8 @@ func (i *QueuePerfItem) Add(j *QueuePerfItem) {
 	i.Success += j.Success
 	i.Budget = (i.Budget*float64(i.Hits) + j.Budget*float64(j.Hits))/float64(i.Hits+j.Hits)
 	i.DeadlineViolationTime = (i.DeadlineViolationTime * float64(i.Hits) + j.DeadlineViolationTime * float64(j.Hits)) / float64(i.Hits + j.Hits)
+	i.DeadlineViolationRatio = (i.DeadlineViolationRatio*float64(i.Hits)+j.DeadlineViolationRatio*float64(j.Hits))/float64(i.Hits+j.Hits)
+	i.DeadlineSurplusRatio = (i.DeadlineSurplusRatio*float64(i.Hits)+j.DeadlineSurplusRatio*float64(j.Hits))/float64(i.Hits+j.Hits)
 	i.ServiceResponseTime = (i.ServiceResponseTime*float64(i.Hits) + j.ServiceResponseTime*float64(j.Hits))/float64(i.Hits+j.Hits)
 	i.DeadlineViolationCount += j.DeadlineViolationCount
 	i.MaximumResponseCount += j.MaximumResponseCount
@@ -68,11 +74,15 @@ func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
 	if i.Hits-j.Hits == 0 {
 		i.DeadlineViolationTime = 0
 		i.ServiceResponseTime = 0
+		i.DeadlineViolationRatio = 0
+		i.DeadlineSurplusRatio = 0
 		i.Budget = 0
 	} else {
 		i.DeadlineViolationTime = (i.DeadlineViolationTime*float64(i.Hits) - j.DeadlineViolationTime*float64(j.Hits))/float64(i.Hits - j.Hits)
 		i.ServiceResponseTime = (i.ServiceResponseTime*float64(i.Hits) - j.ServiceResponseTime*float64(j.Hits))/float64(i.Hits-j.Hits)
 		i.Budget = (i.Budget*float64(i.Hits)-j.Budget*float64(j.Hits))/float64(i.Hits - j.Hits)
+		i.DeadlineViolationRatio = (i.DeadlineViolationRatio*float64(i.Hits)-j.DeadlineViolationRatio*float64(j.Hits))/float64(i.Hits-j.Hits)
+		i.DeadlineSurplusRatio = (i.DeadlineSurplusRatio*float64(i.Hits)-j.DeadlineSurplusRatio*float64(j.Hits))/float64(i.Hits-j.Hits)
 	}
 	i.DeadlineViolationCount -= j.DeadlineViolationCount
 	i.MaximumResponseCount -= j.MaximumResponseCount

@@ -15,6 +15,14 @@ type AverageTaskSLORatios struct {
 	Surplus   float64
 }
 
+type QueuePerfMessage struct {
+	AppKey string
+	QueueKey string
+	Ratio float64
+	AverageRatio float64
+	Clock uint64
+}
+
 type PerfMessageType string
 const(
 	PerfMessageTypeAvgTaskSLORatios PerfMessageType = "avg_task_slo_ratios"
@@ -49,8 +57,7 @@ type PerfCache struct {
 }
 
 
-func NewPerfCache() *PerfCache {
-	clock := NewClock()
+func NewPerfCache(clock *Clock) *PerfCache {
 	return &PerfCache{
 		// TaskCategories: NewTaskCategoriesCache(clock),
 		// ArrivalRateTracker: NewArrivalRateTracker(10),
@@ -85,6 +92,22 @@ func (p *PerfCache) SubscribeAverageSLORatios(m MessengerAverageTaskSLORatios) {
 	for _, app := range p.AppPerfSlots {
 		app.TaskCategories.SubscribeAverageSLORatios(m)
 	}
+}
+
+func (p *PerfCache) GetQueuesAsPerDeadlineViolation(appKey string, deadlineViolationRatio float64) []*QueuePerfMessage {
+	p.mutex.Lock()
+	app := p.getOrNewAppSlot(appKey)
+	p.mutex.Unlock()
+	
+	return app.GetQueuesAsPerDeadlineViolation(appKey, deadlineViolationRatio)
+}
+
+func (p *PerfCache) GetQueuesAsPerDeadlineSurplus(appKey string, deadlineSurplusRatio float64) []*QueuePerfMessage {
+	p.mutex.Lock()
+	app := p.getOrNewAppSlot(appKey)
+	p.mutex.Unlock()
+
+	return app.GetQueuesAsPerDeadlineSurplus(appKey, deadlineSurplusRatio)
 }
 
 // Maximum Task Amount

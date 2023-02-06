@@ -119,3 +119,11 @@ func (p *AppPerfCache) CollectTaskTraces(traceType string, printf func(string, .
 	return p.TaskCategories.CollectTraces(traceType, queueSet, printf)
 
 }
+
+func (p *AppPerfCache) GetQueuesAsPerDeadlineViolation(appKey string, deadlineViolationRatio float64) []*QueuePerfMessage {
+	return p.PerfEventMatrices.GetQueuesAsPerDeadlineViolation(appKey, deadlineViolationRatio)
+}
+
+func (p *AppPerfCache) GetQueuesAsPerDeadlineSurplus(appKey string, deadlineSurplusRatio float64) []*QueuePerfMessage {
+	return p.PerfEventMatrices.GetQueuesAsPerDeadlineSurplus(appKey, deadlineSurplusRatio)
+}

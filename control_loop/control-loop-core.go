@@ -6,18 +6,56 @@ import (
 	"math"
 )
 
+type ActionStatus struct {
+	StartClock uint64
+	TimeoutClock  uint64
+	CompleteClock uint64
+}
+func NewActionStatus(clock uint64) *ActionStatus {
+	return &ActionStatus{
+		StartClock: clock,
+	}
+}
+func (a *ActionStatus) Start(clock uint64) {
+	a.StartClock = clock
+	a.TimeoutClock = 0
+	a.CompleteClock = 0
+}
+func (a *ActionStatus) IsStarted() bool {
+	if a.StartClock > 0 {return true}
+	return false
+}
+func (a *ActionStatus) IsComplete() bool {
+	if a.CompleteClock > 0 || a.TimeoutClock > 0 {
+		return true
+	}
+	return false
+}
+func (a *ActionStatus) IsInAction() bool {
+	return a.IsStarted() && !a.IsComplete()
+}
+
+func (a *ActionStatus) GetStopClock() uint64 {
+	if a.TimeoutClock > a.CompleteClock {return a.TimeoutClock}
+	return a.CompleteClock
+}
+
 type ControlLoop struct {
 	Parameters *ControlLoopParameters
 	mutex *sync.Mutex
 
 	chanAverageSLORatios chan perfstat.AverageTaskSLORatios
-	lastActionClock uint64
-	isInAction bool
 
-	MessengerQueuesAsDeadlineViolation *func(appKey string, deadlineViolationThreshold float64) []string
-	MessengerQueuesAsDeadlineSurplus *func(appKey string, deadlineSurplusThreshold float64) []string
+	actionStatusPerApp map[string]*ActionStatus
+
+	MessengerQueuesAsPerDeadlineViolation *func(appKey string, deadlineViolationThreshold float64) []*perfstat.QueuePerfMessage
+	MessengerQueuesAsPerDeadlineSurplus *func(appKey string, deadlineSurplusThreshold float64) []*perfstat.QueuePerfMessage
 
 	PerfMessageBuffer []*perfstat.PerfMessage
+
+	DaemonIntervalInMilliseconds int
+
+	clock *perfstat.Clock
 }
 
 
@@ -30,17 +68,26 @@ type ControlLoopParameters struct {
 	ThresholdAverageSLOSurplusRatio float64 `json:"thresholdAverageSLOSurplusRatio,omitempty"`
 	ThresholdQueueingDeadlineViolationRatio float64 `json:"thresholdQueueingDeadlineViolationRatio,omitempty"`
 	ThresholdQueueingDeadlineSurplusRatio float64 `json:"thresholdQueueingDeadlineSurplusRatio,omitempty"`
+	ActionTimeOutWindowSize int `json:"actionTimeOut,omitempty"`
 }
 
-func NewControlLoop() *ControlLoop {
+func NewControlLoop(clock *perfstat.Clock) *ControlLoop {
 	loop := &ControlLoop{
 		mutex: &sync.Mutex{},
 		Parameters: &ControlLoopParameters{},
-
+		actionStatusPerApp: map[string]*ActionStatus{},
 		PerfMessageBuffer: []*perfstat.PerfMessage{},
+		DaemonIntervalInMilliseconds: 100,
+		clock: clock,
 	}
 	go loop.daemon()
 	return loop
+}
+
+func (l *ControlLoop) SetIterationTimeScaleInMilliseconds(timeScale int) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.DaemonIntervalInMilliseconds = timeScale
 }
 
 func (l *ControlLoop) AppendPerfMessage(msg *perfstat.PerfMessage) {
@@ -71,13 +118,22 @@ func (l *ControlLoop) isSetup() bool {
 	return false
 }
 
-func (l *ControlLoop) isOutofCalmdownWindow (clock uint64) bool {
+func (l *ControlLoop) isOutofCalmdownWindow (appKey string, clock uint64) bool {
 
-	if clock > l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) {
+	if _, e := l.actionStatusPerApp[appKey]; !e {
 		return true
-	} else if l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 > 0 {
-		if clock < l.lastActionClock {
-			if clock > l.lastActionClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 {
+	}
+
+	if l.actionStatusPerApp[appKey].IsInAction() {return false}
+	if !l.actionStatusPerApp[appKey].IsStarted() {return false}
+
+	stopClock := l.actionStatusPerApp[appKey].GetStopClock()
+
+	if clock > stopClock + uint64(l.Parameters.CalmDownTimeWindowSize) {
+		return true
+	} else if stopClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 > 0 {
+		if clock < stopClock {
+			if clock > stopClock + uint64(l.Parameters.CalmDownTimeWindowSize) - math.MaxUint64 {
 				return true
 			}
 		}
@@ -86,52 +142,22 @@ func (l *ControlLoop) isOutofCalmdownWindow (clock uint64) bool {
 	return false
 }
 
-func (l *ControlLoop) daemon() {
-	for {
-		l.mutex.Lock()
-		if l.isSetup() && !l.isInAction {
-			for _, msg := range l.PerfMessageBuffer {
-				if msg.Type == perfstat.PerfMessageTypeAvgTaskSLORatios && msg.AvgTaskSLORatios!=nil {
-					taskSLORatios := msg.AvgTaskSLORatios
-					if l.isOutofCalmdownWindow(taskSLORatios.Clock) {
-						if taskSLORatios.Violation >= l.Parameters.ThresholdAverageSLOViolationRatio {
-							l.isInAction = true
-							l.lastActionClock = taskSLORatios.Clock
-							go l.ScaleUp(taskSLORatios.Violation)
-						} else if taskSLORatios.Surplus <= l.Parameters.ThresholdAverageSLOSurplusRatio {
-							l.isInAction = true
-							l.lastActionClock = taskSLORatios.Clock
-							go l.ScaleDown(taskSLORatios.Surplus)
-						}
-					}
-				}
-			}
-		}
-		l.PerfMessageBuffer = []*perfstat.PerfMessage{}
-		l.mutex.Unlock()
 
-	}
-}
+func (l *ControlLoop) getScaleUpCandidates(appKey string, threshold float64) []*perfstat.QueuePerfMessage {
 
-func (l *ControlLoop) actionIsDone() {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	l.isInAction = false
-}
+	if l.MessengerQueuesAsPerDeadlineViolation == nil {return nil}
 
-func (l *ControlLoop) ScaleUp(currentViolationRatio float64) {
+	return (*l.MessengerQueuesAsPerDeadlineViolation)(appKey, threshold)
 
-
-
-	l.actionIsDone()
 }
 
 
-func (l *ControlLoop) ScaleDown(currentSurplusRatio float64) {
+func (l *ControlLoop) getScaleDownCandidates(appKey string, threshold float64) []*perfstat.QueuePerfMessage {
 
+	if l.MessengerQueuesAsPerDeadlineSurplus == nil {return nil}
 
+	return (*l.MessengerQueuesAsPerDeadlineSurplus)(appKey, threshold)
 
-	l.actionIsDone()
 }
 
 

@@ -116,16 +116,24 @@ func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey strin
 
 }
 
-func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64, budget float64) {
+func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64, budgetTime float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+
+	budget := budgetTime
+
+	if budget == 0 {
+		budget = 0.0000000001
+	}
 
 	event := &Event{
 		EventType: EventTypeQueuePerformance,
 		QueuePerf: &QueuePerfItem{
 			QueueKey: queueKey,
-			Budget: budget,
+			Budget: budgetTime,
 			DeadlineViolationTime: deadlineViolationTime,
+			DeadlineViolationRatio: math.Max(0, deadlineViolationTime/budget),
+			DeadlineSurplusRatio: math.Max(0, deadlineViolationTime/budget),
 			Hits: 1,
 		},
 	}
@@ -203,6 +211,69 @@ func (m *PerfEventMatrixPipe) AppendEnvPerfEvent(queueKey string, envMetrics *ja
 
 }
 
+func (m *PerfEventMatrixPipe) GetQueuesAsPerDeadlineViolation(appKey string, deadlineViolationThreshold float64) []*QueuePerfMessage {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
+	if m.CumulativeVector == nil {return nil}
+	if len(m.CumulativeVector.QueueSlice) == 0 {return nil}
+
+	currentClock := m.clock.CurrentClock()
+	candidates := []*QueuePerfMessage{}
+
+	avgRatio := float64(0)
+	for _, queuePerfItem := range m.CumulativeVector.QueueSlice {
+		avgRatio += queuePerfItem.DeadlineViolationRatio
+	}
+	avgRatio /= float64(len(m.CumulativeVector.QueueSlice))
+
+	for _, queuePerfItem := range m.CumulativeVector.QueueSlice {
+
+		if queuePerfItem.DeadlineViolationRatio > deadlineViolationThreshold {
+			candidates = append(candidates, &QueuePerfMessage{
+				Clock: currentClock,
+				AppKey: appKey,
+				QueueKey: queuePerfItem.QueueKey,
+				Ratio: queuePerfItem.DeadlineViolationRatio,
+				AverageRatio: avgRatio,
+			})
+		}
+	}
+
+	return candidates
+}
+
+func (m *PerfEventMatrixPipe) GetQueuesAsPerDeadlineSurplus(appKey string, deadlineSurplusThreshold float64) []*QueuePerfMessage {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.CumulativeVector == nil {return nil}
+	if len(m.CumulativeVector.QueueSlice) == 0 {return nil}
+
+	currentClock := m.clock.CurrentClock()
+	candidates := []*QueuePerfMessage{}
+
+	avgRatio := float64(0)
+	for _, queuePerfItem := range m.CumulativeVector.QueueSlice {
+		avgRatio += queuePerfItem.DeadlineSurplusRatio
+	}
+	avgRatio /= float64(len(m.CumulativeVector.QueueSlice))
+
+	for _, queuePerfItem := range m.CumulativeVector.QueueSlice {
+
+		if queuePerfItem.DeadlineSurplusRatio > deadlineSurplusThreshold {
+			candidates = append(candidates, &QueuePerfMessage{
+				Clock: currentClock,
+				AppKey: appKey,
+				QueueKey: queuePerfItem.QueueKey,
+				Ratio: queuePerfItem.DeadlineSurplusRatio,
+				AverageRatio: avgRatio,
+			})
+		}
+	}
+
+	return candidates
+
+}
 
 

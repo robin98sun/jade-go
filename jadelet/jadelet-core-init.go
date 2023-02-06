@@ -33,23 +33,25 @@ func (j *JADE) Init() {
 	j.PodCache = scheduler.NewPodCache()
 	
 	// Control Loop: Performance monitoring, analyzing, action
-	j.ControlLoop = cl.NewControlLoop()
+	clock := perfstat.NewClock()
+
+	j.ControlLoop = cl.NewControlLoop(clock)
 
 	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
 		j.ControlLoop.AppendPerfMessage(m)
 	}
-	j.PerfCache = perfstat.NewPerfCache()
+	j.PerfCache = perfstat.NewPerfCache(clock)
 	j.PerfCache.SubscribeAverageSLORatios(msgrAvgSLORatios)
 
-	msgrQueueDV := func(appKey string, deadlineViolationThreshold float64) []string {
-		return nil
+	msgrQueueDV := func(appKey string, deadlineViolationThreshold float64) []*perfstat.QueuePerfMessage {
+		return j.PerfCache.GetQueuesAsPerDeadlineViolation(appKey, deadlineViolationThreshold)
 	}
-	j.ControlLoop.MessengerQueuesAsDeadlineViolation = &msgrQueueDV
+	j.ControlLoop.MessengerQueuesAsPerDeadlineViolation = &msgrQueueDV
 
-	msgrQueueDS := func(appKey string, deadlineSurplusThreshold float64) []string {
-		return nil
+	msgrQueueDS := func(appKey string, deadlineSurplusThreshold float64) []*perfstat.QueuePerfMessage {
+		return j.PerfCache.GetQueuesAsPerDeadlineSurplus(appKey, deadlineSurplusThreshold)
 	}
-	j.ControlLoop.MessengerQueuesAsDeadlineSurplus = &msgrQueueDS
+	j.ControlLoop.MessengerQueuesAsPerDeadlineSurplus = &msgrQueueDS
 
 	// others
 	j.dist = scheduler.NewDist()
