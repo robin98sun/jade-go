@@ -87,7 +87,15 @@ func (m *PerfEventMatrixPipe) daemon() {
 			newMatrix := NewPerfEventMatrix(m.MatrixLength)
 			newMatrix.Enqueue(dequeued)
 			m.Pipe = append(m.Pipe, newMatrix)
+			dequeued = nil
 		}
+
+		if m.CumulativeVector == nil {
+			m.CumulativeVector = vector.Copy()
+		} else {
+			m.CumulativeVector.Cumulate(vector, dequeued)
+		}
+
 		if len(m.Pipe) == 1 {
 			m.MostRecentMatrix = m.Pipe[0]
 		}

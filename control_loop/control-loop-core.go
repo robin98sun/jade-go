@@ -6,7 +6,6 @@ import (
 	"math"
 )
 
-
 type ControlLoop struct {
 	Parameters *ControlLoopParameters
 	mutex *sync.Mutex
@@ -14,6 +13,11 @@ type ControlLoop struct {
 	chanAverageSLORatios chan perfstat.AverageTaskSLORatios
 	lastActionClock uint64
 	isInAction bool
+
+	MessengerQueuesAsDeadlineViolation *func(appKey string, deadlineViolationThreshold float64) []string
+	MessengerQueuesAsDeadlineSurplus *func(appKey string, deadlineSurplusThreshold float64) []string
+
+	PerfMessageBuffer []*perfstat.PerfMessage
 }
 
 
@@ -28,14 +32,24 @@ type ControlLoopParameters struct {
 	ThresholdQueueingDeadlineSurplusRatio float64 `json:"thresholdQueueingDeadlineSurplusRatio,omitempty"`
 }
 
-func NewControlLoop(c chan perfstat.AverageTaskSLORatios) *ControlLoop {
+func NewControlLoop() *ControlLoop {
 	loop := &ControlLoop{
 		mutex: &sync.Mutex{},
 		Parameters: &ControlLoopParameters{},
-		chanAverageSLORatios: c,
+
+		PerfMessageBuffer: []*perfstat.PerfMessage{},
 	}
 	go loop.daemon()
 	return loop
+}
+
+func (l *ControlLoop) AppendPerfMessage(msg *perfstat.PerfMessage) {
+	if msg == nil {return}
+
+	l.mutex.Lock()
+	l.mutex.Unlock()
+
+	l.PerfMessageBuffer = append(l.PerfMessageBuffer, msg)
 }
 
 func (l *ControlLoop) isSetup() bool {
@@ -74,23 +88,28 @@ func (l *ControlLoop) isOutofCalmdownWindow (clock uint64) bool {
 
 func (l *ControlLoop) daemon() {
 	for {
-		taskSLORatios :=  <-l.chanAverageSLORatios
-		
 		l.mutex.Lock()
-		if l.isSetup() && !l.isInAction && l.isOutofCalmdownWindow(taskSLORatios.Clock) {
-
-			if taskSLORatios.Violation >= l.Parameters.ThresholdAverageSLOViolationRatio {
-				l.isInAction = true
-				l.lastActionClock = taskSLORatios.Clock
-				go l.ScaleUp(taskSLORatios.Violation)
-			} else if taskSLORatios.Surplus <= l.Parameters.ThresholdAverageSLOSurplusRatio {
-				l.isInAction = true
-				l.lastActionClock = taskSLORatios.Clock
-				go l.ScaleDown(taskSLORatios.Surplus)
+		if l.isSetup() && !l.isInAction {
+			for _, msg := range l.PerfMessageBuffer {
+				if msg.Type == perfstat.PerfMessageTypeAvgTaskSLORatios && msg.AvgTaskSLORatios!=nil {
+					taskSLORatios := msg.AvgTaskSLORatios
+					if l.isOutofCalmdownWindow(taskSLORatios.Clock) {
+						if taskSLORatios.Violation >= l.Parameters.ThresholdAverageSLOViolationRatio {
+							l.isInAction = true
+							l.lastActionClock = taskSLORatios.Clock
+							go l.ScaleUp(taskSLORatios.Violation)
+						} else if taskSLORatios.Surplus <= l.Parameters.ThresholdAverageSLOSurplusRatio {
+							l.isInAction = true
+							l.lastActionClock = taskSLORatios.Clock
+							go l.ScaleDown(taskSLORatios.Surplus)
+						}
+					}
+				}
 			}
-
 		}
+		l.PerfMessageBuffer = []*perfstat.PerfMessage{}
 		l.mutex.Unlock()
+
 	}
 }
 

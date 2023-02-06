@@ -31,7 +31,7 @@ func (p *TaskCategoriesCache) daemon() {
 		}
 
 		// calculate the average slo violation and surplus ratios
-		if p.TaskCount > 0 && len(p.chanAverageSLORatios) > 0 {
+		if p.TaskCount > 0 && len(p.listMessengerAverageTaskSLORatios) > 0 {
 			rv := float64(0)
 			rs := float64(0)
 			tn := float64(p.TaskCount)
@@ -39,7 +39,7 @@ func (p *TaskCategoriesCache) daemon() {
 			for _, taskCategoryItem := range p.TaskCategories {
 				if taskCategoryItem.TaskCount > 0 {
 					tc := float64(taskCategoryItem.TaskCount)
-					tv := float64(taskCategoryItem.SLOExceedingCount)
+					te := float64(taskCategoryItem.SLOExceedingCount)
 
 					pct := taskCategoryItem.PercentilePoint
 					if pct > 1 {
@@ -47,19 +47,21 @@ func (p *TaskCategoriesCache) daemon() {
 					}
 
 					w := tc / tn
-					rv += math.Max(0, tv/tc - pct) * w
-					rs += math.Max(0, pct - tv/tc) * w
+					rv += math.Max(0, te/tc - pct) * w
+					rs += math.Max(0, pct - te/tc) * w
 				}
 			}
 
 			// notify the receivers
-			for _, c := range p.chanAverageSLORatios {
-				r := AverageTaskSLORatios{
-					Clock: currentClock,
-					Violation: rv,
-					Surplus: rs,
-				}
-				c <- r
+			for _, msgr := range p.listMessengerAverageTaskSLORatios { 
+				msgr(&PerfMessage{
+					Type: PerfMessageTypeAvgTaskSLORatios,
+					AvgTaskSLORatios: &AverageTaskSLORatios{
+						Clock: currentClock,
+						Violation: rv,
+						Surplus: rs,
+					},
+				})
 			}
 
 		}

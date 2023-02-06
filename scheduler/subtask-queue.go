@@ -84,6 +84,7 @@ func (p *STQueue) Length() int {
 
 type STQueueItem struct {
 	Payload              interface{}
+	AppKey 				 string
 	TaskKey              string
 	SubtaskKey           string
 	ArrivalTime          time.Time
@@ -151,7 +152,7 @@ func (q *STQueue) search_insertion_place(low int, high int, ddl time.Time, pri i
 
 func (q *STQueue) Enqueue( 
 	podQueueType STQueueType,
-	key string, taskKey string, subtaskKey string, payload interface{},
+	key string, appKey string, taskKey string, subtaskKey string, payload interface{},
 	queueingMechanism ds.TaskQueuingMechanism, maxQueuingTime float64, priority int,
 	estimatedServiceTime float64, // milliseconds
 	printf func(string, ...interface{}),
@@ -200,6 +201,7 @@ func (q *STQueue) Enqueue(
 		Payload:              payload,
 		ArrivalTime:          time.Now(),
 		Key:                  key,
+		AppKey:               appKey,
 		TaskKey:              taskKey,
 		SubtaskKey:           subtaskKey,
 		enqueueTime:          q.dequeueClock,

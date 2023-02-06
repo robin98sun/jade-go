@@ -200,7 +200,7 @@ func (j *JADE) ShowPerfEventsTraces(w rest.ResponseWriter, r *rest.Request) {
 	}
 	
 	j.log.Op.Printf("fetch [%v] performance traces", traceType)
-	w.WriteJson(j.PerfCache.PerfEventMatrices.CollectTraces(j.log.Op.Printf))
+	w.WriteJson(j.PerfCache.CollectEventTraces(traceType, j.log.Op.Printf))
 }
 
 func (j *JADE) ShowTaskPerfTraces(w rest.ResponseWriter, r *rest.Request) {

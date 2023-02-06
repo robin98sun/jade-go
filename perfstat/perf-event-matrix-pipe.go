@@ -21,6 +21,7 @@ type PerfEventMatrixPipe struct {
 	DaemonIntervalInMilliseconds int
 	// channels to subscribe performance signals
 	chanAverageSLOViolationRatio []chan float64
+	CumulativeVector *PerfEventVector
 }
 
 func NewPerfEventMatrixPipe(clock *Clock, pipeLength int, matrixLength int, basePercentile float64) *PerfEventMatrixPipe {
@@ -115,7 +116,7 @@ func (m *PerfEventMatrixPipe) AppendQueueServiceResponseTimeEvent(queueKey strin
 
 }
 
-func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64) {
+func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string, deadlineViolationTime float64, budget float64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -123,6 +124,7 @@ func (m *PerfEventMatrixPipe) AppendQueueDeadlineViolationEvent(queueKey string,
 		EventType: EventTypeQueuePerformance,
 		QueuePerf: &QueuePerfItem{
 			QueueKey: queueKey,
+			Budget: budget,
 			DeadlineViolationTime: deadlineViolationTime,
 			Hits: 1,
 		},

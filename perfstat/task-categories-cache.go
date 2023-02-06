@@ -22,7 +22,7 @@ type TaskCategoriesCache struct {
 	TaskCount int
 	TaskSLOExceedingCount int
 
-	chanAverageSLORatios []chan AverageTaskSLORatios
+	listMessengerAverageTaskSLORatios []MessengerAverageTaskSLORatios
 }
 
 func NewTaskCategoriesCache(clock *Clock) *TaskCategoriesCache {
@@ -31,7 +31,7 @@ func NewTaskCategoriesCache(clock *Clock) *TaskCategoriesCache {
 		clock: clock,
 		mutex: &sync.Mutex{},
 		TaskCategories: make(map[string]*TaskCategoryItem),
-		chanAverageSLORatios: []chan AverageTaskSLORatios {},
+		listMessengerAverageTaskSLORatios: []MessengerAverageTaskSLORatios{},
 		DaemonIntervalInMilliseconds: 100,
 	}
 
@@ -64,11 +64,11 @@ func (p *TaskCategoriesCache) SetIterationTimeScaleInMilliseconds(timeScale int)
 }
 
 
-func (p *TaskCategoriesCache) SubscribeAverageSLORatios(r chan AverageTaskSLORatios) {
+func (p *TaskCategoriesCache) SubscribeAverageSLORatios(m MessengerAverageTaskSLORatios) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	p.chanAverageSLORatios = append(p.chanAverageSLORatios, r)
+	p.listMessengerAverageTaskSLORatios = append(p.listMessengerAverageTaskSLORatios, m)
 }
 
 func (p *TaskCategoriesCache) SetHistoryTimeWindowSize(winodwSize int) {

@@ -32,12 +32,24 @@ func (j *JADE) Init() {
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
 	
-	// Performance monitoring and Control Loop
-	c := make(chan perfstat.AverageTaskSLORatios)
-	j.ControlLoop = cl.NewControlLoop(c)
+	// Control Loop: Performance monitoring, analyzing, action
+	j.ControlLoop = cl.NewControlLoop()
 
+	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
+		j.ControlLoop.AppendPerfMessage(m)
+	}
 	j.PerfCache = perfstat.NewPerfCache()
-	j.PerfCache.SubscribeAverageSLORatios(c)
+	j.PerfCache.SubscribeAverageSLORatios(msgrAvgSLORatios)
+
+	msgrQueueDV := func(appKey string, deadlineViolationThreshold float64) []string {
+		return nil
+	}
+	j.ControlLoop.MessengerQueuesAsDeadlineViolation = &msgrQueueDV
+
+	msgrQueueDS := func(appKey string, deadlineSurplusThreshold float64) []string {
+		return nil
+	}
+	j.ControlLoop.MessengerQueuesAsDeadlineSurplus = &msgrQueueDS
 
 	// others
 	j.dist = scheduler.NewDist()

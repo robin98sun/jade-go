@@ -20,6 +20,7 @@ const (
 type QueuePerfItem struct {
 	Hits                   int
 	Success				   int
+	Budget                 float64
 	DeadlineViolationTime  float64
 	ServiceResponseTime    float64
 	DeadlineViolationCount int
@@ -46,26 +47,41 @@ func (i *QueuePerfItem) Copy() *QueuePerfItem {
 }
 
 func (i *QueuePerfItem) Add(j *QueuePerfItem) {
-	i.Hits += j.Hits
+	if i.Hits + j.Hits == 0 {return}
+
 	i.Success += j.Success
-	i.DeadlineViolationTime += j.DeadlineViolationTime
-	i.ServiceResponseTime += j.ServiceResponseTime
+	i.Budget = (i.Budget*float64(i.Hits) + j.Budget*float64(j.Hits))/float64(i.Hits+j.Hits)
+	i.DeadlineViolationTime = (i.DeadlineViolationTime * float64(i.Hits) + j.DeadlineViolationTime * float64(j.Hits)) / float64(i.Hits + j.Hits)
+	i.ServiceResponseTime = (i.ServiceResponseTime*float64(i.Hits) + j.ServiceResponseTime*float64(j.Hits))/float64(i.Hits+j.Hits)
 	i.DeadlineViolationCount += j.DeadlineViolationCount
 	i.MaximumResponseCount += j.MaximumResponseCount
 	i.ExceedingTaskSLOCount += j.ExceedingTaskSLOCount
 	i.MaximumAndExceedingTaskSLOCount += j.MaximumAndExceedingTaskSLOCount
+
+	i.Hits += j.Hits
 }
 
 func (i *QueuePerfItem) Minus(j *QueuePerfItem) {
-	i.Hits -= j.Hits
+	
 	i.Success -= j.Success
-	i.DeadlineViolationTime -= j.DeadlineViolationTime
-	i.ServiceResponseTime -= j.ServiceResponseTime
+
+	if i.Hits-j.Hits == 0 {
+		i.DeadlineViolationTime = 0
+		i.ServiceResponseTime = 0
+		i.Budget = 0
+	} else {
+		i.DeadlineViolationTime = (i.DeadlineViolationTime*float64(i.Hits) - j.DeadlineViolationTime*float64(j.Hits))/float64(i.Hits - j.Hits)
+		i.ServiceResponseTime = (i.ServiceResponseTime*float64(i.Hits) - j.ServiceResponseTime*float64(j.Hits))/float64(i.Hits-j.Hits)
+		i.Budget = (i.Budget*float64(i.Hits)-j.Budget*float64(j.Hits))/float64(i.Hits - j.Hits)
+	}
 	i.DeadlineViolationCount -= j.DeadlineViolationCount
 	i.MaximumResponseCount -= j.MaximumResponseCount
 	i.ExceedingTaskSLOCount -= j.ExceedingTaskSLOCount
 	i.MaximumAndExceedingTaskSLOCount -= j.MaximumAndExceedingTaskSLOCount
+
+	i.Hits -= j.Hits
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 // task performance item
@@ -81,12 +97,18 @@ type TaskPerfItem struct {
 func (t *TaskPerfItem) Add(i *TaskPerfItem) {
 	t.SLOViolationCount += i.SLOViolationCount
 	t.NormalizedSLOViolationCount += i.NormalizedSLOViolationCount
+
+	t.ResponseTime = (t.ResponseTime*float64(t.Count)+i.ResponseTime*float64(i.Count))/float64(t.Count+i.Count)
+
 	t.Count += i.Count
 }
 
 func (t *TaskPerfItem) Minus(i *TaskPerfItem) {
 	t.SLOViolationCount -= i.SLOViolationCount
 	t.NormalizedSLOViolationCount -= i.NormalizedSLOViolationCount
+
+	t.ResponseTime = (t.ResponseTime*float64(t.Count)-i.ResponseTime*float64(i.Count))/float64(t.Count-i.Count)
+
 	t.Count -= i.Count
 }
 
@@ -318,5 +340,68 @@ func (v *PerfEventVector) GetAverageTaskSLOViolationThreshold() float64 {
 
 	}
 	return bar_R
+}
+
+
+func (v *PerfEventVector) Cumulate(incomingVector *PerfEventVector, outgoingVector *PerfEventVector) *PerfEventVector {
+
+	v.EventClock = incomingVector.EventClock
+	for queueKey, perfItem := range incomingVector.QueueSlice {
+		if scalar, e := v.QueueSlice[queueKey]; e{
+			scalar.Add(perfItem)
+		} else {
+			v.QueueSlice[queueKey] = perfItem.Copy()
+		}
+	}
+
+	for label, taskPerf := range incomingVector.TaskClasses {
+		if scalar, e := v.TaskClasses[label]; e{
+			scalar.Add(taskPerf)
+		} else {
+			v.TaskClasses[label] = taskPerf.Copy()
+		}
+	}
+
+	for label, envPerf := range incomingVector.InstantEnvPerf {
+		if scalar, e := v.AvgEnvPerf[label]; e{
+			scalar.Add(envPerf)
+		} else {
+			v.AvgEnvPerf[label] = envPerf.Copy()
+		}
+		v.InstantEnvPerf[label] = envPerf.Copy()
+	}
+
+	v.TaskSLOViolationCount += incomingVector.TaskSLOViolationCount
+	v.NormalizedTaskSLOViolationCount += incomingVector.NormalizedTaskSLOViolationCount
+	v.TaskCount += incomingVector.TaskCount
+	v.Depth++
+
+	if outgoingVector != nil{
+
+		for label, item := range outgoingVector.QueueSlice {
+			if scalar, e := v.QueueSlice[label]; e{
+				scalar.Minus(item)
+			} 
+		}
+		for label, item := range outgoingVector.TaskClasses {
+			if scalar, e := v.TaskClasses[label]; e{
+				scalar.Minus(item)
+			}
+		}
+		for label, envPerf := range outgoingVector.InstantEnvPerf {
+			if scalar, e := v.AvgEnvPerf[label]; e{
+				scalar.Minus(envPerf)
+			}
+			v.InstantEnvPerf[label] = envPerf.Copy()
+		}
+
+		v.TaskSLOViolationCount -= outgoingVector.TaskSLOViolationCount
+		v.NormalizedTaskSLOViolationCount -= outgoingVector.NormalizedTaskSLOViolationCount
+		v.TaskCount -= outgoingVector.TaskCount
+		v.Depth--
+
+	}
+
+	return v
 }
 

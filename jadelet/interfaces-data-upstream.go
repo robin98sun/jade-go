@@ -54,10 +54,10 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				}
 
 				postQueryPerfAnalysis := func() {
-					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.NodeKey, serviceRequestTime)
+					j.PerfCache.AppendQueueServiceResponseTimeEvent(subtask.AppKey, subtask.NodeKey, serviceRequestTime)
 
 					metricsEnv := msg.MetricsEnv
-					j.PerfCache.EnqueueEnvMetrics(subtask.NodeKey, metricsEnv)
+					j.PerfCache.EnqueueEnvMetrics(subtask.AppKey, subtask.NodeKey, metricsEnv)
 
 					// to see if the task is done
 					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, ds.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
@@ -70,7 +70,12 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 
 						percentile := dispatchItem.GetPercentile()
 						adjusted_tail_latency := j.PodCache.CalcTailForNodes(subtasks_on_nodes, percentile, scheduler.STQueueHistogramTypeAdjustedServiceResponseTime)
-						j.PerfCache.EnqueueResponse(dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_tail_latency, timestampReceving, subtasks)
+						j.PerfCache.EnqueueResponse(
+							dispatchItem.Task.Application.Key(),
+							dispatchItem, unloaded_tail_latency, queueing_budget, 
+							provision_overhead, aggregation_overhead, adjusted_tail_latency, 
+							timestampReceving, subtasks,
+						)
 					} else {
 						j.log.Op.Printf("[app message collector] task[%v] is NOT {%v} yet", msg.TaskKey, ds.TaskStatusDone)
 					}
