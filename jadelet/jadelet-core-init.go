@@ -32,7 +32,7 @@ func (j *JADE) Init() {
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
 	
-	// Control Loop: Performance monitoring, analyzing, action
+	// Control Loop: monitoring, analyzing, planning, executing
 	clock := perfstat.NewClock()
 
 	j.ControlLoop = rm.NewControlLoop(clock)

@@ -231,8 +231,8 @@ func (l *ControlLoop) SendAction(appKey string, queueKey string, action *Scaling
 
 func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 
-
-
+	
+	
 	// report the result
 	if action.SourceNode == nil {return}
 
