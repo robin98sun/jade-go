@@ -101,9 +101,9 @@ func (l *ControlLoop) daemon() {
 					}
 				}
 			}
+			l.mutex.Unlock()
 
 		}
-		l.mutex.Unlock()
 
 	}
 }
