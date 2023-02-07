@@ -69,6 +69,10 @@ func main() {
 		rest.Get("/jobs", j.GetJobIdList),
 		rest.Put("/startPerfEventListener", j.StartPerfEventListener),
 		rest.Put("/stopPerfEventListener", j.StopPerfEventListener),
+		rest.Get("/controlLoopParameters", j.GetControlLoopParameters),
+		rest.Put("/controlLoopParameters", j.SetControlLoopParameters),
+		rest.Put("/scaleResource", j.ReceiveResourceScalingAction),
+		rest.Put("/resourceScalingResult", j.ReceiveResourceScalingResult),
 		// for debugging
 		rest.Get("/debug/jadelet", j.ShowJadelet),
 		rest.Get("/debug/configurations", j.ShowConfigurations),

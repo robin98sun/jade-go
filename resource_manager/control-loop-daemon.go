@@ -1,4 +1,4 @@
-package control_loop
+package resource_manager
 
 import (
 	"uta.edu/aces/jade-go/perfstat"
@@ -71,10 +71,10 @@ func (l *ControlLoop) daemon() {
 		}
 
 		if len(scaleUpPlan) + len(scaleDownPlan) > 0 {
-
+			l.mutex.Lock()
 			for i, plan := range []map[string]map[string]*perfstat.QueuePerfMessage{scaleUpPlan, scaleDownPlan} {
-				action := "up";
-				if i == 1 {action = "down"}
+				actionType := ScalingActionTypeUp;
+				if i == 1 {actionType = ScalingActionTypeDown}
 
 				for queueKey, queueItem := range plan {
 					for appKey, appItem := range queueItem {
@@ -85,14 +85,27 @@ func (l *ControlLoop) daemon() {
 						}
 
 						// issue commands
-						// command: queueKey, appKey, action, ratio, averageRatio
+						// command: queueKey, appKey, actionType, ratio, averageRatio
+
+						action := &ScalingAction{
+							AppKey: appKey,
+							QueueKey: queueKey,
+							ActionType: actionType,
+							Ratio: appItem.Ratio,
+							AverageRatio: appItem.AverageRatio,
+							StartClock: appItem.Clock,
+						}
+
+						go l.SendAction(appKey, queueKey, action)
+
 					}
 				}
-
 			}
 
 		}
+		l.mutex.Unlock()
 
 	}
 }
+
 

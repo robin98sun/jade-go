@@ -1,15 +1,50 @@
-package control_loop
+package resource_manager
 
 import (
 	"uta.edu/aces/jade-go/perfstat"
 	"sync"
 	"math"
+	"strconv"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
+
+type ScalingActionType string
+const(
+	ScalingActionTypeUp ScalingActionType = "up"
+	ScalingActionTypeDown ScalingActionType = "down"
+)
+
+type ScalingAction struct {
+	ActionKey string
+	AppKey string
+	QueueKey string
+	ActionType ScalingActionType
+	Ratio float64
+	AverageRatio float64
+	StartClock uint64
+	CompleteClock uint64
+	Succeeded bool
+	SourceNode *ds.Node
+}
+
+type ScalingResult struct {
+	ActionKey string
+	Succeeded bool
+}
+
+func (a *ScalingAction) GetKey() string {
+	if a.ActionKey != "" {return a.ActionKey}
+
+	a.ActionKey = a.AppKey + "--" + a.QueueKey + "--" + strconv.FormatUint(a.StartClock, 16)
+
+	return a.ActionKey
+}
 
 type ActionStatus struct {
 	StartClock uint64
 	TimeoutClock  uint64
 	CompleteClock uint64
+	Succeeded bool
 }
 func NewActionStatus(clock uint64) *ActionStatus {
 	return &ActionStatus{
@@ -51,11 +86,17 @@ type ControlLoop struct {
 	MessengerQueuesAsPerDeadlineViolation *func(appKey string, deadlineViolationThreshold float64) []*perfstat.QueuePerfMessage
 	MessengerQueuesAsPerDeadlineSurplus *func(appKey string, deadlineSurplusThreshold float64) []*perfstat.QueuePerfMessage
 
+	MessengerScaleQueue *func(appKey string, queueKey string, action *ScalingAction) bool
+
+	MessengerReportScalingResult *func(node *ds.Node, result *ScalingResult) bool
+
 	PerfMessageBuffer []*perfstat.PerfMessage
 
 	DaemonIntervalInMilliseconds int
 
 	clock *perfstat.Clock
+
+	ActionCache map[string]*ScalingAction
 }
 
 
@@ -79,6 +120,7 @@ func NewControlLoop(clock *perfstat.Clock) *ControlLoop {
 		PerfMessageBuffer: []*perfstat.PerfMessage{},
 		DaemonIntervalInMilliseconds: 100,
 		clock: clock,
+		ActionCache: make(map[string]*ScalingAction),
 	}
 	go loop.daemon()
 	return loop
@@ -157,6 +199,67 @@ func (l *ControlLoop) getScaleDownCandidates(appKey string, threshold float64) [
 	if l.MessengerQueuesAsPerDeadlineSurplus == nil {return nil}
 
 	return (*l.MessengerQueuesAsPerDeadlineSurplus)(appKey, threshold)
+
+}
+
+
+func (l *ControlLoop) SendAction(appKey string, queueKey string, action *ScalingAction) {
+	l.mutex.Lock()
+	if l.MessengerScaleQueue == nil {
+		l.mutex.Unlock()
+		return
+	}
+
+	actionKey := action.GetKey()
+	l.ActionCache[actionKey] = action
+
+	l.mutex.Unlock()
+
+	success := (*l.MessengerScaleQueue)(appKey, queueKey, action)
+
+	if !success {
+		l.mutex.Lock()
+		currentClock := l.clock.CurrentClock()
+		l.actionStatusPerApp[appKey].CompleteClock = currentClock
+		l.actionStatusPerApp[appKey].Succeeded = false
+		delete(l.ActionCache, actionKey)
+		// l.ActionCache[actionKey].CompleteClock = currentClock
+		// l.ActionCache[actionKey].Succeeded = false
+		l.mutex.Unlock()
+	}
+}
+
+func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
+
+
+
+	// report the result
+	if action.SourceNode == nil {return}
+
+	l.mutex.Lock()
+	if l.MessengerReportScalingResult == nil {
+		l.mutex.Unlock()
+		return
+	}
+
+	result := &ScalingResult{
+		ActionKey: action.GetKey(),
+		Succeeded: true,
+	}
+	(*l.MessengerReportScalingResult)(action.SourceNode, result)
+}
+
+func (l *ControlLoop) ActionHasBeenPhysicallyExecuted(result *ScalingResult) {
+	if result == nil || result.ActionKey == "" {return}
+
+	l.mutex.Lock()
+	if action, e := l.ActionCache[result.ActionKey]; e {
+		currentClock := l.clock.CurrentClock()
+		l.actionStatusPerApp[action.AppKey].CompleteClock = currentClock
+		l.actionStatusPerApp[action.AppKey].Succeeded = result.Succeeded
+		delete(l.ActionCache, result.ActionKey)
+	}
+	l.mutex.Unlock()
 
 }
 

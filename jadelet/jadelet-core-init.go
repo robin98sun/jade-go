@@ -9,7 +9,7 @@ import (
 	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
-	cl "uta.edu/aces/jade-go/control_loop"
+	rm "uta.edu/aces/jade-go/resource_manager"
 )
 
 // Init to do initializing work
@@ -35,7 +35,7 @@ func (j *JADE) Init() {
 	// Control Loop: Performance monitoring, analyzing, action
 	clock := perfstat.NewClock()
 
-	j.ControlLoop = cl.NewControlLoop(clock)
+	j.ControlLoop = rm.NewControlLoop(clock)
 
 	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
 		j.ControlLoop.AppendPerfMessage(m)
@@ -52,6 +52,19 @@ func (j *JADE) Init() {
 		return j.PerfCache.GetQueuesAsPerDeadlineSurplus(appKey, deadlineSurplusThreshold)
 	}
 	j.ControlLoop.MessengerQueuesAsPerDeadlineSurplus = &msgrQueueDS
+
+	msgrScaleQueue := func(appKey string, queueKey string, action *rm.ScalingAction) bool {
+		node := j.GetNodeInControl(queueKey)
+		if node == nil {return false}
+		action.SourceNode = j.Config.SelfNode
+		return j.CommScaleResource(node, action)
+	}
+	j.ControlLoop.MessengerScaleQueue = &msgrScaleQueue
+
+	msgrReportScalingResult := func(node *ds.Node, result *rm.ScalingResult) bool {
+		return j.CommReportResourceScalingResult(node, result)
+	}
+	j.ControlLoop.MessengerReportScalingResult = &msgrReportScalingResult
 
 	// others
 	j.dist = scheduler.NewDist()

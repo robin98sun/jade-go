@@ -12,7 +12,7 @@ import (
 	"uta.edu/aces/jade-go/provisioner"
 	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/perfstat"
-	cl "uta.edu/aces/jade-go/control_loop"
+	rm "uta.edu/aces/jade-go/resource_manager"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"fmt"
@@ -46,7 +46,7 @@ type JADE struct {
 	PodCache        *scheduler.PodCache  `json:"podCache"`
 	// performance monitoring and control loop
 	PerfCache 		*perfstat.PerfCache `json:"perfCache"`
-	ControlLoop     *cl.ControlLoop `json:"control_loop"`
+	ControlLoop     *rm.ControlLoop `json:"control_loop"`
 	// others
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK

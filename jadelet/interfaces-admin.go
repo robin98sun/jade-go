@@ -3,7 +3,7 @@ package jadelet
 import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
-	cl "uta.edu/aces/jade-go/control_loop"
+	rm "uta.edu/aces/jade-go/resource_manager"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"runtime"
 	"encoding/json"
@@ -187,7 +187,7 @@ func (j *JADE) SetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) 
 
 		j.log.Op.Printf("updating perf cache parameters")
 		params := &struct{
-			Parameters *cl.ControlLoopParameters
+			Parameters *rm.ControlLoopParameters
 			Type string
 		}{}
 		err := r.DecodeJsonPayload(params)
@@ -200,6 +200,7 @@ func (j *JADE) SetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) 
 			j.PerfCache.SetIterationTimeScaleInMilliseconds(params.Parameters.IterationTimeScaleInMilliseconds)
 			j.PerfCache.SetMaximumTaskAmount(params.Parameters.MaximumTaskAmount)
 			j.PerfCache.SetHistoryTimeWindowSize(params.Parameters.HistoryTimeWindowSize)
+			j.ControlLoop.SetIterationTimeScaleInMilliseconds(params.Parameters.IterationTimeScaleInMilliseconds)
 		}
 
 		j.DoneRequest(w, r, "OK")
@@ -208,11 +209,50 @@ func (j *JADE) SetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) 
 	}
 }
 
-func (j *JADE) GetPerfCacheParameters(w rest.ResponseWriter, r *rest.Request) {
+func (j *JADE) GetControlLoopParameters(w rest.ResponseWriter, r *rest.Request) {
 	if j.PerfCache != nil {
 		w.WriteJson(j.ControlLoop.Parameters)
 	} else {
 		j.DoneRequest(w, r, "perf cache is nil")
 	}
 }
+
+func (j *JADE) ReceiveResourceScalingAction(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+
+		j.log.Op.Printf("scaling resource")
+		action := &rm.ScalingAction{}
+		err := r.DecodeJsonPayload(action)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		j.ControlLoop.PhysicallyExecuteAction(action)
+
+		j.DoneRequest(w, r, "OK")
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
+}
+
+func (j *JADE) ReceiveResourceScalingResult(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+
+		j.log.Op.Printf("scaling resource")
+		result := &rm.ScalingResult{}
+		err := r.DecodeJsonPayload(result)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		j.ControlLoop.ActionHasBeenPhysicallyExecuted(result)
+		
+		j.DoneRequest(w, r, "OK")
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
+}
+
 
