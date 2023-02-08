@@ -32,14 +32,15 @@ func (l *ControlLoop) daemon() {
 		scaleUpPlan := make(map[string]map[string]*perfstat.QueuePerfMessage) // nodeKey -> appKey -> msg
 		scaleDownPlan := make(map[string]map[string]*perfstat.QueuePerfMessage) // nodeKey -> appKey -> msg
 		
-		for _, msg := range msgBuff {
+		for x, msg := range msgBuff {
 			if msg == nil {
 				for i := 0; i<100; i++ {
+					msg = msgBuff[x]
 					if msg != nil {
 						break
 					}
 				}
-				if msg != nil {
+				if msg == nil {
 					continue
 				}
 			}
