@@ -33,6 +33,16 @@ func (l *ControlLoop) daemon() {
 		scaleDownPlan := make(map[string]map[string]*perfstat.QueuePerfMessage) // nodeKey -> appKey -> msg
 		
 		for _, msg := range msgBuff {
+			if msg == nil {
+				for i := 0; i<100; i++ {
+					if msg != nil {
+						break
+					}
+				}
+				if msg != nil {
+					continue
+				}
+			}
 			if msg.Type == perfstat.PerfMessageTypeAvgTaskSLORatios && msg.AvgTaskSLORatios!=nil {
 				taskSLORatios := msg.AvgTaskSLORatios
 				if !l.isOutofCalmdownWindow(taskSLORatios.AppKey, taskSLORatios.Clock) {
