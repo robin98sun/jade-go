@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 	ds "uta.edu/aces/jadesdk/data_structure"
-	// "encoding/json"
+	"time"
 )
 
 func (k *KubeClient) ProvisionDeployment(envName string, owner string,
@@ -102,19 +102,20 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		k.log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
 	} else {
-		k.log.Println("Successfully deployed pod")
+		k.log.Println("Successfully deployed pod, wait 20 seconds to verify the pods")
+		time.Sleep(time.Duration(20)*time.Second)
 		k.log.Println("the pods of the deployment "+deploymentName+":")
 		// reference: https://itnext.io/generically-working-with-kubernetes-resources-in-go-53bce678f887
 
-		list, err := k.Clientset.CoreV1().Pods(namespace).List(
-						context.Background(), 
-						metav1.ListOptions{
-							LabelSelector: k8s_labels.Set(
+		labelSelectorString := k8s_labels.Set(
 								metav1.LabelSelector{
 									MatchLabels: labels,
 								}.MatchLabels,
-							).String(),
-						},
+							).String()
+		k.log.Println("the label selector string: "+labelSelectorString)
+		list, err := k.Clientset.CoreV1().Pods(namespace).List(
+						context.Background(), 
+						metav1.ListOptions{LabelSelector: labelSelectorString},
 					)
 		if err != nil {
 			k.log.Println("ERROR while querying the pods information from K8s:")
