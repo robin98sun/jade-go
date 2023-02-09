@@ -19,7 +19,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	namespace string, image string, port int,
 	allocation *ds.AllocationUnit,
 	envVars []map[string]string,
-	replicaIndex int) (string, int, error) {
+	replicaIndex int) (string, int, string, string, error) {
 
 	replicaCount := 1
 
@@ -96,15 +96,17 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		},
 	}
 
+	podUid := ""
+	containerId := ""
 	k.log.Println("Deploying pods...")
 	_, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		k.log.Println("ERROR while depolying pods:", err.Error())
-		return "", 0, err
+		return "", 0, podUid, containerId, err
 	} else {
-		k.log.Println("Successfully deployed pod, wait 20 seconds to verify the pods")
+		k.log.Println("Successfully deployed pod, wait 30 seconds to get pod UID and ContainerID")
 		time.Sleep(time.Duration(20)*time.Second)
-		k.log.Println("the pods of the deployment "+deploymentName+":")
+		// k.log.Println("the pods of the deployment "+deploymentName+":")
 		// reference: https://itnext.io/generically-working-with-kubernetes-resources-in-go-53bce678f887
 
 		labelSelectorString := k8s_labels.Set(
@@ -120,15 +122,29 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		if err != nil {
 			k.log.Println("ERROR while querying the pods information from K8s:")
 			k.log.Println(err)
-		} else if list != nil && len(list.Items) > 0 {
-			for podKey, item := range list.Items {
-				k.log.Printf("pod[%v] %+v\n\n", podKey, item.ObjectMeta)
-				k.log.Printf("%v Containers:\n", len(item.Spec.Containers))
-				for key, container := range item.Status.ContainerStatuses {
-					k.log.Printf("container[%v] %+v\n\n", key, container)
-				}
+		} else if list != nil && len(list.Items) == 1 {
+			// for podKey, item := range list.Items {
+			// 	k.log.Printf("pod[%v] %+v\n\n", podKey, item.ObjectMeta)
+			// 	k.log.Printf("%v Containers:\n", len(item.Spec.Containers))
+			// 	for key, container := range item.Status.ContainerStatuses {
+			// 		k.log.Printf("container[%v] %+v\n\n", key, container)
+			// 	}
+			// }
+			// k.log.Println("END of the deployment information")
+
+			pod := list.Items[0]
+			podUid = string(pod.ObjectMeta.UID)
+			if len(pod.Status.ContainerStatuses) != 1 {
+				k.log.Printf("ERROR: the deployment deployed %v containers\n", len(list.Items))
+			} else {
+				container := pod.Status.ContainerStatuses[0]
+				containerId = container.ContainerID
+				k.log.Printf("The deployed pod UID: %v\n", podUid)
+				k.log.Printf("The deployed container ID: %v\n", containerId)
 			}
-			k.log.Println("END of the deployment information")
+
+		} else if list != nil && len(list.Items) > 1 {
+			k.log.Printf("ERROR: the deployment deployed %v pods\n", len(list.Items))
 
 		} else {
 			k.log.Println("ERROR: K8s returned empty response for the query")
@@ -143,11 +159,11 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
 	if err != nil {
 		k.log.Println("ERROR while depolying node port services for pods:", err.Error())
-		return "", 0, err
+		return "", 0, podUid, containerId, err
 	}
 
 	k.log.Printf("Completed deploying pods, deployment name: %q.\n", deploymentName)
-	return deploymentName, nodePort, nil
+	return deploymentName, nodePort, podUid, containerId, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }

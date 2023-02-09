@@ -58,7 +58,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 					// provision an aggregator pod
 					containerSettings := task.Application.GetModule(string(ds.AppModuleAggregator))
 					containerSettings.SetISAInImage(j.Config.ISA)
-					podName, nodePort, err := j.Provisioner.ProvisionTask(
+					podName, nodePort, podUid, containerId, err := j.Provisioner.ProvisionTask(
 						j.Kube, j.Config.SelfNode,
 						j.newEnv(
 							j.Config.SelfNode.GetSDKNode(),
@@ -79,6 +79,8 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 						// Update self-node inside the pod
 						j.log.Debug.Println("[task provision] Error when updating pod configuration:", err)
 					} else {
+						container := task.Application.GetModule(string(ds.AppModuleAggregator)).Copy()
+						container.ID = containerId
 						aggregatorPod = &ds.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
 							Namespace:  j.Config.SelfNode.Namespace,
@@ -87,7 +89,8 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 							Port:       nodePort,
 							// Allocation: task.Requirements.GetModule(string(ds.AppModuleAggregator)),
 							AppKey:     task.Application.Key(),
-							Container:  task.Application.GetModule(string(ds.AppModuleAggregator)),
+							Container:  container,
+							UID: 		podUid,
 							ModuleName: string(ds.AppModuleAggregator),
 						}
 						aggregatorPod.GetKey()
@@ -286,7 +289,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					   		// provision a worker Pod for it
 							containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
 							containerSettings.SetISAInImage(j.Config.ISA)
-							podName, nodePort, err := j.Provisioner.ProvisionTask(
+							podName, nodePort, podUid, containerId, err := j.Provisioner.ProvisionTask(
 								j.Kube, j.Config.SelfNode,
 								j.newEnv(
 									reportTo.Node,
@@ -307,6 +310,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 							} else if err = j.updatePodConfigOfSelfNodePort(nodePort); err != nil {
 								j.log.Debug.Println("[task provision] ERROR when updating pod nodePort", string(ds.AppModuleWorker), "for task", task.GetKey())
 							} else {
+								container := task.Application.GetModule(string(ds.AppModuleWorker)).Copy()
+								container.ID = containerId
 								workerPod := &ds.Pod{
 									NodeKey:    j.Config.SelfNode.Key(),
 									Namespace:  j.Config.SelfNode.Namespace,
@@ -315,7 +320,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 									Port:       nodePort,
 									// Allocation: task.Requirements.GetModule(string(ds.AppModuleWorker)),
 									AppKey:     task.Application.Key(),
-									Container:  task.Application.GetModule(string(ds.AppModuleWorker)),
+									Container:  container,
+									UID: 		podUid,
 									ModuleName: string(ds.AppModuleWorker),
 								}
 								workerPod.GetKey()
