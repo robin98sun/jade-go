@@ -100,6 +100,24 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if err != nil {
 		k.log.Println("ERROR while depolying pods:", err.Error())
 		return "", 0, err
+	} else {
+		k.log.Println("Successfully deployed pod")
+		k.log.Println("the information of the deployment "+deploymentName+":")
+		// reference: https://itnext.io/generically-working-with-kubernetes-resources-in-go-53bce678f887
+
+		list, err := k.Clientset.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			k.log.Println("ERROR while querying the deployment information from K8s:")
+			k.log.Println(err)
+		} else if list != nil && len(list.Items) > 0 {
+			for key, item := range list.Items {
+				k.log.Printf("[%v] %+v\n", key, item)
+			}
+			k.log.Println("END of the deployment information")
+		} else {
+			k.log.Println("ERROR: K8s returned empty response for the query")
+		}
+
 	}
 
 	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
