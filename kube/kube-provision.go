@@ -165,7 +165,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	if podUid != "" && containerId != "" {
 		parts := strings.Split(containerId, "://")
 		if len(parts) == 2 {
-			cgroupPath = podUid + "/" + parts[1]
+			cgroupPath = "pod"+podUid + "/" + parts[1]
 			if resourceMap != nil {
 				cgroupPath = "kubepods/"+cgroupPath
 			} else {
