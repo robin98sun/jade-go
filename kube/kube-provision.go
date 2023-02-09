@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8s_labels "k8s.io/apimachinery/pkg/labels"
 	"strconv"
 	"strings"
 	ds "uta.edu/aces/jadesdk/data_structure"
@@ -102,12 +103,21 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		return "", 0, err
 	} else {
 		k.log.Println("Successfully deployed pod")
-		k.log.Println("the information of the deployment "+deploymentName+":")
+		k.log.Println("the pods of the deployment "+deploymentName+":")
 		// reference: https://itnext.io/generically-working-with-kubernetes-resources-in-go-53bce678f887
 
-		list, err := k.Clientset.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
+		list, err := k.Clientset.CoreV1().Pods(namespace).List(
+						context.Background(), 
+						metav1.ListOptions{
+							LabelSelector: k8s_labels.Set(
+								metav1.LabelSelector{
+									MatchLabels: labels,
+								}.MatchLabels,
+							).String(),
+						},
+					)
 		if err != nil {
-			k.log.Println("ERROR while querying the deployment information from K8s:")
+			k.log.Println("ERROR while querying the pods information from K8s:")
 			k.log.Println(err)
 		} else if list != nil && len(list.Items) > 0 {
 			for key, item := range list.Items {
@@ -115,8 +125,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 				k.log.Printf("[%v] %+v\n", key, item)
 				k.log.Println("Try to parse the 'Spec' field from the result:")
 				k.log.Printf("type of 'Spec': %T\n", item.Spec)
-				k.log.Printf("type of 'Replicas': %T\n", item.Spec.Replicas)
-				k.log.Printf("[replicas] %+v\n", item.Spec.Replicas)
+				k.log.Printf("type of 'Containers': %T\n", item.Spec.Containers)
 			}
 			k.log.Println("END of the deployment information")
 
