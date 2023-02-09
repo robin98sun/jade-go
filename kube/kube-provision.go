@@ -111,9 +111,15 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 			k.log.Println(err)
 		} else if list != nil && len(list.Items) > 0 {
 			for key, item := range list.Items {
+				k.log.Printf("type of item: %T\n", item)
 				k.log.Printf("[%v] %+v\n", key, item)
+				k.log.Println("Try to parse the 'Spec' field from the result:")
+				k.log.Printf("type of 'Spec': %T\n", item.Spec)
+				k.log.Printf("type of 'Replicas': %T\n", item.Spec.Replicas)
+				k.log.Printf("[replicas] %+v\n", item.Spec.Replicas)
 			}
 			k.log.Println("END of the deployment information")
+
 		} else {
 			k.log.Println("ERROR: K8s returned empty response for the query")
 		}
