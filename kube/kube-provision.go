@@ -105,7 +105,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		return "", 0, podUid, containerId, err
 	} else {
 		k.log.Println("Successfully deployed pod, wait 30 seconds to get pod UID and ContainerID")
-		time.Sleep(time.Duration(20)*time.Second)
+		time.Sleep(time.Duration(30)*time.Second)
 		// k.log.Println("the pods of the deployment "+deploymentName+":")
 		// reference: https://itnext.io/generically-working-with-kubernetes-resources-in-go-53bce678f887
 
