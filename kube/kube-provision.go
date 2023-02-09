@@ -121,11 +121,11 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 			k.log.Println("ERROR while querying the pods information from K8s:")
 			k.log.Println(err)
 		} else if list != nil && len(list.Items) > 0 {
-			for _, item := range list.Items {
+			for podKey, item := range list.Items {
+				k.log.Printf("pod[%v] %+v\n\n", podKey, item.ObjectMeta)
 				k.log.Printf("%v Containers:\n", len(item.Spec.Containers))
-				for key, container := range item.Spec.Containers {
-					k.log.Printf("[%v] %+v\n", key, container)
-					k.log.Println("")
+				for key, container := range item.Status.ContainerStatuses {
+					k.log.Printf("container[%v] %+v\n\n", key, container)
 				}
 			}
 			k.log.Println("END of the deployment information")
