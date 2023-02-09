@@ -220,7 +220,7 @@ func (j *JADE) ShowTaskPerfTraces(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.PodCache)
+	w.WriteJson(j.PodCache.GetPods())
 }
 
 func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
