@@ -19,7 +19,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	namespace string, image string, port int,
 	allocation *ds.AllocationUnit,
 	envVars []map[string]string,
-	replicaIndex int) (string, int, string, string, error) {
+	replicaIndex int) (string, int, string, string, string, error) {
 
 	replicaCount := 1
 
@@ -46,8 +46,22 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 		"jade-app-replica-index": "replica-"+strconv.Itoa(replicaIndex),
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	deployment := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+
+	var resourceMap map[string]interface{} = nil
+	if allocation.MinimumCapacity.RAM > 0 || allocation.MaximumCapacity.RAM > 0 || allocation.MinimumCapacity.CPU > 0 || allocation.MaximumCapacity.CPU > 0 {
+		resourceMap = map[string]interface{}{
+			"requests": map[string]interface{}{
+				"memory": strconv.FormatInt(allocation.MinimumCapacity.RAM, 10) + "Mi",
+				"cpu": strconv.FormatInt(allocation.MinimumCapacity.CPU, 10) + "m",
+			},
+			"limits": map[string]interface{}{
+				"memory": strconv.FormatInt(allocation.MaximumCapacity.RAM, 10) + "Mi",
+				"cpu": strconv.FormatInt(allocation.MaximumCapacity.CPU, 10) + "m",
+			},
+		}
+	}
+
+	deploymentMap :=  map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
 			"metadata": map[string]interface{}{
@@ -78,31 +92,24 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 									},
 								},
 								"env": environmentVariables,
-								"resources": map[string]interface{}{
-									"requests": map[string]interface{}{
-										"memory": strconv.FormatInt(allocation.MinimumCapacity.RAM, 10) + "Mi",
-										"cpu":    strconv.FormatInt(allocation.MinimumCapacity.CPU, 10) + "m",
-									},
-									"limits": map[string]interface{}{
-										"memory": strconv.FormatInt(allocation.MaximumCapacity.RAM, 10) + "Mi",
-										"cpu":    strconv.FormatInt(allocation.MaximumCapacity.CPU, 10) + "m",
-									},
-								},
+								"resources": resourceMap,
 							},
 						},
 					},
 				},
 			},
-		},
-	}
+		}
+
+	deployment := &unstructured.Unstructured{Object:deploymentMap}
 
 	podUid := ""
 	containerId := ""
+	cgroupPath := ""
 	k.log.Println("Deploying pods...")
 	_, err := k.Client.Resource(deploymentRes).Namespace(namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		k.log.Println("ERROR while depolying pods:", err.Error())
-		return "", 0, podUid, containerId, err
+		return "", 0, podUid, containerId, cgroupPath, err
 	} else {
 		k.log.Println("Successfully deployed pod, wait 30 seconds to get pod UID and ContainerID")
 		time.Sleep(time.Duration(30)*time.Second)
@@ -155,15 +162,27 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	// resultBytes, _ := json.MarshalIndent(result, "", "  ")
 	// k.log.Println("deployment:", deploymentName, ", result:", string(resultBytes))
 
+	if podUid != "" && containerId != "" {
+		parts := strings.Split(containerId, "://")
+		if len(parts) == 2 {
+			cgroupPath = podUid + "/" + parts[1]
+			if resourceMap != nil {
+				cgroupPath = "kubepods/"+cgroupPath
+			} else {
+				cgroupPath = "kubepods/besteffort/"+cgroupPath
+			}
+		}
+	}
+
 	// deploy node port service for the pod
 	nodePort, err := k.provisionNodePortService(deploymentName, namespace, labels, port)
 	if err != nil {
 		k.log.Println("ERROR while depolying node port services for pods:", err.Error())
-		return "", 0, podUid, containerId, err
+		return "", 0, podUid, containerId, cgroupPath, err
 	}
 
 	k.log.Printf("Completed deploying pods, deployment name: %q.\n", deploymentName)
-	return deploymentName, nodePort, podUid, containerId, nil
+	return deploymentName, nodePort, podUid, containerId, cgroupPath, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }

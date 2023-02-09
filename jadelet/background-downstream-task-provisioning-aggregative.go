@@ -58,7 +58,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 					// provision an aggregator pod
 					containerSettings := task.Application.GetModule(string(ds.AppModuleAggregator))
 					containerSettings.SetISAInImage(j.Config.ISA)
-					podName, nodePort, podUid, containerId, err := j.Provisioner.ProvisionTask(
+					podName, nodePort, podUid, containerId, cgroupPath, err := j.Provisioner.ProvisionTask(
 						j.Kube, j.Config.SelfNode,
 						j.newEnv(
 							j.Config.SelfNode.GetSDKNode(),
@@ -81,6 +81,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 					} else {
 						container := task.Application.GetModule(string(ds.AppModuleAggregator)).Copy()
 						container.ID = containerId
+						container.CgroupPath = cgroupPath
 						aggregatorPod = &ds.Pod{
 							NodeKey:    j.Config.SelfNode.Key(),
 							Namespace:  j.Config.SelfNode.Namespace,
@@ -289,7 +290,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 					   		// provision a worker Pod for it
 							containerSettings := task.Application.GetModule(string(ds.AppModuleWorker))
 							containerSettings.SetISAInImage(j.Config.ISA)
-							podName, nodePort, podUid, containerId, err := j.Provisioner.ProvisionTask(
+							podName, nodePort, podUid, containerId, cgroupPath, err := j.Provisioner.ProvisionTask(
 								j.Kube, j.Config.SelfNode,
 								j.newEnv(
 									reportTo.Node,
@@ -312,6 +313,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 							} else {
 								container := task.Application.GetModule(string(ds.AppModuleWorker)).Copy()
 								container.ID = containerId
+								container.CgroupPath = cgroupPath
 								workerPod := &ds.Pod{
 									NodeKey:    j.Config.SelfNode.Key(),
 									Namespace:  j.Config.SelfNode.Namespace,

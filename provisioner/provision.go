@@ -24,14 +24,14 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *ds.Node,
 	envVars []map[string]string, app *ds.Application,
 	moduleName string, container *ds.Container,
 	allocationLimits *ds.AllocationUnit,
-	replicaIndex int, retryLimit int) (string, int, string, string, error) {
+	replicaIndex int, retryLimit int) (string, int, string, string, string, error) {
 	// deploymentName
 	deploymentName := purifyString(node.Hostname) +"-"+ purifyString(app.Name) 
 	deploymentName += "-" + purifyString(app.Owner)
 	// registry
 	// Environment variables
 	p.log.Op.Println("Provisioning pod", deploymentName, ", container image:", container.Image, ", conntainer port:", container.Port)
-	deployedName, nodePort, podUid, containerId, err := client.ProvisionDeployment(
+	deployedName, nodePort, podUid, containerId, cgroupPath, err := client.ProvisionDeployment(
 		app.EnvName, app.Owner,
 		app.Name, app.Version, moduleName,
 		// deploymentName, "k3s.io/hostname",
@@ -51,11 +51,11 @@ func (p *Provisioner) ProvisionTask(client *kube.KubeClient, node *ds.Node,
 			time.Sleep(time.Duration(retryDelay)*time.Second)
 			return p.ProvisionTask(client, node, envVars, app, moduleName, container, allocationLimits, replicaIndex, retryLimit-1)
 		} else {
-			return deploymentName, 0, podUid, containerId, err
+			return deploymentName, 0, podUid, containerId, cgroupPath, err
 		}
 	} else {
 		p.log.Op.Println("Successfully provisioned pods, deployment:", deployedName, "nodePort:", nodePort)
-		return deployedName, nodePort, podUid, containerId, nil
+		return deployedName, nodePort, podUid, containerId, cgroupPath, nil
 	}
 }
 
