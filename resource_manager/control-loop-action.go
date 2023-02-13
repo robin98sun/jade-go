@@ -19,6 +19,16 @@ type CPUResourceUpdateResponse struct {
 	Value int `json:"value,omitempty"`
 }
 
+type CPUCoresQueryResponse struct {
+	Error interface{} `json:"error,omitempty"`
+	Cores int `json:"cores,omitempty"`
+}
+
+type OverallSharesQueryResponse struct {
+	Error interface{} `json:"error,omitempty"`
+	Shares int `json:"shares,omitempty"`
+}
+
 type CPUResourceUpdateRequest struct {
 	Type string `json:"type,omitempty"`
 	IsBesteffort bool `json:"is_besteffort,omitempty"`
@@ -111,12 +121,63 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 				if printf != nil {
 					printf("[resource manager] ERROR when decoding response of querying cpu resourece of all pods, error: %v", err2)
 				}
-			} else if res.Error == nil {
-				l.CPUResourceCache.UpdatePods(res.Pods)
 			} else if res.Error != nil {
 				if printf != nil {
 					printf("[resource manager] ERROR in the response of querying cpu resourece of all pods, error: %v", res.Error)
 				}
+			} else {
+				l.CPUResourceCache.UpdatePods(res.Pods)
+				_, content_cores, err3 := (*l.MessengerCommLocalResourceManagerAddon)(
+					l.LocalResourceManagerPort,
+					"GET", "/cpu-cores",
+					nil,
+				)
+				if err3 != nil {
+					if printf != nil {
+						printf("[resource manager] ERROR when querying cpu cores: error: %v", err3)
+					}
+				} else {
+					res_cores := &CPUCoresQueryResponse{}
+					err4 := json.Unmarshal(content_cores, res_cores)
+					if err4 != nil {
+						if printf != nil {
+							printf("[resource manager] ERROR when decoding response of querying cpu cores, error: %v", err4)
+						}
+					} else if res_cores.Error != nil {
+						if printf != nil {
+							printf("[resource manager] ERROR in the response of querying cpu cores, error: %v", res_cores.Error)
+						}
+					} else {
+						l.CPUResourceCache.SetCPUCores(res_cores.Cores)
+
+						_, content_shares, err4 := (*l.MessengerCommLocalResourceManagerAddon)(
+							l.LocalResourceManagerPort,
+							"GET", "/kube-overall-cpu-shares",
+							nil,
+						)
+						if err4 != nil {
+							if printf != nil {
+								printf("[resource manager] ERROR when querying cpu shares: error: %v", err4)
+							}
+						} else {
+							res_shares := &OverallSharesQueryResponse{}
+							err5 := json.Unmarshal(content_shares, res_shares)
+							if err5 != nil {
+								if printf != nil {
+									printf("[resource manager] ERROR when decoding response of querying overall shares, error: %v", err5)
+								}
+							} else if res_shares.Error != nil {
+								if printf != nil {
+									printf("[resource manager] ERROR in the response of querying overall shares, error: %v", res_shares.Error)
+								}
+							} else {
+								l.CPUResourceCache.SetTotalShares(res_shares.Shares)
+								
+							}
+						}
+					}
+				}
+
 			}
 		}
 	}

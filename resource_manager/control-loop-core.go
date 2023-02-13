@@ -5,6 +5,7 @@ import (
 	"sync"
 	"math"
 	"strconv"
+	"sort"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
@@ -294,10 +295,41 @@ func (l *ControlLoop) ActionHasBeenPhysicallyExecuted(result *ScalingResult) {
 
 }
 
-// func (l *ControlLoop) GetActionHistoryTrace() [][]string {
-// 	for appKey, appHistory := range l.actionStatusPerApp {
+func (l *ControlLoop) generateActionGroupID(appKey string, startClock uint64) string {
+	return appKey + "::" + strconv.FormatUint(startClock, 10)
+}
 
-// 	}
-// }
+func (l *ControlLoop) GetActionHistoryTrace() [][]string {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	result := [][]string{}
+	for appKey, appHistory := range l.actionStatusPerApp {
+
+		clock_list := []uint64{}
+		for _, actionGroup := range appHistory.ActionList {
+			if len(actionGroup) == 0 {continue}
+			actionGroupClock := actionGroup[0].StartClock
+			clock_list = append(clock_list, actionGroupClock)
+		}
+		sort.Slice(clock_list, func(i, j int) bool {
+			return clock_list[i] < clock_list[j]
+		})
+
+		for _, clock := range clock_list {
+			groupId := l.generateActionGroupID(appKey, clock)
+			if actionGroup, e := appHistory.ActionList[groupId]; e {
+				if len(actionGroup) == 0 {continue}
+				line := []string{
+					appKey, strconv.FormatUint(clock, 10),
+					string(actionGroup[0].ActionType),
+				}
+				result = append(result, line)
+			}
+		}
+
+	}
+	return result
+}
 
 
