@@ -37,7 +37,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 	}
 
 
-	l.updateLocalCPUResourceCache()
+	l.updateLocalCPUResourceCache(printf)
 	shares := l.CPUResourceCache.TotalShares
 	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
 	if period <= 0 || shares <= 0 {
@@ -90,7 +90,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 }
 
 
-func (l *ControlLoop) updateLocalCPUResourceCache() {
+func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, args ...interface{})) {
 	// refresh local resource cache from local resource manager
 	// update local resource cache, regardless whether succeeded or not
 	if l.MessengerCommLocalResourceManagerAddon != nil {
@@ -100,11 +100,23 @@ func (l *ControlLoop) updateLocalCPUResourceCache() {
 						"GET", "/kube-all-pods-cpu-resources",
 						nil,
 					)
-		if err == nil{
+		if err != nil {
+			if printf != nil {
+				printf("[resource manager] ERROR when querying cpu resources of all pods, error: %v", err)
+			}
+		} else {
 			res := &CPUResourcesOfPodsResponse{}
 			err2 := json.Unmarshal(content, res)
-			if res != nil && res.Error == nil && err2 == nil{
+			if err2 != nil {
+				if printf != nil {
+					printf("[resource manager] ERROR when decoding response of querying cpu resourece of all pods, error: %v", err2)
+				}
+			} else if res.Error == nil {
 				l.CPUResourceCache.UpdatePods(res.Pods)
+			} else if res.Error != nil {
+				if printf != nil {
+					printf("[resource manager] ERROR in the response of querying cpu resourece of all pods, error: %v", res.Error)
+				}
 			}
 		}
 	}
@@ -131,7 +143,7 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 		Succeeded: false,
 	}
 
-	l.updateLocalCPUResourceCache()
+	l.updateLocalCPUResourceCache(nil)
 
 	if action.ActionType == ScalingActionTypeUp || action.ActionType == ScalingActionTypeDown {
 
@@ -169,7 +181,7 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 					err2 := json.Unmarshal(content, res)
 					if res != nil && res.Error == nil && err2 == nil{
 						result.Succeeded = true
-						l.updateLocalCPUResourceCache()
+						l.updateLocalCPUResourceCache(nil)
 					}
 				}
 

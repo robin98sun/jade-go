@@ -115,10 +115,10 @@ func (l *ControlLoop) daemon() {
 								ActionGroupID: actionGroupID,
 							}
 
-							if _, e := l.actionStatusPerApp[appKey].QueueList[queueKey]; !e {
-								l.actionStatusPerApp[appKey].QueueList[queueKey] = []*ScalingAction{}
+							if _, e := l.actionStatusPerApp[appKey].ActionList[actionGroupID]; !e {
+								l.actionStatusPerApp[appKey].ActionList[actionGroupID] = []*ScalingAction{}
 							}
-							l.actionStatusPerApp[appKey].QueueList[queueKey] = append(l.actionStatusPerApp[appKey].QueueList[queueKey], action)
+							l.actionStatusPerApp[appKey].ActionList[actionGroupID] = append(l.actionStatusPerApp[appKey].ActionList[actionGroupID], action)
 
 							go l.SendAction(appKey, queueKey, action)
 
