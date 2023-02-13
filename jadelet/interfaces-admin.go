@@ -256,3 +256,24 @@ func (j *JADE) ReceiveResourceScalingResult(w rest.ResponseWriter, r *rest.Reque
 }
 
 
+func (j *JADE) OperateAutoScalingSwitch(w rest.ResponseWriter, r *rest.Request) {
+	if j.PerfCache != nil {
+
+		j.log.Op.Printf("operating auto-scaling switch")
+		req := map[string]bool{}
+		err := r.DecodeJsonPayload(req)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if value, e := req["enable-auto-scaling"]; e {
+			j.ControlLoop.SwitchAutoScaling(value)
+		}
+		
+		j.DoneRequest(w, r, "OK")
+	} else {
+		j.DoneRequest(w, r, "perf cache is nil")
+	}
+}
+

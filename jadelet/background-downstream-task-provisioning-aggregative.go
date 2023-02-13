@@ -51,7 +51,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 			j.log.Debug.Printf("[task provision] there are %v neighbors in collaboration", task.NeighborNodes)
 			if j.IsCoordinator() {
 				// allocate an aggregator pod if needed
-				aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
+				aggregatorAllocation := task.Requirements.GetModule(string(ds.AppModuleAggregator))
 				aggregatorPod := j.PodCache.GetOnePodForModule(j.SelfNodeKey(), task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
 				if aggregatorPod == nil && taskItem.Options != nil && taskItem.Options.ProvisionPodsIfNotExist {
 					j.log.Debug.Println("[task provision] there is no existing aggregator pod on this node, going to provision one")
@@ -69,7 +69,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 						),
 						task.Application, string(ds.AppModuleAggregator),
 						containerSettings,
-						task.Requirements.GetModule(string(ds.AppModuleAggregator)),
+						aggregatorAllocation,
 						0, 5,
 					)
 					//
@@ -100,8 +100,13 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 							task.Application,
 							string(ds.AppModuleAggregator),
 							aggregatorPod,
-							task.Requirements.GetModule(string(ds.AppModuleAggregator)),
+							aggregatorAllocation,
 						)
+						avgCpu := float64(1)
+						if aggregatorAllocation != nil {
+							avgCpu = aggregatorAllocation.GetAvgCPUCores()
+						}
+						j.ControlLoop.InitPodCPUResource(podUid, avgCpu)
 					}
 				}
 				if aggregatorPod == nil {
@@ -196,7 +201,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 
 func (j *JADE) updatePodConfigOfSelfNodePort(nodePort int) error {
 	// seconds := 15
-	seconds := 60 
+	seconds := 30 
 	j.log.Debug.Printf("[task provision] waiting {%v} seconds for pod up", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
 	newConf := &jadesdk.SDKConf{
@@ -269,8 +274,8 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 			for _, nodekey := range availableNodes {
 				j.log.Debug.Printf("[task provision] provision available node[%v]", nodekey)
 				//		search pod on that node for this task
-				workerAllocation := task.Requirements.Allocations[string(ds.AppModuleWorker)]
-				aggregatorAllocation := task.Requirements.Allocations[string(ds.AppModuleAggregator)]
+				workerAllocation := task.Requirements.GetModule(string(ds.AppModuleWorker))
+				aggregatorAllocation := task.Requirements.GetModule(string(ds.AppModuleAggregator))
 				workerScheduler := j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
 				aggregatorPod := j.PodCache.GetOnePodForModule(nodekey, task.Application.Key(), string(ds.AppModuleAggregator), aggregatorAllocation)
 				// if the node itself is also a worker, then allcate a worker pod for it
@@ -334,6 +339,11 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 									workerPod,
 									task.Requirements.GetModule(string(ds.AppModuleWorker)),
 								)
+								avgCpu := float64(1)
+								if aggregatorAllocation != nil {
+									avgCpu = workerAllocation.GetAvgCPUCores()
+								}
+								j.ControlLoop.InitPodCPUResource(podUid, avgCpu)
 								if r == 0 {
 									workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)
 								}

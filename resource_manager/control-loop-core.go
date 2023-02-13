@@ -113,7 +113,15 @@ type ControlLoop struct {
 
 	LocalResourceManagerPort int
 
+	EnableAutoScaling bool
 
+}
+
+func (l *ControlLoop) SwitchAutoScaling(on bool) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	l.EnableAutoScaling = on
 }
 
 

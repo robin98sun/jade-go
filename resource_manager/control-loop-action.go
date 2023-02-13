@@ -3,21 +3,65 @@ package resource_manager
 import (
 	// "uta.edu/aces/jade-go/perfstat"
 	// "sync"
-	// "math"
+	"math"
 	// "strconv"
 	// ds "uta.edu/aces/jadesdk/data_structure"
 )
+
+type CPUResourcesOfPodsResponse struct {
+	Error interface{} `json:"error,omitempty"`
+	Pods  map[string]*CPUResourceItem `json:"pods,omitempty"`
+}
+
+type CPUResourceUpdateResponse struct {
+	Error interface{} `json:"error,omitempty"`
+	Value int `json:"value,omitempty"`
+}
+
+
+func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64) {
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	if l.MessengerCommLocalResourceManagerAddon == nil {return}
+
+
+	l.updateLocalCPUResourceCache()
+	shares := l.CPUResourceCache.TotalShares
+	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
+	if period <= 0 || shares <= 0 {return}
+
+	quota := int(math.Round(cpuCores * float64(period)))
+
+	(*l.MessengerCommLocalResourceManagerAddon)(
+		l.LocalResourceManagerPort,
+		"PUT", "/kube-pod-cpu-resource",
+		map[string]interface{}{
+			"type": "quota",
+			"is_besteffort": false,
+			"uid": podUID,
+			"value": quota,
+		},
+	)
+
+	(*l.MessengerCommLocalResourceManagerAddon)(
+		l.LocalResourceManagerPort,
+		"PUT", "/kube-pod-cpu-resource",
+		map[string]interface{}{
+			"type": "shares",
+			"is_besteffort": false,
+			"uid": podUID,
+			"value": shares,
+		},
+	)
+
+}
 
 
 func (l *ControlLoop) updateLocalCPUResourceCache() {
 	// refresh local resource cache from local resource manager
 	// update local resource cache, regardless whether succeeded or not
 	if l.MessengerCommLocalResourceManagerAddon != nil {
-
-		type CPUResourcesOfPodsResponse struct {
-			Error interface{} `json:"error,omitempty"`
-			Pods  map[string]*CPUResourceItem `json:"pods,omitempty"`
-		}
 
 		resInst, err := (*l.MessengerCommLocalResourceManagerAddon)(
 						l.LocalResourceManagerPort,
@@ -76,11 +120,7 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 			if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
 				// actually take the action
 
-				type CPUResourceUpdateResponse struct {
-					Error interface{} `json:"error,omitempty"`
-					Value int `json:"value,omitempty"`
-				}
-
+				
 				resInst, err := (*l.MessengerCommLocalResourceManagerAddon)(
 					l.LocalResourceManagerPort,
 					"PUT", "/kube-pod-cpu-resource",

@@ -120,5 +120,6 @@ func (j *JADE) InitControlLoop() {
 		return j.CommLocalResourceManagerAddon(port, method, path, payload)
 	}
 	j.ControlLoop.MessengerCommLocalResourceManagerAddon = &msgrCommLocalResourceManagerAddon
+
 }
 
