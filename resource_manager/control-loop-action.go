@@ -42,9 +42,9 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 	resInst1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
-		map[string]interface{}{
+		map[string]string{
 			"type": "quota",
-			"is_besteffort": false,
+			"is_besteffort": "N",
 			"uid": podUID,
 			"value": quota,
 		},
@@ -53,9 +53,9 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 	resInst2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
-		map[string]interface{}{
+		map[string]string{
 			"type": "shares",
-			"is_besteffort": false,
+			"is_besteffort": "N",
 			"uid": podUID,
 			"value": shares,
 		},

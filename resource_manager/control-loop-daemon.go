@@ -112,6 +112,11 @@ func (l *ControlLoop) daemon() {
 								StartClock: appItem.Clock,
 							}
 
+							if _, e := l.actionStatusPerApp[appKey].QueueList[queueKey]; !e {
+								l.actionStatusPerApp[appKey].QueueList[queueKey] = []*ScalingAction{}
+							}
+							l.actionStatusPerApp[appKey].QueueList[queueKey] = append(l.actionStatusPerApp[appKey].QueueList[queueKey], action)
+
 							go l.SendAction(appKey, queueKey, action)
 
 						}

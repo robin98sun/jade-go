@@ -48,10 +48,12 @@ type ActionStatus struct {
 	TimeoutClock  uint64
 	CompleteClock uint64
 	Succeeded bool
+	QueueList map[string][]*ScalingAction
 }
 func NewActionStatus(clock uint64) *ActionStatus {
 	return &ActionStatus{
 		StartClock: clock,
+		QueueList: make(map[string][]*ScalingAction),
 	}
 }
 func (a *ActionStatus) Start(clock uint64) {
