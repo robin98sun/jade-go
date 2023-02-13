@@ -127,6 +127,9 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 				}
 			} else {
 				l.CPUResourceCache.UpdatePods(res.Pods)
+				if printf != nil {
+					printf("[resource manager] got pods for resource cache: %v", res)
+				}
 				_, content_cores, err3 := (*l.MessengerCommLocalResourceManagerAddon)(
 					l.LocalResourceManagerPort,
 					"GET", "/cpu-cores",
@@ -150,6 +153,10 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 					} else {
 						l.CPUResourceCache.SetCPUCores(res_cores.Cores)
 
+						if printf != nil {
+							printf("[resource manager] got cpu cores: %v", res_cores)
+						}
+
 						_, content_shares, err4 := (*l.MessengerCommLocalResourceManagerAddon)(
 							l.LocalResourceManagerPort,
 							"GET", "/kube-overall-cpu-shares",
@@ -172,7 +179,9 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 								}
 							} else {
 								l.CPUResourceCache.SetTotalShares(res_shares.Shares)
-								
+								if printf != nil {
+									printf("[resource manager] got overall shares: %v", res_shares)
+								}
 							}
 						}
 					}
