@@ -18,6 +18,13 @@ type CPUResourceUpdateResponse struct {
 	Value int `json:"value,omitempty"`
 }
 
+type CPUResourceUpdateRequest struct {
+	Type string `json:"type,omitempty"`
+	IsBesteffort bool `json:"is_besteffort,omitempty"`
+	UID string `json:"uid,omitempty"`
+	Value int `json:"value,omitempty"`
+}
+
 
 func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf func(template string, args ...interface{})) {
 
@@ -42,22 +49,22 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 	resInst1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
-		map[string]string{
-			"type": "quota",
-			"is_besteffort": "N",
-			"uid": podUID,
-			"value": quota,
+		&CPUResourceUpdateRequest{
+			Type: "quota",
+			IsBesteffort: false,
+			UID: podUID,
+			Value: quota,
 		},
 	)
 
 	resInst2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
-		map[string]string{
-			"type": "shares",
-			"is_besteffort": "N",
-			"uid": podUID,
-			"value": shares,
+		&CPUResourceUpdateRequest{
+			Type: "shares",
+			IsBesteffort: false,
+			UID: podUID,
+			Value: shares,
 		},
 	)
 
