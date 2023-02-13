@@ -19,21 +19,27 @@ type CPUResourceUpdateResponse struct {
 }
 
 
-func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64) {
+func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf func(template string, args ...interface{})) {
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	if l.MessengerCommLocalResourceManagerAddon == nil {return}
+	if l.MessengerCommLocalResourceManagerAddon == nil {
+		printf("[resource manager] ERROR: messenger for communicating local resource manager addon is nil")
+		return
+	}
 
 
 	l.updateLocalCPUResourceCache()
 	shares := l.CPUResourceCache.TotalShares
 	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
-	if period <= 0 || shares <= 0 {return}
+	if period <= 0 || shares <= 0 {
+		printf("[resource manager] ERROR: total shares=%v, for pod UID=%v period=%v", shares, podUID, period)
+		return
+	}
 
 	quota := int(math.Round(cpuCores * float64(period)))
 
-	(*l.MessengerCommLocalResourceManagerAddon)(
+	resInst1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		map[string]interface{}{
@@ -44,7 +50,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64) {
 		},
 	)
 
-	(*l.MessengerCommLocalResourceManagerAddon)(
+	resInst2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		map[string]interface{}{
@@ -54,6 +60,20 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64) {
 			"value": shares,
 		},
 	)
+
+	res1 := resInst1.(*CPUResourceUpdateResponse)
+	res2 := resInst2.(*CPUResourceUpdateResponse)
+	if err1 != nil || res1.Error != nil {
+		printf("[resource manager] ERROR when updating quota to %v for pod UID=%v, comm error: %v, service error: %v", quota, podUID, err1, res1.Error)
+	} else {
+		printf("[resource manager] pod UID=%v, quota has been updated to %v", podUID, res1.Value)
+	}
+
+	if res2.Error != nil {
+		printf("[resource manager] ERROR when updating shares to %v for pod UID=%v, comm error: %v, service error: %v", shares, podUID, err2, res2.Error)
+	} else {
+		printf("[resource manager] pod UID=%v, shares has been updated to %v", podUID, res2.Value)
+	}
 
 }
 
