@@ -4,6 +4,7 @@ import (
 	"uta.edu/aces/jade-go/perfstat"
 	"time"
 	"math/rand"
+	"strconv"
 )
 
 func (l *ControlLoop) daemon() {	
@@ -91,6 +92,7 @@ func (l *ControlLoop) daemon() {
 
 					for queueKey, queueItem := range plan {
 						for appKey, appItem := range queueItem {
+							actionGroupID := appKey + "::" + strconv.FormatUint(appItem.Clock, 10)
 							if _, e := l.actionStatusPerApp[appKey]; !e {
 								l.actionStatusPerApp[appKey] = NewActionStatus(appItem.Clock)
 							} else if l.actionStatusPerApp[appKey].StartClock < appItem.Clock {
@@ -110,6 +112,7 @@ func (l *ControlLoop) daemon() {
 								Ratio: appItem.Ratio,
 								AverageRatio: appItem.AverageRatio,
 								StartClock: appItem.Clock,
+								ActionGroupID: actionGroupID,
 							}
 
 							if _, e := l.actionStatusPerApp[appKey].QueueList[queueKey]; !e {

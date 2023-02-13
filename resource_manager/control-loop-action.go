@@ -6,6 +6,7 @@ import (
 	"math"
 	// "strconv"
 	// ds "uta.edu/aces/jadesdk/data_structure"
+	"encoding/json"
 )
 
 type CPUResourcesOfPodsResponse struct {
@@ -46,7 +47,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 
 	quota := int(math.Round(cpuCores * float64(period)))
 
-	resInst1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
+	_, content1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -57,7 +58,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 		},
 	)
 
-	resInst2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
+	_, content2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -68,16 +69,20 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 		},
 	)
 
-	res1 := resInst1.(*CPUResourceUpdateResponse)
-	res2 := resInst2.(*CPUResourceUpdateResponse)
-	if err1 != nil || res1.Error != nil {
-		printf("[resource manager] ERROR when updating quota to %v for pod UID=%v, comm error: %v, service error: %v", quota, podUID, err1, res1.Error)
+	res1 := &CPUResourceUpdateResponse{}
+	res2 := &CPUResourceUpdateResponse{}
+
+	err11 := json.Unmarshal(content1, res1)
+	err22 := json.Unmarshal(content2, res2)
+
+	if err1 != nil || err11 != nil || res1.Error != nil {
+		printf("[resource manager] ERROR when updating quota to %v for pod UID=%v, comm error: %v, decoding error:%v, service error: %v", quota, podUID, err1, err11, res1.Error)
 	} else {
 		printf("[resource manager] pod UID=%v, quota has been updated to %v", podUID, res1.Value)
 	}
 
-	if res2.Error != nil {
-		printf("[resource manager] ERROR when updating shares to %v for pod UID=%v, comm error: %v, service error: %v", shares, podUID, err2, res2.Error)
+	if err2 != nil || err22 != nil || res2.Error != nil  {
+		printf("[resource manager] ERROR when updating shares to %v for pod UID=%v, comm error: %v, decoding error %v, service error: %v", shares, podUID, err2, err22, res2.Error)
 	} else {
 		printf("[resource manager] pod UID=%v, shares has been updated to %v", podUID, res2.Value)
 	}
@@ -90,14 +95,15 @@ func (l *ControlLoop) updateLocalCPUResourceCache() {
 	// update local resource cache, regardless whether succeeded or not
 	if l.MessengerCommLocalResourceManagerAddon != nil {
 
-		resInst, err := (*l.MessengerCommLocalResourceManagerAddon)(
+		_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
 						l.LocalResourceManagerPort,
 						"GET", "/kube-all-pods-cpu-resources",
 						nil,
 					)
 		if err == nil{
-			res := resInst.(*CPUResourcesOfPodsResponse)
-			if res.Error == nil {
+			res := &CPUResourcesOfPodsResponse{}
+			err2 := json.Unmarshal(content, res)
+			if res != nil && res.Error == nil && err2 == nil{
 				l.CPUResourceCache.UpdatePods(res.Pods)
 			}
 		}
@@ -148,7 +154,7 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 				// actually take the action
 
 				
-				resInst, err := (*l.MessengerCommLocalResourceManagerAddon)(
+				_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
 					l.LocalResourceManagerPort,
 					"PUT", "/kube-pod-cpu-resource",
 					map[string]interface{}{
@@ -159,8 +165,9 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 					},
 				)
 				if err == nil{
-					res := resInst.(*CPUResourceUpdateResponse)
-					if res.Error == nil {
+					res := &CPUResourceUpdateResponse{}
+					err2 := json.Unmarshal(content, res)
+					if res != nil && res.Error == nil && err2 == nil{
 						result.Succeeded = true
 						l.updateLocalCPUResourceCache()
 					}

@@ -28,6 +28,7 @@ type ScalingAction struct {
 	CompleteClock uint64
 	Succeeded bool
 	SourceNode *ds.Node
+	ActionGroupID string
 }
 
 type ScalingResult struct {
@@ -98,7 +99,7 @@ type ControlLoop struct {
 
 	MessengerPodUIDsAsPerQueue *func(appKey string, queueKey string) []string
 
-	MessengerCommLocalResourceManagerAddon *func(port int, method string, path string, payload interface{}) (interface{}, error)
+	MessengerCommLocalResourceManagerAddon *func(port int, method string, path string, payload interface{}) (interface{}, []byte, error)
 
 	PerfMessageBuffer []*perfstat.PerfMessage
 
@@ -286,10 +287,17 @@ func (l *ControlLoop) ActionHasBeenPhysicallyExecuted(result *ScalingResult) {
 		currentClock := l.clock.CurrentClock()
 		l.actionStatusPerApp[action.AppKey].CompleteClock = currentClock
 		l.actionStatusPerApp[action.AppKey].Succeeded = result.Succeeded
+		action.CompleteClock = currentClock
 		delete(l.ActionCache, result.ActionKey)
 	}
 	l.mutex.Unlock()
 
 }
+
+// func (l *ControlLoop) GetActionHistoryTrace() [][]string {
+	// for appKey, appHistory := range l.actionStatusPerApp {
+
+	// }
+// }
 
 

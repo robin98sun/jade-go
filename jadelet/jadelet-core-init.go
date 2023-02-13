@@ -116,7 +116,7 @@ func (j *JADE) InitControlLoop() {
 	}
 	j.ControlLoop.MessengerReportScalingResult = &msgrReportScalingResult
 
-	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}) (interface{}, error) {
+	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}) (interface{}, []byte, error) {
 		return j.CommLocalResourceManagerAddon(port, method, path, payload)
 	}
 	j.ControlLoop.MessengerCommLocalResourceManagerAddon = &msgrCommLocalResourceManagerAddon
