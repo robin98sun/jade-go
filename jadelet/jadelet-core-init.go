@@ -34,7 +34,49 @@ func (j *JADE) Init() {
 	// j.CapacityStatus = &kernel.CapacityStatus{}
 	j.TaskCache = scheduler.NewTaskCache()
 	j.PodCache = scheduler.NewPodCache()
+
+	// read environment variables into config
+	j.Config = ds.ReadConfFromEnv()
+	// j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
+	// j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
+
+	// read env metrics if the addon is deployed
 	
+	// control loop
+	j.InitControlLoop()
+
+	// others
+	j.dist = scheduler.NewDist()
+	
+	// setup k8s client instance
+	clients := kube.NewKubeClient(j.log.Op)
+	clients.Init()
+	j.Kube = clients
+	j.Provisioner = provisioner.NewProvisioner(j.log)
+	// Register to upper node
+	if j.Config.SelfNode.IsAddrEmpty() {
+		j.MakeUpAddressForNode(j.Config.SelfNode)
+	}
+	j.log.Op.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Desc(), j.Config.SelfNode.IsAddrEmpty())
+	if !j.Config.SelfNode.IsAddrEmpty() {
+		j.log.Op.Printf("[init] setting capabilities during initializing")
+		if list, e := j.Config.Capabilities["public"]; e {
+			j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), list)
+			j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), list)
+		}
+	}
+	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
+	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
+	// go j.routimeForPodQueues(1000)
+}
+
+func (j *JADE) SetVerboseAccordingToConf() {
+	if j.Config != nil && j.Config.Options != nil {
+
+	}
+}
+
+func (j *JADE) InitControlLoop() {
 	// Control Loop: monitoring, analyzing, planning, executing
 	clock := perfstat.NewClock()
 
@@ -64,45 +106,19 @@ func (j *JADE) Init() {
 	}
 	j.ControlLoop.MessengerScaleQueue = &msgrScaleQueue
 
+	msgrPodsAsPerQueue := func(appKey string, queueKey string) []string {
+		return j.PodCache.GetPodUIDsAsPerQueue(appKey, queueKey)
+	}
+	j.ControlLoop.MessengerPodUIDsAsPerQueue = &msgrPodsAsPerQueue
+
 	msgrReportScalingResult := func(node *ds.Node, result *rm.ScalingResult) bool {
 		return j.CommReportResourceScalingResult(node, result)
 	}
 	j.ControlLoop.MessengerReportScalingResult = &msgrReportScalingResult
 
-	// others
-	j.dist = scheduler.NewDist()
-	// read environment variables into config
-	j.Config = ds.ReadConfFromEnv()
-	// j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
-	// j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
-
-	// read env metrics if the addon is deployed
-	
-	// setup k8s client instance
-	clients := kube.NewKubeClient(j.log.Op)
-	clients.Init()
-	j.Kube = clients
-	j.Provisioner = provisioner.NewProvisioner(j.log)
-	// Register to upper node
-	if j.Config.SelfNode.IsAddrEmpty() {
-		j.MakeUpAddressForNode(j.Config.SelfNode)
+	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}) (interface{}, error) {
+		return j.CommLocalResourceManagerAddon(port, method, path, payload)
 	}
-	j.log.Op.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Desc(), j.Config.SelfNode.IsAddrEmpty())
-	if !j.Config.SelfNode.IsAddrEmpty() {
-		j.log.Op.Printf("[init] setting capabilities during initializing")
-		if list, e := j.Config.Capabilities["public"]; e {
-			j.subnodeCapabilityCache.Set(j.Config.SelfNode.Key(), list)
-			j.neighborCapabilityCache.Set(j.Config.SelfNode.Key(), list)
-		}
-	}
-	go j.RegisterToNode(JadeNodeTypeUpperNode, int64(0))
-	go j.RegisterToNode(JadeNodeTypeRegistryNode, int64(0))
-	// go j.routimeForPodQueues(1000)
-}
-
-func (j *JADE) SetVerboseAccordingToConf() {
-	if j.Config != nil && j.Config.Options != nil {
-
-	}
+	j.ControlLoop.MessengerCommLocalResourceManagerAddon = &msgrCommLocalResourceManagerAddon
 }
 

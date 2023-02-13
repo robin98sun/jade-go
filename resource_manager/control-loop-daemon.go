@@ -19,7 +19,7 @@ func (l *ControlLoop) daemon() {
 		}
 		msgBuff := l.PerfMessageBuffer
 		l.PerfMessageBuffer = []*perfstat.PerfMessage{}
-		if l.isSetup() {
+		if !l.isSetup() {
 			l.mutex.Unlock()
 			continue
 		}
@@ -83,32 +83,38 @@ func (l *ControlLoop) daemon() {
 
 		if len(scaleUpPlan) + len(scaleDownPlan) > 0 {
 			l.mutex.Lock()
-			for i, plan := range []map[string]map[string]*perfstat.QueuePerfMessage{scaleUpPlan, scaleDownPlan} {
-				actionType := ScalingActionTypeUp;
-				if i == 1 {actionType = ScalingActionTypeDown}
+			if l.MessengerPodUIDsAsPerQueue != nil {
 
-				for queueKey, queueItem := range plan {
-					for appKey, appItem := range queueItem {
-						if _, e := l.actionStatusPerApp[appKey]; !e {
-							l.actionStatusPerApp[appKey] = NewActionStatus(appItem.Clock)
-						} else if l.actionStatusPerApp[appKey].StartClock < appItem.Clock {
-							l.actionStatusPerApp[appKey].Start(appItem.Clock)
+				for i, plan := range []map[string]map[string]*perfstat.QueuePerfMessage{scaleUpPlan, scaleDownPlan} {
+					actionType := ScalingActionTypeUp;
+					if i == 1 {actionType = ScalingActionTypeDown}
+
+					for queueKey, queueItem := range plan {
+						for appKey, appItem := range queueItem {
+							if _, e := l.actionStatusPerApp[appKey]; !e {
+								l.actionStatusPerApp[appKey] = NewActionStatus(appItem.Clock)
+							} else if l.actionStatusPerApp[appKey].StartClock < appItem.Clock {
+								l.actionStatusPerApp[appKey].Start(appItem.Clock)
+							}
+
+							// issue commands
+							// command: queueKey, appKey, actionType, ratio, averageRatio
+
+							podUIDs := (*l.MessengerPodUIDsAsPerQueue)(appKey, queueKey)
+
+							action := &ScalingAction{
+								AppKey: appKey,
+								QueueKey: queueKey,
+								PodUIDs: podUIDs,
+								ActionType: actionType,
+								Ratio: appItem.Ratio,
+								AverageRatio: appItem.AverageRatio,
+								StartClock: appItem.Clock,
+							}
+
+							go l.SendAction(appKey, queueKey, action)
+
 						}
-
-						// issue commands
-						// command: queueKey, appKey, actionType, ratio, averageRatio
-
-						action := &ScalingAction{
-							AppKey: appKey,
-							QueueKey: queueKey,
-							ActionType: actionType,
-							Ratio: appItem.Ratio,
-							AverageRatio: appItem.AverageRatio,
-							StartClock: appItem.Clock,
-						}
-
-						go l.SendAction(appKey, queueKey, action)
-
 					}
 				}
 			}

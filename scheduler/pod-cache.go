@@ -398,3 +398,24 @@ func (p *PodCache) CleanAndResetQueues() {
 		}
 	}
 }
+
+func (p *PodCache) GetPodUIDsAsPerQueue(appKey string, queueKey string) []string {
+	p.Lock()
+	defer p.Unlock()
+
+	defaultAppModule := ds.AppModuleWorker
+	key := p.GetKeyFromApplicationAndModule(appKey, string(defaultAppModule))
+	if nodeItem, e1 := p.Nodes[queueKey]; e1 {
+		if nodeScheduler, e2 := nodeItem.AppModules[key]; e2 && nodeScheduler != nil && len(nodeScheduler.Pods) > 0 {
+
+			pods := []string{}
+			for _, pod := range nodeScheduler.Pods {
+				pods = append(pods, pod.UID)
+			}
+
+			return pods
+
+		}
+	}
+	return nil
+}

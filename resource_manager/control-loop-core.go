@@ -14,10 +14,13 @@ const(
 	ScalingActionTypeDown ScalingActionType = "down"
 )
 
+const DefaultLocalResourceManagerPort int = 8765
+
 type ScalingAction struct {
 	ActionKey string
 	AppKey string
 	QueueKey string
+	PodUIDs []string
 	ActionType ScalingActionType
 	Ratio float64
 	AverageRatio float64
@@ -75,6 +78,7 @@ func (a *ActionStatus) GetStopClock() uint64 {
 	return a.CompleteClock
 }
 
+
 type ControlLoop struct {
 	Parameters *ControlLoopParameters
 	mutex *sync.Mutex
@@ -90,6 +94,10 @@ type ControlLoop struct {
 
 	MessengerReportScalingResult *func(node *ds.Node, result *ScalingResult) bool
 
+	MessengerPodUIDsAsPerQueue *func(appKey string, queueKey string) []string
+
+	MessengerCommLocalResourceManagerAddon *func(port int, method string, path string, payload interface{}) (interface{}, error)
+
 	PerfMessageBuffer []*perfstat.PerfMessage
 
 	DaemonIntervalInMilliseconds int
@@ -97,6 +105,15 @@ type ControlLoop struct {
 	clock *perfstat.Clock
 
 	ActionCache map[string]*ScalingAction
+
+	CPUResourceCache *CPUResourceCache
+
+	DefaultUnitForVerticalScaling float64
+	DefaultUnitForHorizontalScaling float64
+
+	LocalResourceManagerPort int
+
+
 }
 
 
@@ -110,17 +127,37 @@ type ControlLoopParameters struct {
 	ThresholdQueueingDeadlineViolationRatio float64 `json:"thresholdQueueingDeadlineViolationRatio,omitempty"`
 	ThresholdQueueingDeadlineSurplusRatio float64 `json:"thresholdQueueingDeadlineSurplusRatio,omitempty"`
 	ActionTimeOutWindowSize int `json:"actionTimeOut,omitempty"`
+	LocalResourceManagerPort int `json:"localResourceManagerPort,omitempty"`
+}
+
+func DefaultControlLoopParameters() *ControlLoopParameters {
+	return &ControlLoopParameters{
+		IterationTimeScaleInMilliseconds: 100,
+		MaximumTaskAmount: 0,
+		HistoryTimeWindowSize: 600,
+		CalmDownTimeWindowSize: 150,
+		ThresholdAverageSLOViolationRatio: 0.01,
+		ThresholdAverageSLOSurplusRatio: 0.1,
+		ThresholdQueueingDeadlineViolationRatio: 0.01,
+		ThresholdQueueingDeadlineSurplusRatio: 0.1,
+		ActionTimeOutWindowSize: 150,
+		LocalResourceManagerPort: 8765,
+	}
 }
 
 func NewControlLoop(clock *perfstat.Clock) *ControlLoop {
 	loop := &ControlLoop{
 		mutex: &sync.Mutex{},
-		Parameters: &ControlLoopParameters{},
+		Parameters: DefaultControlLoopParameters(),
 		actionStatusPerApp: map[string]*ActionStatus{},
 		PerfMessageBuffer: []*perfstat.PerfMessage{},
 		DaemonIntervalInMilliseconds: 100,
 		clock: clock,
 		ActionCache: make(map[string]*ScalingAction),
+		CPUResourceCache: NewCPUResourceCache(),
+		DefaultUnitForVerticalScaling: 0.1,
+		DefaultUnitForHorizontalScaling: 1,
+		LocalResourceManagerPort: DefaultLocalResourceManagerPort,
 	}
 	go loop.daemon()
 	return loop
@@ -229,25 +266,7 @@ func (l *ControlLoop) SendAction(appKey string, queueKey string, action *Scaling
 	}
 }
 
-func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 
-	
-	
-	// report the result
-	if action.SourceNode == nil {return}
-
-	l.mutex.Lock()
-	if l.MessengerReportScalingResult == nil {
-		l.mutex.Unlock()
-		return
-	}
-
-	result := &ScalingResult{
-		ActionKey: action.GetKey(),
-		Succeeded: true,
-	}
-	(*l.MessengerReportScalingResult)(action.SourceNode, result)
-}
 
 func (l *ControlLoop) ActionHasBeenPhysicallyExecuted(result *ScalingResult) {
 	if result == nil || result.ActionKey == "" {return}
