@@ -105,7 +105,7 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 	// update local resource cache, regardless whether succeeded or not
 	if l.MessengerCommLocalResourceManagerAddon != nil {
 
-		_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
+		resInst1, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
 						l.LocalResourceManagerPort,
 						"GET", "/kube-all-pods-cpu-resources",
 						nil,
@@ -128,9 +128,9 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 			} else {
 				l.CPUResourceCache.UpdatePods(res.Pods)
 				if printf != nil {
-					printf("[resource manager] got pods for resource cache: %v", res)
+					printf("[resource manager] got pods for resource cache: %v, original res:", res, resInst1)
 				}
-				_, content_cores, err3 := (*l.MessengerCommLocalResourceManagerAddon)(
+				resInst2, content_cores, err3 := (*l.MessengerCommLocalResourceManagerAddon)(
 					l.LocalResourceManagerPort,
 					"GET", "/cpu-cores",
 					nil,
@@ -154,10 +154,10 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 						l.CPUResourceCache.SetCPUCores(res_cores.Cores)
 
 						if printf != nil {
-							printf("[resource manager] got cpu cores: %v", res_cores)
+							printf("[resource manager] got cpu cores: %v, original res: %v", res_cores, resInst2)
 						}
 
-						_, content_shares, err4 := (*l.MessengerCommLocalResourceManagerAddon)(
+						resInst3, content_shares, err4 := (*l.MessengerCommLocalResourceManagerAddon)(
 							l.LocalResourceManagerPort,
 							"GET", "/kube-overall-cpu-shares",
 							nil,
@@ -180,13 +180,12 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 							} else {
 								l.CPUResourceCache.SetTotalShares(res_shares.Shares)
 								if printf != nil {
-									printf("[resource manager] got overall shares: %v", res_shares)
+									printf("[resource manager] got overall shares: %v, original res: %v", res_shares, resInst3)
 								}
 							}
 						}
 					}
 				}
-
 			}
 		}
 	}
