@@ -6,6 +6,7 @@ import (
 
 	rm "uta.edu/aces/jade-go/resource_manager"
 	ds "uta.edu/aces/jadesdk/data_structure"
+	"log"
 )
 
 func (j *JADE) HTTPCommunicate(
@@ -52,10 +53,15 @@ func (j *JADE) CommLocalResourceManagerAddon(port int, method string, path strin
 		Protocol: j.Config.SelfNode.Protocol,
 		Port:     port,
 	}
-	_, _, content, err := j.HTTPCommunicate(
+	res, _, content, err := j.HTTPCommunicate(
 		"communicating with local resource manager", method, path, node, payload,
 		0, 10,
 	)
+
+	log.Printf("[resource manager][comm] method: %v, path: %v", method, path)
+	log.Printf("[resource manager][comm] res: %v", res)
+	log.Printf("[resource manager][comm] content: %v", content)
+	log.Printf("[resource manager][comm] error: %v", err)
 
 	if err != nil {
 		return err

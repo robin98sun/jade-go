@@ -69,7 +69,10 @@ func (j *JADE) Unlock() {
 }
 
 func (j *JADE) Verbose(on bool) {
+	j.log.Op.Enabled = on
 	j.log.Debug.Enabled = on
+	j.log.Perf.Enabled = on
+	j.log.Heartbeat.Enabled = on
 	j.sdk.Verbose(on)
 }
 

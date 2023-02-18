@@ -16,10 +16,6 @@ import (
 // Init to do initializing work
 func (j *JADE) Init() {
 	j.log = kernel.NewLogger()
-	j.log.Op.Enabled = true
-	j.log.Debug.Enabled = true
-	j.log.Perf.Enabled = true
-	j.log.Heartbeat.Enabled = true
 
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
