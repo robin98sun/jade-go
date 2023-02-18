@@ -100,7 +100,7 @@ type ControlLoop struct {
 
 	MessengerPodUIDsAsPerQueue *func(appKey string, queueKey string) []string
 
-	MessengerCommLocalResourceManagerAddon *func(port int, method string, path string, payload interface{}) (interface{}, []byte, error)
+	MessengerCommLocalResourceManagerAddon *func(port int, method string, path string, payload interface{}, response interface{}) error
 
 	PerfMessageBuffer []*perfstat.PerfMessage
 

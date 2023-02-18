@@ -2,14 +2,15 @@ package jadelet
 
 import (
 	"sync"
+
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
-	"uta.edu/aces/jade-go/provisioner"
-	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jade-go/perfstat"
+	"uta.edu/aces/jade-go/provisioner"
+	rm "uta.edu/aces/jade-go/resource_manager"
+	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
-	rm "uta.edu/aces/jade-go/resource_manager"
 )
 
 // Init to do initializing work
@@ -19,7 +20,7 @@ func (j *JADE) Init() {
 	j.log.Debug.Enabled = true
 	j.log.Perf.Enabled = true
 	j.log.Heartbeat.Enabled = true
-	
+
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
@@ -41,13 +42,13 @@ func (j *JADE) Init() {
 	// j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 
 	// read env metrics if the addon is deployed
-	
+
 	// control loop
 	j.InitControlLoop()
 
 	// others
 	j.dist = scheduler.NewDist()
-	
+
 	// setup k8s client instance
 	clients := kube.NewKubeClient(j.log.Op)
 	clients.Init()
@@ -100,7 +101,9 @@ func (j *JADE) InitControlLoop() {
 
 	msgrScaleQueue := func(appKey string, queueKey string, action *rm.ScalingAction) bool {
 		node := j.GetNodeInControl(queueKey)
-		if node == nil {return false}
+		if node == nil {
+			return false
+		}
 		action.SourceNode = j.Config.SelfNode
 		return j.CommScaleResource(node, action)
 	}
@@ -116,10 +119,9 @@ func (j *JADE) InitControlLoop() {
 	}
 	j.ControlLoop.MessengerReportScalingResult = &msgrReportScalingResult
 
-	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}) (interface{}, []byte, error) {
-		return j.CommLocalResourceManagerAddon(port, method, path, payload)
+	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}, response interface{}) error {
+		return j.CommLocalResourceManagerAddon(port, method, path, payload, response)
 	}
 	j.ControlLoop.MessengerCommLocalResourceManagerAddon = &msgrCommLocalResourceManagerAddon
 
 }
-

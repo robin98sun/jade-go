@@ -1,9 +1,11 @@
 package jadelet
 
 import (
-	ds "uta.edu/aces/jadesdk/data_structure"
-	rm "uta.edu/aces/jade-go/resource_manager"
+	"encoding/json"
 	"errors"
+
+	rm "uta.edu/aces/jade-go/resource_manager"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 func (j *JADE) HTTPCommunicate(
@@ -12,8 +14,8 @@ func (j *JADE) HTTPCommunicate(
 ) (interface{}, int, []byte, error) {
 	return j.sdk.HTTPCommunicate(
 		operationName, targetNode.Protocol, method, path,
-		// targetNode.GetSDKNode(), 
-		targetNode, 
+		// targetNode.GetSDKNode(),
+		targetNode,
 		payload, retryCnt, retryLimitation,
 	)
 }
@@ -41,18 +43,33 @@ func (j *JADE) CommScaleResource(targetNode *ds.Node, action *rm.ScalingAction) 
 	return true
 }
 
-func (j *JADE) CommLocalResourceManagerAddon(port int, method string, path string, payload interface{}) (interface{}, []byte, error) {
+func (j *JADE) CommLocalResourceManagerAddon(port int, method string, path string, payload interface{}, response interface{}) error {
 	if j.Config == nil || j.Config.SelfNode == nil || j.Config.SelfNode.IsAddrEmpty() {
-		return nil, nil, errors.New("JADE is not ready to communicate yet")
+		return errors.New("JADE is not ready to communicate yet")
 	}
 	node := &ds.Node{
-		Addr: j.Config.SelfNode.Addr,
+		Addr:     j.Config.SelfNode.Addr,
 		Protocol: j.Config.SelfNode.Protocol,
-		Port: port,
+		Port:     port,
 	}
-	res, _, content, err := j.HTTPCommunicate(
+	_, _, content, err := j.HTTPCommunicate(
 		"communicating with local resource manager", method, path, node, payload,
 		0, 10,
 	)
-	return res, content, err
+
+	if err != nil {
+		return err
+	}
+
+	if response != nil {
+		if len(content) == 0 {
+			return errors.New("JSON payload is empty")
+		}
+		err = json.Unmarshal(content, response)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

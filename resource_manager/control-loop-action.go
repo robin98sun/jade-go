@@ -6,7 +6,7 @@ import (
 	"math"
 	// "strconv"
 	// ds "uta.edu/aces/jadesdk/data_structure"
-	"encoding/json"
+	// "encoding/json"
 )
 
 type CPUResourcesOfPodsResponse struct {
@@ -57,7 +57,7 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 
 	quota := int(math.Round(cpuCores * float64(period)))
 
-	_, content1, err1 := (*l.MessengerCommLocalResourceManagerAddon)(
+	(*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -65,10 +65,10 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 			IsBesteffort: false,
 			UID: podUID,
 			Value: quota,
-		},
+		}, nil,
 	)
 
-	_, content2, err2 := (*l.MessengerCommLocalResourceManagerAddon)(
+	(*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -76,26 +76,9 @@ func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf
 			IsBesteffort: false,
 			UID: podUID,
 			Value: shares,
-		},
+		}, nil,
 	)
 
-	res1 := &CPUResourceUpdateResponse{}
-	res2 := &CPUResourceUpdateResponse{}
-
-	err11 := json.Unmarshal(content1, res1)
-	err22 := json.Unmarshal(content2, res2)
-
-	if err1 != nil || err11 != nil || res1.Error != nil {
-		printf("[resource manager] ERROR when updating quota to %v for pod UID=%v, comm error: %v, decoding error:%v, service error: %v", quota, podUID, err1, err11, res1.Error)
-	} else {
-		printf("[resource manager] pod UID=%v, quota has been updated to %v", podUID, res1.Value)
-	}
-
-	if err2 != nil || err22 != nil || res2.Error != nil  {
-		printf("[resource manager] ERROR when updating shares to %v for pod UID=%v, comm error: %v, decoding error %v, service error: %v", shares, podUID, err2, err22, res2.Error)
-	} else {
-		printf("[resource manager] pod UID=%v, shares has been updated to %v", podUID, res2.Value)
-	}
 
 }
 
@@ -105,87 +88,56 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 	// update local resource cache, regardless whether succeeded or not
 	if l.MessengerCommLocalResourceManagerAddon != nil {
 
-		resInst1, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
+		responsePods := &CPUResourcesOfPodsResponse{}
+		err := (*l.MessengerCommLocalResourceManagerAddon)(
 						l.LocalResourceManagerPort,
 						"GET", "/kube-all-pods-cpu-resources",
-						nil,
+						nil, responsePods,
 					)
 		if err != nil {
 			if printf != nil {
 				printf("[resource manager] ERROR when querying cpu resources of all pods, error: %v", err)
 			}
 		} else {
-			res := &CPUResourcesOfPodsResponse{}
-			err2 := json.Unmarshal(content, res)
-			if err2 != nil {
-				if printf != nil {
-					printf("[resource manager] ERROR when decoding response of querying cpu resourece of all pods, error: %v", err2)
-				}
-			} else if res.Error != nil {
-				if printf != nil {
-					printf("[resource manager] ERROR in the response of querying cpu resourece of all pods, error: %v", res.Error)
-				}
-			} else {
-				l.CPUResourceCache.UpdatePods(res.Pods)
-				if printf != nil {
-					printf("[resource manager] got pods for resource cache: %v, original res:", res, resInst1)
-				}
-				resInst2, content_cores, err3 := (*l.MessengerCommLocalResourceManagerAddon)(
-					l.LocalResourceManagerPort,
-					"GET", "/cpu-cores",
-					nil,
-				)
-				if err3 != nil {
-					if printf != nil {
-						printf("[resource manager] ERROR when querying cpu cores: error: %v", err3)
-					}
-				} else {
-					res_cores := &CPUCoresQueryResponse{}
-					err4 := json.Unmarshal(content_cores, res_cores)
-					if err4 != nil {
-						if printf != nil {
-							printf("[resource manager] ERROR when decoding response of querying cpu cores, error: %v", err4)
-						}
-					} else if res_cores.Error != nil {
-						if printf != nil {
-							printf("[resource manager] ERROR in the response of querying cpu cores, error: %v", res_cores.Error)
-						}
-					} else {
-						l.CPUResourceCache.SetCPUCores(res_cores.Cores)
+			l.CPUResourceCache.UpdatePods(responsePods.Pods)
+			if printf != nil {
+				printf("[resource manager] got pods for resource cache original res:", responsePods)
+			}
+		}
 
-						if printf != nil {
-							printf("[resource manager] got cpu cores: %v, original res: %v", res_cores, resInst2)
-						}
+		responseCores := &CPUCoresQueryResponse{}
+		err3 := (*l.MessengerCommLocalResourceManagerAddon)(
+			l.LocalResourceManagerPort,
+			"GET", "/cpu-cores",
+			nil, responseCores,
+		)
+		if err3 != nil {
+			if printf != nil {
+				printf("[resource manager] ERROR when querying cpu cores: error: %v", err3)
+			}
+		} else {
+			l.CPUResourceCache.SetCPUCores(responseCores.Cores)
+				
+			if printf != nil {
+				printf("[resource manager] got cpu cores original res: %v", responseCores)
+			}
+		}
 
-						resInst3, content_shares, err4 := (*l.MessengerCommLocalResourceManagerAddon)(
-							l.LocalResourceManagerPort,
-							"GET", "/kube-overall-cpu-shares",
-							nil,
-						)
-						if err4 != nil {
-							if printf != nil {
-								printf("[resource manager] ERROR when querying cpu shares: error: %v", err4)
-							}
-						} else {
-							res_shares := &OverallSharesQueryResponse{}
-							err5 := json.Unmarshal(content_shares, res_shares)
-							if err5 != nil {
-								if printf != nil {
-									printf("[resource manager] ERROR when decoding response of querying overall shares, error: %v", err5)
-								}
-							} else if res_shares.Error != nil {
-								if printf != nil {
-									printf("[resource manager] ERROR in the response of querying overall shares, error: %v", res_shares.Error)
-								}
-							} else {
-								l.CPUResourceCache.SetTotalShares(res_shares.Shares)
-								if printf != nil {
-									printf("[resource manager] got overall shares: %v, original res: %v", res_shares, resInst3)
-								}
-							}
-						}
-					}
-				}
+
+		responseShares := &OverallSharesQueryResponse{}
+		err4 := (*l.MessengerCommLocalResourceManagerAddon)(
+			l.LocalResourceManagerPort,
+			"GET", "/kube-overall-cpu-shares",
+			nil, responseShares,
+		)
+		if err4 != nil {
+			if printf != nil {
+				printf("[resource manager] ERROR when querying cpu shares: error: %v", err4)
+			}
+		} else {
+			l.CPUResourceCache.SetTotalShares(responseShares.Shares)
+			if printf != nil {
+				printf("[resource manager] got overall shares original res: %v", responseShares)
 			}
 		}
 	}
@@ -216,46 +168,46 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 
 	if action.ActionType == ScalingActionTypeUp || action.ActionType == ScalingActionTypeDown {
 
-		deltaCores := float64(0)
-		if action.ActionType == ScalingActionTypeUp {
-			deltaCores = l.DefaultUnitForVerticalScaling
-		} else if action.ActionType == ScalingActionTypeDown {
-			deltaCores = -l.DefaultUnitForVerticalScaling
-		}
+		// deltaCores := float64(0)
+		// if action.ActionType == ScalingActionTypeUp {
+		// 	deltaCores = l.DefaultUnitForVerticalScaling
+		// } else if action.ActionType == ScalingActionTypeDown {
+		// 	deltaCores = -l.DefaultUnitForVerticalScaling
+		// }
 
-		remainingCPUCores := l.CPUResourceCache.GetRemainingCPUCores()
+		// remainingCPUCores := l.CPUResourceCache.GetRemainingCPUCores()
 
-		for i:=0; i<len(action.PodUIDs) && remainingCPUCores > 0; i++ {
-			podKey := action.PodUIDs[i]
-			resourceItem := l.CPUResourceCache.GetCPUResourceItem(podKey)
-			currentCores := resourceItem.GetNormalizedCPUCores()
-			targetCores := currentCores + deltaCores
-			targetQuota, deltaQuota, maxCores := l.CPUResourceCache.CalcQuotaForTargetCPUCores(podKey, targetCores)
-			if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
-				// actually take the action
+		// for i:=0; i<len(action.PodUIDs) && remainingCPUCores > 0; i++ {
+		// 	podKey := action.PodUIDs[i]
+		// 	resourceItem := l.CPUResourceCache.GetCPUResourceItem(podKey)
+		// 	currentCores := resourceItem.GetNormalizedCPUCores()
+		// 	targetCores := currentCores + deltaCores
+		// 	targetQuota, deltaQuota, maxCores := l.CPUResourceCache.CalcQuotaForTargetCPUCores(podKey, targetCores)
+		// 	if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
+		// 		// actually take the action
 
 				
-				_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
-					l.LocalResourceManagerPort,
-					"PUT", "/kube-pod-cpu-resource",
-					map[string]interface{}{
-						"type": "quota",
-						"is_besteffort": false,
-						"uid": podKey,
-						"value": targetQuota,
-					},
-				)
-				if err == nil{
-					res := &CPUResourceUpdateResponse{}
-					err2 := json.Unmarshal(content, res)
-					if res != nil && res.Error == nil && err2 == nil{
-						result.Succeeded = true
-						l.updateLocalCPUResourceCache(nil)
-					}
-				}
+		// 		_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
+		// 			l.LocalResourceManagerPort,
+		// 			"PUT", "/kube-pod-cpu-resource",
+		// 			map[string]interface{}{
+		// 				"type": "quota",
+		// 				"is_besteffort": false,
+		// 				"uid": podKey,
+		// 				"value": targetQuota,
+		// 			},
+		// 		)
+		// 		if err == nil{
+		// 			res := &CPUResourceUpdateResponse{}
+		// 			err2 := json.Unmarshal(content, res)
+		// 			if res != nil && res.Error == nil && err2 == nil{
+		// 				result.Succeeded = true
+		// 				l.updateLocalCPUResourceCache(nil)
+		// 			}
+		// 		}
 
-			}
-		}
+		// 	}
+		// }
 	}
 
 
