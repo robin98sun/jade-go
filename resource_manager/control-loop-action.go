@@ -31,7 +31,7 @@ type OverallSharesQueryResponse struct {
 
 type CPUResourceUpdateRequest struct {
 	Type string `json:"type,omitempty"`
-	IsBesteffort bool `json:"is_besteffort,omitempty"`
+	IsBesteffort bool `json:"is_besteffort"`
 	UID string `json:"uid,omitempty"`
 	Value int `json:"value,omitempty"`
 }
