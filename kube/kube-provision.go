@@ -121,7 +121,7 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 									MatchLabels: labels,
 								}.MatchLabels,
 							).String()
-		k.log.Println("the label selector string: "+labelSelectorString)
+		// k.log.Println("the label selector string: "+labelSelectorString)
 		list, err := k.Clientset.CoreV1().Pods(namespace).List(
 						context.Background(), 
 						metav1.ListOptions{LabelSelector: labelSelectorString},

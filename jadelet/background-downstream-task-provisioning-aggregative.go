@@ -106,7 +106,7 @@ func (j *JADE) evaluateAggregativeTasks(tasklist map[string]*ds.TaskDispatchingI
 						if aggregatorAllocation != nil {
 							avgCpu = aggregatorAllocation.GetAvgCPUCores()
 						}
-						j.ControlLoop.InitPodCPUResource(podUid, avgCpu, j.log.Debug.Printf)
+						j.ControlLoop.SetPodCPUResource(podUid, avgCpu, j.log.Debug.Printf)
 					}
 				}
 				if aggregatorPod == nil {
@@ -343,7 +343,7 @@ func (j *JADE) downstreamPropagating(tasklist map[string]*DispatchItemWithAggreg
 								if aggregatorAllocation != nil {
 									avgCpu = workerAllocation.GetAvgCPUCores()
 								}
-								j.ControlLoop.InitPodCPUResource(podUid, avgCpu, j.log.Debug.Printf)
+								j.ControlLoop.SetPodCPUResource(podUid, avgCpu, j.log.Debug.Printf)
 								j.log.Debug.Printf("[task provision] pod cpu resource has been updated to cpu cores: %v", avgCpu)
 								if r == 0 {
 									workerScheduler = j.PodCache.GetNodeSchedulerForModule(nodekey, task.Application.Key(), string(ds.AppModuleWorker), workerAllocation)

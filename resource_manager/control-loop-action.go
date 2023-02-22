@@ -37,52 +37,6 @@ type CPUResourceUpdateRequest struct {
 }
 
 
-func (l *ControlLoop) InitPodCPUResource(podUID string, cpuCores float64, printf func(template string, args ...interface{})) {
-
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-	if l.MessengerCommLocalResourceManagerAddon == nil {
-		printf("[resource manager] ERROR: messenger for communicating local resource manager addon is nil")
-		return
-	}
-
-
-	l.updateLocalCPUResourceCache(printf)
-	shares := l.CPUResourceCache.TotalShares
-	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
-	if period <= 0 || shares <= 0 {
-		printf("[resource manager] ERROR: total shares=%v, for pod UID=%v period=%v", shares, podUID, period)
-		return
-	}
-
-	quota := int(math.Round(cpuCores * float64(period)))
-
-	(*l.MessengerCommLocalResourceManagerAddon)(
-		l.LocalResourceManagerPort,
-		"PUT", "/kube-pod-cpu-resource",
-		&CPUResourceUpdateRequest{
-			Type: "quota",
-			IsBesteffort: false,
-			UID: podUID,
-			Value: quota,
-		}, nil,
-	)
-
-	(*l.MessengerCommLocalResourceManagerAddon)(
-		l.LocalResourceManagerPort,
-		"PUT", "/kube-pod-cpu-resource",
-		&CPUResourceUpdateRequest{
-			Type: "shares",
-			IsBesteffort: false,
-			UID: podUID,
-			Value: shares,
-		}, nil,
-	)
-
-
-}
-
-
 func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, args ...interface{})) {
 	// refresh local resource cache from local resource manager
 	// update local resource cache, regardless whether succeeded or not
@@ -141,6 +95,50 @@ func (l *ControlLoop) updateLocalCPUResourceCache(printf func(template string, a
 			}
 		}
 	}
+}
+
+
+func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf func(template string, args ...interface{})) {
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	if l.MessengerCommLocalResourceManagerAddon == nil {
+		printf("[resource manager] ERROR: messenger for communicating local resource manager addon is nil")
+		return
+	}
+
+
+	l.updateLocalCPUResourceCache(printf)
+	shares := int(math.Round(float64(l.CPUResourceCache.TotalShares) * cpuCores / float64(l.CPUResourceCache.CPUCores)))
+	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
+	if period <= 0 || shares <= 0 {
+		printf("[resource manager] ERROR: total shares=%v, for pod UID=%v period=%v", shares, podUID, period)
+		return
+	}
+
+	quota := int(math.Round(cpuCores * float64(period)))
+
+	(*l.MessengerCommLocalResourceManagerAddon)(
+		l.LocalResourceManagerPort,
+		"PUT", "/kube-pod-cpu-resource",
+		&CPUResourceUpdateRequest{
+			Type: "quota",
+			IsBesteffort: false,
+			UID: podUID,
+			Value: quota,
+		}, nil,
+	)
+
+	(*l.MessengerCommLocalResourceManagerAddon)(
+		l.LocalResourceManagerPort,
+		"PUT", "/kube-pod-cpu-resource",
+		&CPUResourceUpdateRequest{
+			Type: "shares",
+			IsBesteffort: false,
+			UID: podUID,
+			Value: shares,
+		}, nil,
+	)
 }
 
 
