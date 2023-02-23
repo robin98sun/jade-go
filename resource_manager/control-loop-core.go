@@ -2,6 +2,7 @@ package resource_manager
 
 import (
 	"uta.edu/aces/jade-go/perfstat"
+	"uta.edu/aces/jade-go/kernel"
 	"sync"
 	"math"
 	"strconv"
@@ -119,6 +120,8 @@ type ControlLoop struct {
 
 	EnableAutoScaling bool
 
+	log *kernel.Logger
+
 }
 
 func (l *ControlLoop) SwitchAutoScaling(on bool) {
@@ -157,7 +160,7 @@ func DefaultControlLoopParameters() *ControlLoopParameters {
 	}
 }
 
-func NewControlLoop(clock *perfstat.Clock) *ControlLoop {
+func NewControlLoop(clock *perfstat.Clock, logger *kernel.Logger) *ControlLoop {
 	loop := &ControlLoop{
 		mutex: &sync.Mutex{},
 		Parameters: DefaultControlLoopParameters(),
@@ -170,6 +173,7 @@ func NewControlLoop(clock *perfstat.Clock) *ControlLoop {
 		DefaultUnitForVerticalScaling: 0.1,
 		DefaultUnitForHorizontalScaling: 1,
 		LocalResourceManagerPort: DefaultLocalResourceManagerPort,
+		log: logger,
 	}
 	go loop.daemon()
 	return loop

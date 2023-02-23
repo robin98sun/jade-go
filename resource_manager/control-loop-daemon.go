@@ -46,6 +46,8 @@ func (l *ControlLoop) daemon() {
 			}
 			if msg.Type == perfstat.PerfMessageTypeAvgTaskSLORatios && msg.AvgTaskSLORatios!=nil {
 				taskSLORatios := msg.AvgTaskSLORatios
+				l.log.Debug.Printf("[resource manager][daemon] received task SLO violation ratio: %v, threshold: %v; surplus ratio: %v, threshold: %v", taskSLORatios.Violation, thresholdAverageSLOViolationRatio, taskSLORatios.Surplus, thresholdAverageSLOSurplusRatio)
+
 				if !l.isOutofCalmdownWindow(taskSLORatios.AppKey, taskSLORatios.Clock) {
 					continue
 				}
@@ -121,6 +123,9 @@ func (l *ControlLoop) daemon() {
 							}
 							l.actionStatusPerApp[appKey].ActionList[actionGroupID] = append(l.actionStatusPerApp[appKey].ActionList[actionGroupID], action)
 
+
+							l.log.Debug.Printf("[resource manager][daemon] planned to scale %v queue %v", actionType, queueKey)
+							
 							go l.SendAction(appKey, queueKey, action)
 
 						}

@@ -77,7 +77,7 @@ func (j *JADE) InitControlLoop() {
 	// Control Loop: monitoring, analyzing, planning, executing
 	clock := perfstat.NewClock()
 
-	j.ControlLoop = rm.NewControlLoop(clock)
+	j.ControlLoop = rm.NewControlLoop(clock, j.log)
 
 	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
 		j.ControlLoop.AppendPerfMessage(m)
