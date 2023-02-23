@@ -102,7 +102,7 @@ func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf 
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	if l.MessengerCommLocalResourceManagerAddon == nil {
+	if l.MessengerCommLocalResourceManagerAddon == nil && printf != nil {
 		printf("[resource manager] ERROR: messenger for communicating local resource manager addon is nil")
 		return
 	}
@@ -111,14 +111,15 @@ func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf 
 	l.updateLocalCPUResourceCache(printf)
 	shares := int(math.Round(float64(l.CPUResourceCache.TotalShares) * cpuCores / float64(l.CPUResourceCache.CPUCores)))
 	period := l.CPUResourceCache.GetPodResource(CPUResourceTypePeriod, podUID)
-	if period <= 0 || shares <= 0 {
+	if (period <= 0 || shares <= 0) && printf != nil {
 		printf("[resource manager] ERROR: total shares=%v, for pod UID=%v period=%v", shares, podUID, period)
 		return
 	}
 
 	quota := int(math.Round(cpuCores * float64(period)))
 
-	(*l.MessengerCommLocalResourceManagerAddon)(
+	res1 := &CPUResourceUpdateResponse{}
+	err1 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -126,10 +127,11 @@ func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf 
 			IsBesteffort: false,
 			UID: podUID,
 			Value: quota,
-		}, nil,
+		}, res1,
 	)
 
-	(*l.MessengerCommLocalResourceManagerAddon)(
+	res2 := &CPUResourceUpdateResponse{}
+	err2 := (*l.MessengerCommLocalResourceManagerAddon)(
 		l.LocalResourceManagerPort,
 		"PUT", "/kube-pod-cpu-resource",
 		&CPUResourceUpdateRequest{
@@ -137,12 +139,26 @@ func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf 
 			IsBesteffort: false,
 			UID: podUID,
 			Value: shares,
-		}, nil,
+		}, res2,
 	)
+
+	if printf != nil {
+		if err1 != nil {
+			printf("[resource manager] ERROR when sending request to set CPU quota to %v: %v", quota, err1)
+		} else if res1.Error != nil {
+			printf("[resource manager] ERROR when setting CPU quota to %v: %v",quota, res1.Error)
+		}
+
+		if err2 != nil {
+			printf("[resource manager] ERROR when sending request to set CPU shares to %v: %v", shares, err2)
+		} else if res2.Error != nil {
+			printf("[resource manager] ERROR when setting CPU shares to %v: %v",shares, res2.Error)
+		}
+	}
 }
 
 
-func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
+func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction, printf func(template string, args ...interface{})) {
 
 	// the master node sent this action to this node, regardless whether this node have resources or not
 
@@ -166,46 +182,52 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction) {
 
 	if action.ActionType == ScalingActionTypeUp || action.ActionType == ScalingActionTypeDown {
 
-		// deltaCores := float64(0)
-		// if action.ActionType == ScalingActionTypeUp {
-		// 	deltaCores = l.DefaultUnitForVerticalScaling
-		// } else if action.ActionType == ScalingActionTypeDown {
-		// 	deltaCores = -l.DefaultUnitForVerticalScaling
-		// }
+		deltaCores := float64(0)
+		if action.ActionType == ScalingActionTypeUp {
+			deltaCores = l.DefaultUnitForVerticalScaling
+		} else if action.ActionType == ScalingActionTypeDown {
+			deltaCores = -l.DefaultUnitForVerticalScaling
+		}
 
-		// remainingCPUCores := l.CPUResourceCache.GetRemainingCPUCores()
+		remainingCPUCores := l.CPUResourceCache.GetRemainingCPUCores()
 
-		// for i:=0; i<len(action.PodUIDs) && remainingCPUCores > 0; i++ {
-		// 	podKey := action.PodUIDs[i]
-		// 	resourceItem := l.CPUResourceCache.GetCPUResourceItem(podKey)
-		// 	currentCores := resourceItem.GetNormalizedCPUCores()
-		// 	targetCores := currentCores + deltaCores
-		// 	targetQuota, deltaQuota, maxCores := l.CPUResourceCache.CalcQuotaForTargetCPUCores(podKey, targetCores)
-		// 	if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
-		// 		// actually take the action
+		for i:=0; i<len(action.PodUIDs) && remainingCPUCores >= deltaCores; i++ {
+			podKey := action.PodUIDs[i]
+			resourceItem := l.CPUResourceCache.GetCPUResourceItem(podKey)
+			currentCores := resourceItem.GetNormalizedCPUCores()
+			targetCores := currentCores + deltaCores
+			if targetCores > 0 {
+				if printf != nil {
+					printf("[resource manager] going to scale %v pod[%v] from %v cores to %v cores", action.ActionType, podKey, currentCores, targetCores)
+				}
+				l.SetPodCPUResource(podKey, targetCores, printf)
+			}
+			// targetQuota, deltaQuota, maxCores := l.CPUResourceCache.CalcQuotaForTargetCPUCores(podKey, targetCores)
+			// if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
+			// 	// actually take the action
 
 				
-		// 		_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
-		// 			l.LocalResourceManagerPort,
-		// 			"PUT", "/kube-pod-cpu-resource",
-		// 			map[string]interface{}{
-		// 				"type": "quota",
-		// 				"is_besteffort": false,
-		// 				"uid": podKey,
-		// 				"value": targetQuota,
-		// 			},
-		// 		)
-		// 		if err == nil{
-		// 			res := &CPUResourceUpdateResponse{}
-		// 			err2 := json.Unmarshal(content, res)
-		// 			if res != nil && res.Error == nil && err2 == nil{
-		// 				result.Succeeded = true
-		// 				l.updateLocalCPUResourceCache(nil)
-		// 			}
-		// 		}
+			// 	_, content, err := (*l.MessengerCommLocalResourceManagerAddon)(
+			// 		l.LocalResourceManagerPort,
+			// 		"PUT", "/kube-pod-cpu-resource",
+			// 		map[string]interface{}{
+			// 			"type": "quota",
+			// 			"is_besteffort": false,
+			// 			"uid": podKey,
+			// 			"value": targetQuota,
+			// 		},
+			// 	)
+			// 	if err == nil{
+			// 		res := &CPUResourceUpdateResponse{}
+			// 		err2 := json.Unmarshal(content, res)
+			// 		if res != nil && res.Error == nil && err2 == nil{
+			// 			result.Succeeded = true
+			// 			l.updateLocalCPUResourceCache(nil)
+			// 		}
+			// 	}
 
-		// 	}
-		// }
+			// }
+		}
 	}
 
 

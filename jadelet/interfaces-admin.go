@@ -228,7 +228,7 @@ func (j *JADE) ReceiveResourceScalingAction(w rest.ResponseWriter, r *rest.Reque
 			return
 		}
 		
-		j.ControlLoop.PhysicallyExecuteAction(action)
+		j.ControlLoop.PhysicallyExecuteAction(action, j.log.Op.Printf)
 
 		j.DoneRequest(w, r, "OK")
 	} else {

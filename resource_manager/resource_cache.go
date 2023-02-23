@@ -212,40 +212,40 @@ func (c *CPUResourceCache) UpdatePods(pods map[string]*CPUResourceItem) {
 	c.Pods = pods
 }
 
-func (c *CPUResourceCache) CalcQuotaForTargetCPUCores(podKey string, targetCores float64) (int, int, float64) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+// func (c *CPUResourceCache) CalcQuotaForTargetCPUCores(podKey string, targetCores float64) (int, int, float64) {
+// 	c.mutex.Lock()
+// 	defer c.mutex.Unlock()
 
-	targetQuota := -1
-	deltaQuota := 0
-	maxCores := float64(0)
-	if item, e := c.Pods[podKey]; e{
-		totalInUseShares := 0
-		for _, tmpItem := range c.Pods {
-			if tmpItem.Type == "besteffort" { 
-				continue 
-			}else if tmpItem.Type == "fixed" {
-				totalInUseShares += tmpItem.Shares
-			}
-		}
-		coreShares := float64(0)
-		if totalInUseShares > 0 {
-			coreShares = float64(c.CPUCores) * float64(item.Shares) / float64(totalInUseShares)	
-		} 
-		maxCores = coreShares
+// 	targetQuota := -1
+// 	deltaQuota := 0
+// 	maxCores := float64(0)
+// 	if item, e := c.Pods[podKey]; e{
+// 		totalInUseShares := 0
+// 		for _, tmpItem := range c.Pods {
+// 			if tmpItem.Type == "besteffort" { 
+// 				continue 
+// 			}else if tmpItem.Type == "fixed" {
+// 				totalInUseShares += tmpItem.Shares
+// 			}
+// 		}
+// 		coreShares := float64(0)
+// 		if totalInUseShares > 0 {
+// 			coreShares = float64(c.CPUCores) * float64(item.Shares) / float64(totalInUseShares)	
+// 		} 
+// 		maxCores = coreShares
 
-		if targetCores > coreShares {
-			maximumQuota := int(math.Round(float64(c.CPUCores)*float64(item.Period)))
-			targetQuota = maximumQuota
-			deltaQuota = maximumQuota - item.Quota
-		} else if c.CPUCores > 0 {
-			targetQuota = int(math.Round(float64(targetCores) / float64(c.CPUCores) * float64(item.Period)))
-			deltaQuota = targetQuota - item.Quota
-		}
-	}
+// 		if targetCores > coreShares {
+// 			maximumQuota := int(math.Round(float64(c.CPUCores)*float64(item.Period)))
+// 			targetQuota = maximumQuota
+// 			deltaQuota = maximumQuota - item.Quota
+// 		} else if c.CPUCores > 0 {
+// 			targetQuota = int(math.Round(float64(targetCores) / float64(c.CPUCores) * float64(item.Period)))
+// 			deltaQuota = targetQuota - item.Quota
+// 		}
+// 	}
 
-	return targetQuota, deltaQuota, maxCores
-}
+// 	return targetQuota, deltaQuota, maxCores
+// }
 
 
 
