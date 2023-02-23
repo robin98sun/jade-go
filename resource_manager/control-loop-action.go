@@ -147,12 +147,16 @@ func (l *ControlLoop) SetPodCPUResource(podUID string, cpuCores float64, printf 
 			printf("[resource manager] ERROR when sending request to set CPU quota to %v: %v", quota, err1)
 		} else if res1.Error != nil {
 			printf("[resource manager] ERROR when setting CPU quota to %v: %v",quota, res1.Error)
+		} else {
+			printf("[resource manager] successfully set CPU quota to %v",quota)
 		}
 
 		if err2 != nil {
 			printf("[resource manager] ERROR when sending request to set CPU shares to %v: %v", shares, err2)
 		} else if res2.Error != nil {
 			printf("[resource manager] ERROR when setting CPU shares to %v: %v",shares, res2.Error)
+		} else {
+			printf("[resource manager] successfully set CPU shares to %v",shares)
 		}
 	}
 }
@@ -172,15 +176,15 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction, printf func
 	// report the result
 
 	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	result := &ScalingResult{
 		ActionKey: action.GetKey(),
 		Succeeded: false,
 	}
 
-	l.updateLocalCPUResourceCache(nil)
-
 	if action.ActionType == ScalingActionTypeUp || action.ActionType == ScalingActionTypeDown {
+		l.updateLocalCPUResourceCache(printf)
 
 		deltaCores := float64(0)
 		if action.ActionType == ScalingActionTypeUp {
@@ -201,6 +205,7 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction, printf func
 					printf("[resource manager] going to scale %v pod[%v] from %v cores to %v cores", action.ActionType, podKey, currentCores, targetCores)
 				}
 				l.SetPodCPUResource(podKey, targetCores, printf)
+				result.Succeeded = true
 			}
 			// targetQuota, deltaQuota, maxCores := l.CPUResourceCache.CalcQuotaForTargetCPUCores(podKey, targetCores)
 			// if targetCores <= maxCores && targetQuota > 0 && deltaQuota != 0 {
@@ -228,6 +233,10 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction, printf func
 
 			// }
 		}
+
+		if result.Succeeded {
+			l.updateLocalCPUResourceCache(printf)
+		}
 	}
 
 
@@ -235,5 +244,4 @@ func (l *ControlLoop) PhysicallyExecuteAction(action *ScalingAction, printf func
 		(*l.MessengerReportScalingResult)(action.SourceNode, result)
 	}
 
-	l.mutex.Unlock()
 }
