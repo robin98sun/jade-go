@@ -19,7 +19,7 @@ func (l *ControlLoop) daemon() {
 		}
 		msgBuff := l.PerfMessageBuffer
 		l.PerfMessageBuffer = []*perfstat.PerfMessage{}
-		if !l.isSetup() || !l.EnableAutoScaling {
+		if !l.isSetup() || !l.EnableAutoScaling || len(msgBuff) == 0 {
 			l.mutex.Unlock()
 			continue
 		}
