@@ -50,7 +50,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				j.PodCache.SetPodIdle(pod, serviceRequestTime, communicationTime, queueingTime, budget)
 				// forward aggregator subtask to upper tier if possible
 				if subtask.ModuleName == string(ds.AppModuleAggregator) && j.HasUpperNode() {
-					j.sdk.SendReportMessageToJadelet(j.Config.UpperNode.GetSDKNode(), msg)
+					j.sdk.SendReportMessageToJadelet(subtask.TaskKey, j.Config.UpperNode.GetSDKNode(), msg)
 				}
 
 				postQueryPerfAnalysis := func() {
