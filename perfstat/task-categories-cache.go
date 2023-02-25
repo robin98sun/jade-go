@@ -129,6 +129,10 @@ func (p *TaskCategoriesCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingIt
 	taskTag := dispatchItem.GetUnifiedTag()
 
 	p.mutex.Lock()
+
+	defer p.mutex.Unlock()
+
+
 	if _, e := p.TaskCategories[taskTag]; !e {
 		percentile := dispatchItem.GetPercentile()
 		slo := dispatchItem.GetTailLatencySLOInMilliseconds()
@@ -137,9 +141,17 @@ func (p *TaskCategoriesCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingIt
 	categoryItem := p.TaskCategories[taskTag]
 
 	perfVector := categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, instantCumulativePerfVector)
-	perfVector.ResponseTaskClock = p.clock.CurrentClock()
 
-	p.mutex.Unlock()
+	for i:=0; i<100;i++{
+		if p.clock != nil {
+			break
+		}
+	}
+	if p.clock != nil && perfVector != nil {
+		perfVector.ResponseTaskClock = p.clock.CurrentClock()
+	}
+	
+
 
 	return perfVector
 
