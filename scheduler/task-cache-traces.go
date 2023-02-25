@@ -115,6 +115,8 @@ func (c *TaskCache) CollectTraces(traceType string, jobKey string, printf func(s
 			)
 		}
 	}
+
+	
 	job_stat := JobStat{
 		Nodes: map[string]*NodeStat{},
 		Neighbors: map[string]*NodeStat{},
