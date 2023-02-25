@@ -58,13 +58,15 @@ func NewClock() *Clock {
 }
 
 func CloneClock(c *Clock) *Clock {
-	newClock := &Clock{
-		mutex: &sync.Mutex{},
-		DaemonIntervalInMilliseconds: c.GetIterationTimeScaleInMilliseconds(),
-	}
-	newClock.SetClock(c.CurrentClock())
-	go newClock.daemon()
-	return newClock
+	// newClock := &Clock{
+	// 	mutex: &sync.Mutex{},
+	// 	DaemonIntervalInMilliseconds: c.GetIterationTimeScaleInMilliseconds(),
+	// }
+	// newClock.SetClock(c.CurrentClock())
+	// go newClock.daemon()
+	// return newClock
+
+	return c
 }
 
 func (c *Clock) SetClock(currentClock uint64) {
