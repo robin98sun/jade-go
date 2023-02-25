@@ -26,9 +26,9 @@ type AppPerfCache struct {
 
 func NewAppPerfCache(appKey string, clock *Clock, EVENTMatrixSize int, EVENTPipeLength int) *AppPerfCache {
 	return &AppPerfCache{
-		TaskCategories: NewTaskCategoriesCache(clock),
+		TaskCategories: NewTaskCategoriesCache(CloneClock(clock)),
 		ArrivalRateTracker: NewArrivalRateTracker(10),
-		PerfEventMatrices: NewPerfEventMatrixPipe(clock, EVENTPipeLength, EVENTMatrixSize, 0.99),
+		PerfEventMatrices: NewPerfEventMatrixPipe(CloneClock(clock), EVENTPipeLength, EVENTMatrixSize, 0.99),
 		Clock: clock,
 		AppKey: appKey,
 	}

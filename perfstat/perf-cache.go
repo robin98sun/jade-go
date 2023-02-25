@@ -171,7 +171,7 @@ func (p *PerfCache) getOrNewAppSlot(appKey string) *AppPerfCache {
 		return existingApp
 	} 
 
-	app := NewAppPerfCache(appKey, p.Clock, EVENTMatrixSize, EVENTPipeLength)
+	app := NewAppPerfCache(appKey, CloneClock(p.Clock), EVENTMatrixSize, EVENTPipeLength)
 	p.setMaximumTaskAmountForAppSlot(app)
 	p.setHistoryTimeWindowSizeForAppSlot(app)
 	p.setIterationTimeScaleInMillisecondsForAppSlot(app)

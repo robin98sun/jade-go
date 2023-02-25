@@ -82,7 +82,7 @@ func (j *JADE) InitControlLoop() {
 	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
 		j.ControlLoop.AppendPerfMessage(m)
 	}
-	j.PerfCache = perfstat.NewPerfCache(clock)
+	j.PerfCache = perfstat.NewPerfCache(perfstat.CloneClock(clock))
 	j.PerfCache.SubscribeAverageSLORatios(msgrAvgSLORatios)
 
 	msgrQueueDV := func(appKey string, deadlineViolationThreshold float64) []*perfstat.QueuePerfMessage {

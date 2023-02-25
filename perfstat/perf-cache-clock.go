@@ -28,20 +28,20 @@ func (c *Clock) daemon() {
 	for{
 		time.Sleep(time.Duration(INTERVAL) * time.Millisecond)
 
-		// c.mutex.Lock()
+		c.mutex.Lock()
 
 		if c.DaemonIntervalInMilliseconds > 0 && c.DaemonIntervalInMilliseconds != INTERVAL {
 			INTERVAL = c.DaemonIntervalInMilliseconds
 		}
 
 		c.increaseClock()
-		// c.mutex.Unlock()
+		c.mutex.Unlock()
 	}
 }
 
 func (c *Clock) CurrentClock() uint64 {
-	// c.mutex.Lock()
-	// defer c.mutex.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	x := c.clock
 
 	return x
@@ -55,6 +55,28 @@ func NewClock() *Clock {
 	}
 	go c.daemon()
 	return c
+}
+
+func CloneClock(c *Clock) *Clock {
+	newClock := &Clock{
+		mutex: &sync.Mutex{},
+		DaemonIntervalInMilliseconds: c.GetIterationTimeScaleInMilliseconds(),
+	}
+	newClock.SetClock(c.CurrentClock())
+	go newClock.daemon()
+	return newClock
+}
+
+func (c *Clock) SetClock(currentClock uint64) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.clock = currentClock
+}
+
+func (c *Clock) GetIterationTimeScaleInMilliseconds() int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.DaemonIntervalInMilliseconds
 }
 
 func (c *Clock) SetIterationTimeScaleInMilliseconds(timescale int) {
