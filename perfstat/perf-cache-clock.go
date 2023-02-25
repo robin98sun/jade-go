@@ -28,14 +28,14 @@ func (c *Clock) daemon() {
 	for{
 		time.Sleep(time.Duration(INTERVAL) * time.Millisecond)
 
-		c.mutex.Lock()
+		// c.mutex.Lock()
 
 		if c.DaemonIntervalInMilliseconds > 0 && c.DaemonIntervalInMilliseconds != INTERVAL {
 			INTERVAL = c.DaemonIntervalInMilliseconds
 		}
 
 		c.increaseClock()
-		c.mutex.Unlock()
+		// c.mutex.Unlock()
 	}
 }
 
