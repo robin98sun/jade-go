@@ -40,10 +40,11 @@ func (c *Clock) daemon() {
 }
 
 func (c *Clock) CurrentClock() uint64 {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	// c.mutex.Lock()
+	// defer c.mutex.Unlock()
+	x := c.clock
 
-	return c.clock
+	return x
 }
 
 

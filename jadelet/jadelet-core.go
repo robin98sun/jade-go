@@ -251,18 +251,18 @@ func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) (
 // DoneRequest send a message to the visitor to say everything is done
 func (j *JADE) DoneRequest(w rest.ResponseWriter, r *rest.Request, payload interface{}) {
 	if payload != nil {
-		w.WriteJson(ResponsePayload{
+		w.WriteJson(&ResponsePayload{
 			Status:  "OK",
 			Payload: payload,
 		})
 	} else {
-		w.WriteJson(ResponsePayload{Status: "OK"})
+		w.WriteJson(&ResponsePayload{Status: "OK"})
 	}
 }
 
 // PeacefulFatalRequest send an Error message to the visitor to say some business is wrong, without breaking the connection
 func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg string) {
-	w.WriteJson(ResponsePayload{
+	w.WriteJson(&ResponsePayload{
 		Status: "ERROR",
 		Error:  msg,
 	})
