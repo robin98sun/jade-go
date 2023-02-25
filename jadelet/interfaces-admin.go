@@ -144,7 +144,7 @@ func (j *JADE) ClearPodCache(w rest.ResponseWriter, r *rest.Request) {
 func (j *JADE) ClearPerfCache(w rest.ResponseWriter, r *rest.Request) {
 	if j.PerfCache != nil {
 		j.log.Op.Printf("clearing performance cache")
-		j.PerfCache.Clear()
+		j.InitControlLoop()
 		runtime.GC()
 		j.log.Op.Printf("performance cache is cleared")
 	}
