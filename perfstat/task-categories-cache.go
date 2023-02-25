@@ -139,7 +139,10 @@ func (p *TaskCategoriesCache) EnqueueResponse(dispatchItem *ds.TaskDispatchingIt
 	categoryItem := p.TaskCategories[taskTag]
 
 	perfVector := categoryItem.EnqueueResponse(dispatchItem, taskResponseTime, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead, adjusted_unloaded_tail_latency, subtasks, instantOverallArrivalRate, instantCumulativePerfVector)
-	perfVector.ResponseTaskClock = p.clock.CurrentClock()
+
+	if perfVector != nil {
+		perfVector.ResponseTaskClock = p.clock.CurrentClock()
+	}
 
 	return perfVector
 }
