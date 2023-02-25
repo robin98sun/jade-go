@@ -83,7 +83,7 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 
 				postQueryPerfAnalysis()	
 				
-				// return
+				return
 			}
 		}
 		j.log.Op.Printf("[app message collector] ERROR: the subtask[%v] of task[%v] claimed by a message from pod[%v] is not recognized",
