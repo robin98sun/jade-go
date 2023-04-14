@@ -3,8 +3,8 @@ package jadelet
 import (
 	"encoding/json"
 	"github.com/ant0ine/go-json-rest/rest"
-	"uta.edu/aces/scheduler/task"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/scheduler"
+	// "uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
@@ -43,8 +43,8 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 		}
 		taskList := reqInst.Payload
 
-		dataPlaneTasks := make(map[string]*scheduler.TaskDispatchingItem)
-		controlPlaneTasks := map[string]*scheduler.TaskDispatchingItem{}
+		dataPlaneTasks := make(map[string]*ds.TaskDispatchingItem)
+		controlPlaneTasks := map[string]*ds.TaskDispatchingItem{}
 
 		res := &TaskReceiverResponse{}
 		
@@ -118,7 +118,8 @@ func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingIte
 	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
 
 	for taskKey, dispatchItem := range tasklist {
-
+		resultBytes, _ := json.MarshalIndent(dispatchItem.Options, "", "  ")
+		j.log.Debug.Printf("received task option:", string(resultBytes))
 		if j.HasRegistry() && dispatchItem.TTL > 0 {
 			j.log.Op.Printf("received a collaborative task [%v], ttl: %v", taskKey, dispatchItem.TTL)
 			collaborativeTasks[taskKey] = dispatchItem
@@ -128,15 +129,18 @@ func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingIte
 			if _, aggregatorExists := task.Application.Modules[string(ds.AppModuleAggregator)]; aggregatorExists {
 				if _, workerExists := task.Application.Modules[string(ds.AppModuleWorker)]; workerExists {
 					aggregativeTasks[taskKey] = dispatchItem
-					// j.PerfCache.EnqueueArrivalTime(dispatchItem, dispatchItem.ArriveTimestamp)
+					j.log.Op.Printf("the autonomous task is an aggregative task")
+					j.PerfCache.EnqueueArrivalTime(dispatchItem.Task.Application.Key(), dispatchItem, dispatchItem.ArriveTimestamp)
 				}
 			}
 		}
 	}
-	// if len(aggregativeTasks) > 0 {
-	// 	go j.evaluateAggregativeTasks(aggregativeTasks)
-	// }
-	// if len(collaborativeTasks) > 0 {
-	// 	go j.evaluateCollaborativeTasks(collaborativeTasks)
-	// }
+	if len(aggregativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v aggregative tasks", len(aggregativeTasks))
+		go j.evaluateAggregativeTasks(aggregativeTasks)
+	}
+	if len(collaborativeTasks) > 0 {
+		j.log.Op.Printf("evaluating %v collaborative tasks", len(aggregativeTasks))
+		go j.evaluateCollaborativeTasks(collaborativeTasks)
+	}
 }

@@ -2,18 +2,20 @@ package kernel
 // if talking about "registry", it actually means kernel in the implementation
 
 import (
+	// "uta.edu/aces/jade-go/kernel"
 	"sync"
+	// "log"
 	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 type EligibleNeighborCacheItem struct {
-	// Nodes 	map[string]*ds.Node // nodeKey: node
+	// Nodes 	map[string]*Node // nodeKey: node
 	NodeList []*ds.Node
 }
 
 func NewEligibleNeighborCacheItem(neighborNodes []*ds.Node) *EligibleNeighborCacheItem {
 	cacheItem := &EligibleNeighborCacheItem{
-		// Nodes: make(map[string]*ds.Node),
+		// Nodes: make(map[string]*Node),
 	}
 
 	// for _, node := range neighborNodes {
@@ -23,7 +25,6 @@ func NewEligibleNeighborCacheItem(neighborNodes []*ds.Node) *EligibleNeighborCac
 
 	return cacheItem
 }
-
 
 func (item *EligibleNeighborCacheItem) GetNeighborNodes() []*ds.Node {
 	if item.NodeList == nil || len(item.NodeList) == 0 {

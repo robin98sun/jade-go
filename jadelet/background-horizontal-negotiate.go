@@ -2,12 +2,16 @@ package jadelet
 
 import (
 	"time"
+	// "sort"
 	"encoding/json"
-	"uta.edu/aces/jade-go/kernel"
-	"uta.edu/aces/scheduler/histogram"
-	"uta.edu/aces/scheduler/task"
+	// "uta.edu/aces/jade-go/kernel"
+	"uta.edu/aces/jade-go/histogram"
+	"uta.edu/aces/jade-go/scheduler"
+	// "uta.edu/aces/jade-go/histogram"
+	// "uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"math"
+	// "sync"
 )
 
 func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchingItem) {
@@ -24,7 +28,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 		eligibleNeighbors, _, _, _ := j.discoverNeighbors(dispatchItem)
 		
 		dispatchItem.InquiryStartTimestamp = time.Now()
-		var budgetnegotationCache *task.BudgetNegotiationResponseCache
+		var budgetnegotationCache *scheduler.BudgetNegotiationResponseCache
 		to_cache_neighbor_subtask := true
 		if len(eligibleNeighbors) > 0 {
 
@@ -32,19 +36,19 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 			j.log.Debug.Printf("[budget negotiation] retrieved %v eligible neighbors from cache", len(eligibleNeighbors))
 			// for some options, no need to negotiate budget
 
-			if 	dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL ||
-				dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None ||
-				dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block || 
-				dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+			if 	dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL ||
+				dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_None ||
+				dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block || 
+				dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 
-				budgetNegotiation := task.BudgetNegotiationTypeNone
+				budgetNegotiation := ds.BudgetNegotiationTypeNone
 				// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
 				// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 				// }
-				if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
-					budgetNegotiation = task.BudgetNegotiationTypeCDFNonBlock
-				} else if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
-					budgetNegotiation = task.BudgetNegotiationTypeCDFBlock
+				if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFNonBlock
+				} else if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
+					budgetNegotiation = ds.BudgetNegotiationTypeCDFBlock
 				}
 
 				budgetEstimationPercentilePoint := float64(0.95)
@@ -54,40 +58,40 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 
 				// for single fanout, no need to negotiate
 				if len(eligibleNeighbors) == 1 {
-					dispatchItem.Task.QueuingMechanism = kernel.TaskQueuingDDL_None
+					dispatchItem.Task.QueuingMechanism = ds.TaskQueuingDDL_None
 					// if dispatchItem.Options != nil  {
-					// 	dispatchItem.Options.BudgetNegotiation = task.BudgetNegotiationTypeNone
+					// 	dispatchItem.Options.BudgetNegotiation = scheduler.BudgetNegotiationTypeNone
 					// }
-					budgetNegotiation = task.BudgetNegotiationTypeNone
+					budgetNegotiation = ds.BudgetNegotiationTypeNone
 				}
 
 				// for larger fanouts, do whatever needed to negotiate
-				if 	budgetNegotiation == task.BudgetNegotiationTypeCDFBlock ||
-					budgetNegotiation == task.BudgetNegotiationTypeCDFNonBlock ||
-					dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block || 
-					dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+				if 	budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock ||
+					budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock ||
+					dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block || 
+					dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 					
-					if 	budgetNegotiation == task.BudgetNegotiationTypeCDFNonBlock ||
-						dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
+					if 	budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock ||
+						dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
 						// for non-block negotiation, do not put into cache
 						// so nothing to do here
-					} else if budgetNegotiation == task.BudgetNegotiationTypeCDFBlock ||
-							  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
+					} else if budgetNegotiation == ds.BudgetNegotiationTypeCDFBlock ||
+							  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
 					    // the cache is only used for blockable negotiation
-						budgetnegotationCache = task.NewBudgetNegotiationResponseCache()
+						budgetnegotationCache = scheduler.NewBudgetNegotiationResponseCache()
 						for _, neighbor := range eligibleNeighbors {
-							budgetnegotationCache.Responses[neighbor.Key()] = &task.BudgetNegotiationResponseCacheItem{
+							budgetnegotationCache.Responses[neighbor.Key()] = &scheduler.BudgetNegotiationResponseCacheItem{
 								Neighbor: neighbor,
 								IsDone: false,
 								RequestSentAt: time.Now(),
 							}
 						}
 						tmpDispatchItem := dispatchItem.MinimumCopy()
-						tmpDispatchItem.SetReportToForModule(string(kernel.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
+						tmpDispatchItem.SetReportToForModule(string(ds.AppModuleAggregator), j.Config.SelfNode.GetSDKNode(), nil)
 						
 						tmpDispatchItem.TTL = dispatchItem.TTL - 1
 
-						tmpDispatchItem.Options = &task.TaskDispatchingOptions{
+						tmpDispatchItem.Options = &ds.TaskDispatchingOptions{
 							// BudgetNegotiation: budgetNegotiation,
 							BudgetEstimationPercentilePoint: budgetEstimationPercentilePoint,
 						}
@@ -106,7 +110,7 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 				} else {
 					targetPercentile := math.Pow(budgetEstimationPercentilePoint, 1.0/float64(len(eligibleNeighbors)))
 					if dispatchItem.Options == nil {
-						dispatchItem.Options = &task.TaskDispatchingOptions{}
+						dispatchItem.Options = &ds.TaskDispatchingOptions{}
 					}
 					dispatchItem.Options.BudgetEstimationPercentilePoint = targetPercentile
 					j.log.Debug.Printf("[budget negotiation] one-way negotiation by setting budget estimation percentile point to %v for %v eligible neighbors, where original percentile point is %v", targetPercentile, len(eligibleNeighbors), budgetEstimationPercentilePoint)
@@ -130,24 +134,24 @@ func (j *JADE) evaluateCollaborativeTasks(tasklist map[string]*ds.TaskDispatchin
 	}
 }
 
-func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache, dispatchItem *ds.TaskDispatchingItem) {
+func (j *JADE) CallbackOfNegotiation(cache *scheduler.BudgetNegotiationResponseCache, dispatchItem *ds.TaskDispatchingItem) {
 	
 	dispatchItem.TTL--
-	budgetNegotiation := task.BudgetNegotiationTypeNone
+	budgetNegotiation := ds.BudgetNegotiationTypeNone
 	// if dispatchItem.Options != nil && dispatchItem.Options.BudgetNegotiation != "" {
 	// 	budgetNegotiation = dispatchItem.Options.BudgetNegotiation
 	// }
-	if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock {
-		budgetNegotiation = task.BudgetNegotiationTypeCDFNonBlock
-	} else if dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block {
-		budgetNegotiation = task.BudgetNegotiationTypeCDFBlock
+	if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock {
+		budgetNegotiation = ds.BudgetNegotiationTypeCDFNonBlock
+	} else if dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block {
+		budgetNegotiation = ds.BudgetNegotiationTypeCDFBlock
 	}
 
-	if 	dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock ||
-		budgetNegotiation == task.BudgetNegotiationTypeCDFNonBlock {
+	if 	dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock ||
+		budgetNegotiation == ds.BudgetNegotiationTypeCDFNonBlock {
 		// for non-block negotiation, the budget inquiry process will happen when the local resources have been provisioned
-		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), -1)
-		dispatchItem.Options.BudgetNegotiationPhase = task.BudgetNegotiationPhaseInquiry
+		dispatchItem.SetBudgetForModule(string(ds.AppModuleWorker), -1)
+		dispatchItem.Options.BudgetNegotiationPhase = ds.BudgetNegotiationPhaseInquiry
 	} else {
 		// if cache is not nil, wait for cache done
 		for {
@@ -202,10 +206,10 @@ func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache,
 			// here is typically for non-negotiation
 		dispatchItem.BudgetEstimationDoneTimestamp = time.Now()
 		if dispatchItem.SLO != nil && 
-			( dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL ||
-			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_None ||
-			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_Block ||
-			  dispatchItem.Task.QueuingMechanism == kernel.TaskQueuingDDL_CDF_NonBlock){
+			( dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL ||
+			  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_None ||
+			  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_Block ||
+			  dispatchItem.Task.QueuingMechanism == ds.TaskQueuingDDL_CDF_NonBlock){
 			provisionOverhead := float64(dispatchItem.BudgetEstimationDoneTimestamp.Sub(dispatchItem.ArriveTimestamp)*10 / time.Millisecond)/10
 			dispatchItem.SLO.TailLatencyInMilliseconds -= provisionOverhead
 		}
@@ -214,7 +218,7 @@ func (j *JADE) CallbackOfNegotiation(cache *task.BudgetNegotiationResponseCache,
 		j.log.Debug.Printf("[budget negotiation] going to dispatch the task among all eligible clusters, there are %v neighbor subtasks", len(dispatchItem.Task.NeighborNodes))
 	}
 
-	j.evaluateAggregativeTasks(map[string]*task.TaskDispatchingItem{
+	j.evaluateAggregativeTasks(map[string]*ds.TaskDispatchingItem{
 		dispatchItem.Task.GetKey(): dispatchItem,
 	})
 
@@ -248,7 +252,7 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *ds.Task
 			budget = 0
 		}
 
-		dispatchItem.SetBudgetForModule(string(kernel.AppModuleWorker), budget)
+		dispatchItem.SetBudgetForModule(string(ds.AppModuleWorker), budget)
 
 		j.TaskCache.SetUnloadedTailLatencyAndBudgetForTask(dispatchItem.Task.GetKey(), tail_latency, budget)
 
@@ -266,7 +270,7 @@ func (j *JADE) CalcGlobalBudget(cdf_list []*histogram.CDF, dispatchItem *ds.Task
 }
 
 
-func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingItem, cache *task.BudgetNegotiationResponseCache) *task.BudgetNegotiationResponse {
+func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingItem, cache *scheduler.BudgetNegotiationResponseCache) *scheduler.BudgetNegotiationResponse {
 	payload := j.GeneratePayloadOfRequest(neighbor, sampleTask, nil, nil)
 
 	j.log.Debug.Printf("[budget negotiation] inquirying eligible neighbor %v for budget on task %v ", neighbor, sampleTask)
@@ -276,7 +280,7 @@ func (j *JADE) inquiryBudget(neighbor *ds.Node, sampleTask *ds.TaskDispatchingIt
 		j.log.Debug.Println("[budget negotiation] ERROR when inquirying eligible neighbor:", err.Error())
 	} else {
 		resInst :=  &struct{
-			Payload *task.BudgetNegotiationResponse `json:"payload,omitempty"`
+			Payload *scheduler.BudgetNegotiationResponse `json:"payload,omitempty"`
 		}{}
 		err = json.Unmarshal(content, resInst)
 		if err != nil {

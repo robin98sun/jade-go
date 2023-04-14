@@ -1,6 +1,10 @@
 package jadelet
 
 import (
+	// "encoding/json"
+	// "github.com/ant0ine/go-json-rest/rest"
+	// "uta.edu/aces/jade-go/scheduler"
+	// "uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
 	"time"
 	"sync"
@@ -120,7 +124,7 @@ func (j *JADE) processControlPlaneTask(dispatchItem *ds.TaskDispatchingItem) (in
 					if _, e := cache.returnlist[node.Key()]; !e {
 						if iteration % 1000 == 0 {
 							j.log.Op.Printf("[control plane][parallel negotiation] waiting for node[%v], hostname: %v, port: %v", 
-								node.Key(), node.Hostname, node.Port,
+								node.Desc(), node.Hostname, node.Port,
 							)
 						}
 						count_waiting_nodes += 1

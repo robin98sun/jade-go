@@ -2,20 +2,21 @@ package jadelet
 
 import (
 	"sync"
+
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
+	"uta.edu/aces/jade-go/perfstat"
 	"uta.edu/aces/jade-go/provisioner"
-	// "uta.edu/aces/scheduler"
+	rm "uta.edu/aces/jade-go/resource_manager"
+	"uta.edu/aces/jade-go/scheduler"
 	"uta.edu/aces/jadesdk"
 	ds "uta.edu/aces/jadesdk/data_structure"
-	rm "uta.edu/aces/resource_manager"
 )
 
 // Init to do initializing work
 func (j *JADE) Init() {
 	j.log = kernel.NewLogger()
-	j.log.Op.Enabled = true
-	
+
 	j.mutex = &sync.Mutex{}
 	j.registryMutex = &sync.Mutex{}
 	// Initialize caches and queues
@@ -23,68 +24,27 @@ func (j *JADE) Init() {
 	j.Subnodes = make(map[string]*ds.Node)
 	j.Neighbors = make(map[string]*ds.Node)
 	j.subnodeCapabilityCache = kernel.NewCapabilityCache()
-	// j.subnodeCapacityCache = ds.NewCapacityCache()
+	// j.subnodeCapacityCache = kernel.NewCapacityCache()
 	j.neighborCapabilityCache = kernel.NewCapabilityCache()
-	// j.neighborCapacityCache = ds.NewCapacityCache()
+	// j.neighborCapacityCache = kernel.NewCapacityCache()
 	j.eligibleNeighborCache = kernel.NewEligibleNeighborCache()
-	j.CapacityStatus = &kernel.CapacityStatus{}
-
-	// j.TaskCache = scheduler.NewTaskCache()
-	// j.PodCache = scheduler.NewPodCache()
-	// j.PerfCache = perfstat.NewPerfCache()
-	// j.dist = scheduler.NewDist()
-
-	// resource manager
-	j.ResourceManager = rm.NewResourceManager()
-
-	// scheduler
-	// var subtaskDispatcher scheduler.SubtaskDispatcher = func(
-	// 	appId string, 
-	// 	moduleName string, 
-	// 	addr *ds.Node, 
-	// 	payload interface{},
-	// ) int {
-	// 	_, reqlen, _, _ := j.HTTPCommunicate(
-	// 		"dispatch subtask "+moduleName, "POST", "/"+moduleName,
-	// 		addr,
-	// 		payload,
-	// 		0, 10,
-	// 	)
-	// 	return reqlen
-	// }
-
-	// var aggregatorTaskDispatcher scheduler.AggregativeTaskDispatcher = func(
-	// 	moduleName string, queueKey string, addr *ds.Node, msg interface{},
-	// ) int {
-	// 	_, reqlen, _, _ := j.HTTPCommunicate(
-	// 		"dispatch subtask "+moduleName, "PUT", "/$jade$/enqueueAggregativeTask",
-	// 		addr, msg,
-	// 		0, 10,
-	// 	)
-	// 	return reqlen
-	// }
-
-	// var neighborTaskDispatcher scheduler.NeighborTaskDispatcher = func(
-	// 	neighborNode *ds.Node, dispatchItem *ds.TaskDispatchingItem,
-	// ) {
-	// 	j.dispatchNeighborTask(neighborNode, dispatchItem)
-	// }
-
-	// j.Scheduler = scheduler.NewScheduler(
-	// 	j.Config.SelfNode, 50000, 
-	// 	subtaskDispatcher, 
-	// 	aggregatorTaskDispatcher,
-	// 	neighborTaskDispatcher,
-	// 	j.log.Op.Printf,
-	// )
+	// j.CapacityStatus = &kernel.CapacityStatus{}
+	j.TaskCache = scheduler.NewTaskCache()
+	j.PodCache = scheduler.NewPodCache()
 
 	// read environment variables into config
 	j.Config = ds.ReadConfFromEnv()
-	j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
-	j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
+	// j.CapacityStatus.MaximumCapacity = j.Config.Capacity.Copy()
+	// j.CapacityStatus.RemainingCapacity = j.Config.Capacity.Copy()
 
 	// read env metrics if the addon is deployed
-	
+
+	// control loop
+	j.InitControlLoop()
+
+	// others
+	j.dist = scheduler.NewDist()
+
 	// setup k8s client instance
 	clients := kube.NewKubeClient(j.log.Op)
 	clients.Init()
@@ -94,7 +54,7 @@ func (j *JADE) Init() {
 	if j.Config.SelfNode.IsAddrEmpty() {
 		j.MakeUpAddressForNode(j.Config.SelfNode)
 	}
-	j.log.Op.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Key(), j.Config.SelfNode.IsAddrEmpty())
+	j.log.Op.Printf("[init] self node [%v] config emptyness is %v", j.Config.SelfNode.Desc(), j.Config.SelfNode.IsAddrEmpty())
 	if !j.Config.SelfNode.IsAddrEmpty() {
 		j.log.Op.Printf("[init] setting capabilities during initializing")
 		if list, e := j.Config.Capabilities["public"]; e {
@@ -113,3 +73,51 @@ func (j *JADE) SetVerboseAccordingToConf() {
 	}
 }
 
+func (j *JADE) InitControlLoop() {
+	// Control Loop: monitoring, analyzing, planning, executing
+	clock := perfstat.NewClock()
+
+	j.ControlLoop = rm.NewControlLoop(clock, j.log)
+
+	msgrAvgSLORatios := func(m *perfstat.PerfMessage) {
+		j.ControlLoop.AppendPerfMessage(m)
+	}
+	j.PerfCache = perfstat.NewPerfCache(perfstat.CloneClock(clock))
+	j.PerfCache.SubscribeAverageSLORatios(msgrAvgSLORatios)
+
+	msgrQueueDV := func(appKey string, deadlineViolationThreshold float64) []*perfstat.QueuePerfMessage {
+		return j.PerfCache.GetQueuesAsPerDeadlineViolation(appKey, deadlineViolationThreshold)
+	}
+	j.ControlLoop.MessengerQueuesAsPerDeadlineViolation = &msgrQueueDV
+
+	msgrQueueDS := func(appKey string, deadlineSurplusThreshold float64) []*perfstat.QueuePerfMessage {
+		return j.PerfCache.GetQueuesAsPerDeadlineSurplus(appKey, deadlineSurplusThreshold)
+	}
+	j.ControlLoop.MessengerQueuesAsPerDeadlineSurplus = &msgrQueueDS
+
+	msgrScaleQueue := func(appKey string, queueKey string, action *rm.ScalingAction) bool {
+		node := j.GetNodeInControl(queueKey)
+		if node == nil {
+			return false
+		}
+		action.SourceNode = j.Config.SelfNode
+		return j.CommScaleResource(node, action)
+	}
+	j.ControlLoop.MessengerScaleQueue = &msgrScaleQueue
+
+	msgrPodsAsPerQueue := func(appKey string, queueKey string) []string {
+		return j.PodCache.GetPodUIDsAsPerQueue(appKey, queueKey)
+	}
+	j.ControlLoop.MessengerPodUIDsAsPerQueue = &msgrPodsAsPerQueue
+
+	msgrReportScalingResult := func(node *ds.Node, result *rm.ScalingResult) bool {
+		return j.CommReportResourceScalingResult(node, result)
+	}
+	j.ControlLoop.MessengerReportScalingResult = &msgrReportScalingResult
+
+	msgrCommLocalResourceManagerAddon := func(port int, method string, path string, payload interface{}, response interface{}) error {
+		return j.CommLocalResourceManagerAddon(port, method, path, payload, response)
+	}
+	j.ControlLoop.MessengerCommLocalResourceManagerAddon = &msgrCommLocalResourceManagerAddon
+
+}

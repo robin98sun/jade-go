@@ -4,7 +4,8 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
 	"strconv"
-	"uta.edu/aces/jade-go/kernel"
+	// "uta.edu/aces/jade-go/kernel"
+	ds "uta.edu/aces/jadesdk/data_structure"
 )
 
 // ShowConfigurations show current JADE runtime configurations
@@ -131,7 +132,7 @@ func (j *JADE) ShowCapabilityCacheNeighbors(w rest.ResponseWriter, r *rest.Reque
 
 // SearchNodes search subnodes according a list of capabilities
 func (j *JADE) SearchSubnodes(w rest.ResponseWriter, r *rest.Request) {
-	requirements := &kernel.Requirements{}
+	requirements := &ds.Requirements{}
 	err := r.DecodeJsonPayload(&requirements)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -144,7 +145,7 @@ func (j *JADE) SearchSubnodes(w rest.ResponseWriter, r *rest.Request) {
 
 // SearchNodes search neighbors according a list of capabilities
 func (j *JADE) SearchNeighbors(w rest.ResponseWriter, r *rest.Request) {
-	requirements := &kernel.Requirements{}
+	requirements := &ds.Requirements{}
 	err := r.DecodeJsonPayload(&requirements)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -156,13 +157,13 @@ func (j *JADE) SearchNeighbors(w rest.ResponseWriter, r *rest.Request) {
 
 // ShowSubnodeCapacities show capacities of subnodes
 func (j *JADE) ShowSubnodeCapacities(w rest.ResponseWriter, r *rest.Request) {
-	result := make(map[string]map[string]*kernel.Capacity)
-	result["remaining"] = make(map[string]*kernel.Capacity)
-	result["maximum"] = make(map[string]*kernel.Capacity)
-	for nodeID := range j.Subnodes {
-		result["remaining"][nodeID] = j.subnodeCapacityCache.GetRemainingCapacity(nodeID)
-		result["maximum"][nodeID] = j.subnodeCapacityCache.GetMaximumCapacity(nodeID)
-	}
+	result := make(map[string]map[string]*ds.Capacity)
+	result["remaining"] = make(map[string]*ds.Capacity)
+	result["maximum"] = make(map[string]*ds.Capacity)
+	// for nodeID := range j.Subnodes {
+	// 	result["remaining"][nodeID] = j.subnodeCapacityCache.GetRemainingCapacity(nodeID)
+	// 	result["maximum"][nodeID] = j.subnodeCapacityCache.GetMaximumCapacity(nodeID)
+	// }
 	w.WriteJson(result)
 }
 
@@ -199,7 +200,7 @@ func (j *JADE) ShowPerfEventsTraces(w rest.ResponseWriter, r *rest.Request) {
 	}
 	
 	j.log.Op.Printf("fetch [%v] performance traces", traceType)
-	w.WriteJson(j.PerfCache.PerfEventMatrices.CollectTraces(j.log.Op.Printf))
+	w.WriteJson(j.PerfCache.CollectEventTraces(traceType, j.log.Op.Printf))
 }
 
 func (j *JADE) ShowTaskPerfTraces(w rest.ResponseWriter, r *rest.Request) {
@@ -215,11 +216,11 @@ func (j *JADE) ShowTaskPerfTraces(w rest.ResponseWriter, r *rest.Request) {
 	}
 	
 	j.log.Op.Printf("fetch [%v] performance traces", traceType)
-	w.WriteJson(j.PerfCache.CollectTraces(traceType, j.log.Op.Printf))
+	w.WriteJson(j.PerfCache.CollectTaskTraces(traceType, j.log.Op.Printf))
 }
 
 func (j *JADE) ShowPodCache(w rest.ResponseWriter, r *rest.Request) {
-	w.WriteJson(j.PodCache)
+	w.WriteJson(j.PodCache.GetPods())
 }
 
 func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
@@ -228,4 +229,11 @@ func (j *JADE) ShowTaskCache(w rest.ResponseWriter, r *rest.Request) {
 
 func (j *JADE) GetJobIdList(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(j.TaskCache.GetJobIdList())
+}
+
+func (j *JADE) ShowScalablePods(w rest.ResponseWriter, r *rest.Request) {
+
+
+
+	w.WriteJson(j.PodCache.DescribeScalablePods())
 }

@@ -11,6 +11,7 @@ import (
 
 	// Sub packages
 	"uta.edu/aces/jade-go/jadelet"
+	// "uta.edu/aces/jade-go/kernel"
 	ds "uta.edu/aces/jadesdk/data_structure"
 
 	// others
@@ -33,7 +34,7 @@ func main() {
 	// construt JADE RESTful API server
 	j := jadelet.NewJadelet()
 	j.Init()
-	DEV_DEBUGGING := false
+	DEV_DEBUGGING := true
 	j.Verbose(DEV_DEBUGGING)
 
 	// APIs
@@ -45,60 +46,56 @@ func main() {
 	}
 	router, err := rest.MakeRouter(
 		// Control path horizontal
-		// rest.Put("/registerNeighbor", j.RegisterNeighbor),
-		// rest.Post("/eligibleNeighbors", j.ListNeighbors),
-		// rest.Post("/inquiryBudget", j.NeighborInquiry),
-		// rest.Put("/collectCDF", j.CollectCDF),
-		// rest.Post("/gossip", j.NeighborGossip),
-
+		rest.Put("/registerNeighbor", j.RegisterNeighbor),
+		rest.Post("/eligibleNeighbors", j.ListNeighbors),
+		rest.Post("/inquiryBudget", j.NeighborInquiry),
+		rest.Put("/collectCDF", j.CollectCDF),
+		rest.Post("/gossip", j.NeighborGossip),
 		// Control path upstream
-		// rest.Put("/registerSubnode", j.RegisterSubnode),
-		// rest.Post("/collectProvisioning", j.CollectProvisioning),
-
+		rest.Put("/registerSubnode", j.RegisterSubnode),
+		rest.Post("/collectProvisioning", j.CollectProvisioning),
 		// Control path downstream
-		// rest.Post("/taskReceiver", j.TaskReceiver),
-
+		rest.Post("/taskReceiver", j.TaskReceiver),
 		// for administration
-		// rest.Put("/configurations", j.UpdateConfigurations),
-
-		// Provisioning pods
-		rest.Post("/containerProvisioner", j.ContainerProvisioner),
-
+		rest.Put("/configurations", j.UpdateConfigurations),
 		// for data path
-		// rest.Put("/app/listener", j.CollectAppMsg),
-		// rest.Get("/taskResults", j.GetAggregativeTaskResults),
-
+		rest.Put("/app/listener", j.CollectAppMsg),
+		rest.Get("/taskResults", j.GetAggregativeTaskResults),
 		// for stat
-		// rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
-		// rest.Delete("/podCache", j.ClearPodCache),
-		// rest.Delete("/perfCache", j.ClearPerfCache),
-		// rest.Get("/jobs", j.GetJobIdList),
-		// rest.Put("/startPerfEventListener", j.StartPerfEventListener),
-		// rest.Put("/stopPerfEventListener", j.StopPerfEventListener),
-
+		// rest.Get("/dumpStat", j.DumpStat),
+		rest.Delete("/taskCacheAndStat", j.ClearTaskCacheAndStat),
+		rest.Delete("/podCache", j.ClearPodCache),
+		rest.Delete("/perfCache", j.ClearPerfCache),
+		rest.Get("/jobs", j.GetJobIdList),
+		rest.Put("/startPerfEventListener", j.StartPerfEventListener),
+		rest.Put("/stopPerfEventListener", j.StopPerfEventListener),
+		rest.Get("/controlLoopParameters", j.GetControlLoopParameters),
+		rest.Put("/controlLoopParameters", j.SetControlLoopParameters),
+		rest.Put("/scaleResource", j.ReceiveResourceScalingAction),
+		rest.Put("/resourceScalingResult", j.ReceiveResourceScalingResult),
 		// for debugging
-		// rest.Get("/debug/jadelet", j.ShowJadelet),
-		// rest.Get("/debug/configurations", j.ShowConfigurations),
-		// rest.Get("/debug/pod", j.ShowPodInfo),
-		// rest.Get("/debug/service", j.ShowService),
-		// rest.Get("/debug/clusterIP", j.ShowClusterIP),
-		// rest.Get("/debug/externalIP", j.ShowExternalIP),
-		// rest.Get("/debug/node", j.ShowNode),
-		// rest.Get("/debug/subnodes", j.ShowSubnodes),
-		// rest.Get("/debug/neighbors", j.ShowNeighbors),
-		// rest.Post("/debug/collectTraces", j.ShowTraces),
-		// rest.Post("/debug/collectPerfEventsTraces", j.ShowPerfEventsTraces),
-		// rest.Post("/debug/collectTaskPerfTraces", j.ShowTaskPerfTraces),
-		// rest.Get("/debug/podCache", j.ShowPodCache),
-		// rest.Get("/debug/taskCache", j.ShowTaskCache),
-		// rest.Get("/debug/subnodeCapabilityCache", j.ShowCapabilityCacheSubnodes),
-		// rest.Get("/debug/neighborCapabilityCache", j.ShowCapabilityCacheNeighbors),
-		// rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
-		// rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
-		// rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
-		// rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
-		// rest.Get("/debug/perfcache", j.ShowPerfCache),
-
+		rest.Get("/debug/jadelet", j.ShowJadelet),
+		rest.Get("/debug/configurations", j.ShowConfigurations),
+		rest.Get("/debug/pod", j.ShowPodInfo),
+		rest.Get("/debug/service", j.ShowService),
+		rest.Get("/debug/clusterIP", j.ShowClusterIP),
+		rest.Get("/debug/externalIP", j.ShowExternalIP),
+		rest.Get("/debug/node", j.ShowNode),
+		rest.Get("/debug/subnodes", j.ShowSubnodes),
+		rest.Get("/debug/neighbors", j.ShowNeighbors),
+		rest.Post("/debug/collectTraces", j.ShowTraces),
+		rest.Post("/debug/collectPerfEventsTraces", j.ShowPerfEventsTraces),
+		rest.Post("/debug/collectTaskPerfTraces", j.ShowTaskPerfTraces),
+		rest.Get("/debug/podCache", j.ShowPodCache),
+		rest.Get("/debug/taskCache", j.ShowTaskCache),
+		rest.Get("/debug/subnodeCapabilityCache", j.ShowCapabilityCacheSubnodes),
+		rest.Get("/debug/neighborCapabilityCache", j.ShowCapabilityCacheNeighbors),
+		rest.Get("/debug/capacityCache", j.ShowSubnodeCapacities),
+		rest.Post("/debug/searchSubnodes", j.SearchSubnodes),
+		rest.Post("/debug/searchNeighbors", j.SearchNeighbors),
+		rest.Delete("/cleanAndResetQueues", j.CleanAndResetQueues),
+		rest.Get("/debug/perfcache", j.ShowPerfCache),
+		rest.Get("/debug/scalablePods", j.ShowScalablePods),
 	)
 	if err != nil {
 		log.Fatal(err)

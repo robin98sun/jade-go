@@ -10,11 +10,12 @@ import (
 	"uta.edu/aces/jade-go/kernel"
 	"uta.edu/aces/jade-go/kube"
 	"uta.edu/aces/jade-go/provisioner"
-	"uta.edu/aces/scheduler"
-	rm "uta.edu/aces/resource_manager"
+	"uta.edu/aces/jade-go/scheduler"
+	"uta.edu/aces/jade-go/perfstat"
+	rm "uta.edu/aces/jade-go/resource_manager"
 	"uta.edu/aces/jadesdk"
-	"fmt"
 	ds "uta.edu/aces/jadesdk/data_structure"
+	"fmt"
 )
 
 type JadeNodeType string
@@ -34,19 +35,22 @@ type JADE struct {
 	Subnodes        map[string]*ds.Node  `json:"subnodes"`
 	Neighbors       map[string]*ds.Node  `json:"neighbors"`
 	RegisterStatus  string                   `json:"registerStatus"`
-	CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
+	// CapacityStatus  *kernel.CapacityStatus   `json:"capacityStatus"`
 	subnodeCapabilityCache *kernel.CapabilityCache
 	// subnodeCapacityCache   *kernel.CapacityCache
 	neighborCapabilityCache *kernel.CapabilityCache
 	// neighborCapacityCache   *kernel.CapacityCache
 	eligibleNeighborCache   *kernel.EligibleNeighborCache
 	log             *kernel.Logger
-
-	Scheduler    	*scheduler.Buffet
-	ResourceManager *rm.ResourceManager
-
+	TaskCache       *scheduler.TaskCache `json:"taskCache"`
+	PodCache        *scheduler.PodCache  `json:"podCache"`
+	// performance monitoring and control loop
+	PerfCache 		*perfstat.PerfCache `json:"perfCache"`
+	ControlLoop     *rm.ControlLoop `json:"control_loop"`
+	// others
 	mutex           *sync.Mutex
 	sdk             *jadesdk.JadeSDK
+	dist            *scheduler.Dist
 	registryMutex 	*sync.Mutex
 }
 
@@ -65,7 +69,10 @@ func (j *JADE) Unlock() {
 }
 
 func (j *JADE) Verbose(on bool) {
+	j.log.Op.Enabled = on
 	j.log.Debug.Enabled = on
+	j.log.Perf.Enabled = on
+	j.log.Heartbeat.Enabled = on
 	j.sdk.Verbose(on)
 }
 
@@ -244,18 +251,18 @@ func (j *JADE) ValidateUpstreamRequest(w rest.ResponseWriter, r *rest.Request) (
 // DoneRequest send a message to the visitor to say everything is done
 func (j *JADE) DoneRequest(w rest.ResponseWriter, r *rest.Request, payload interface{}) {
 	if payload != nil {
-		w.WriteJson(ResponsePayload{
+		w.WriteJson(&ResponsePayload{
 			Status:  "OK",
 			Payload: payload,
 		})
 	} else {
-		w.WriteJson(ResponsePayload{Status: "OK"})
+		w.WriteJson(&ResponsePayload{Status: "OK"})
 	}
 }
 
 // PeacefulFatalRequest send an Error message to the visitor to say some business is wrong, without breaking the connection
 func (j *JADE) PeacefulFatalRequest(w rest.ResponseWriter, r *rest.Request, msg string) {
-	w.WriteJson(ResponsePayload{
+	w.WriteJson(&ResponsePayload{
 		Status: "ERROR",
 		Error:  msg,
 	})
