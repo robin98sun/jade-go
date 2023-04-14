@@ -36,13 +36,13 @@ func (k *KubeClient) ProvisionDeployment(envName string, owner string,
 	deploymentName =  strings.ToLower(deploymentName + "-" + ds.RandomString())
 
 	labels := map[string]string{
-		"jade-env":         envName,
+		"jade-env":         strings.ReplaceAll(envName, "/", "-"),
 		"jade-role":        "application",
-		"jade-owner":       owner,
+		"jade-owner":       strings.ReplaceAll(owner, "/", "-"),
 		"jade-app":         strings.ReplaceAll(appname, "/", "-"),
-		"jade-node":        hostname,
-		"jade-app-version": appversion,
-		"jade-app-module":  moduleName,
+		"jade-node":        strings.ReplaceAll(hostname, "/", "-"),
+		"jade-app-version": strings.ReplaceAll(appversion, "/", "-"),
+		"jade-app-module":  strings.ReplaceAll(moduleName, "/", "-"),
 		"jade-app-replica-index": "replica-"+strconv.Itoa(replicaIndex),
 	}
 	deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
