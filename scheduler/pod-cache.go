@@ -115,22 +115,6 @@ func NewPodCacheNodeItem() *PodCacheNodeItem {
 	return inst
 }
 
-type NodeScheduler struct {
-	Application *ds.Application
-	Queue       *STQueue
-	ModuleName  string
-	Pods        []*ds.Pod
-	NodeKey     string
-	IsIdle      bool
-	mutex 		*sync.Mutex
-}
-
-func (i *NodeScheduler) IsEmpty() bool {
-	if i == nil || len(i.Pods) == 0 {
-		return true
-	}
-	return false
-}
 
 
 func (p *PodCache) GetAllPods() []*ds.Pod {
@@ -150,8 +134,9 @@ func (p *PodCache) GetSchedulablePods(moduleName string) []*ds.Pod {
 	for _, nodeItem := range p.Nodes {
 		for key, nodeScheduler := range nodeItem.AppModules {
 			if p.IsKeyForModule(key, string(ds.AppModuleWorker)) {
-				if len(nodeScheduler.Queue.Pods) > 0 {
-					pod_list = append(pod_list, nodeScheduler.Queue.Pods...)
+				nodePods := nodeScheduler.GetSchedulablePods()
+				if len(nodePods) > 0 {
+					pod_list = append(pod_list, nodePods...)
 				}
 			}
 		}
@@ -159,18 +144,6 @@ func (p *PodCache) GetSchedulablePods(moduleName string) []*ds.Pod {
 	return pod_list
 }
 
-func NewNodeScheduler(nodeKey string, app *ds.Application, moduleName string, pods []*ds.Pod) *NodeScheduler {
-	inst := &NodeScheduler{
-		Application: app,
-		ModuleName:  moduleName,
-		Queue:       NewSTQueue(nodeKey),
-		Pods:        pods,
-		IsIdle:      true,
-		NodeKey:     nodeKey,
-	}
-	inst.Queue.Pods = pods
-	return inst
-}
 
 func (p *PodCache) SetPodIdle(pod *ds.Pod, serviceRequestTime float64, communicationTime float64, queueingTime float64, budget float64) *NodeScheduler {
 	return p.setPodIdleOrNot(pod, true, serviceRequestTime, communicationTime, queueingTime, budget)
@@ -187,23 +160,7 @@ func (p *PodCache) setPodIdleOrNot(pod *ds.Pod, idle bool, serviceRequestTime fl
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if podItem, e := nodeItem.AppModules[key]; e {
-			podItem.IsIdle = idle
-			if podItem.Queue.HistogramServiceTime != nil && serviceRequestTime >= 0 {
-				podItem.Queue.HistogramServiceTime.Enqueue(serviceRequestTime, 1)
-			}
-			if podItem.Queue.HistogramWithQueueingTime != nil && queueingTime >= 0 && serviceRequestTime >= 0 {
-				podItem.Queue.HistogramWithQueueingTime.Enqueue(serviceRequestTime+queueingTime, 1)	
-			}
-			if podItem.Queue.HistogramAdjustedServiceTime != nil && budget >= 0 && queueingTime >= 0 && serviceRequestTime >= 0 {
-				adjustedServiceTime := serviceRequestTime+queueingTime-budget
-				if adjustedServiceTime < 0 {
-					adjustedServiceTime = 0
-				}
-				podItem.Queue.HistogramAdjustedServiceTime.Enqueue(adjustedServiceTime, 1)	
-			}
-			if podItem.Queue.HistogramCommunicationTime != nil && communicationTime >= 0 {
-				podItem.Queue.HistogramCommunicationTime.Enqueue(communicationTime, 1)
-			}
+			podItem.SetPodIdle(pod, idle, serviceRequestTime, communicationTime, queueingTime, budget)
 			return podItem
 		}
 	}
@@ -218,7 +175,7 @@ func (p *PodCache) IsPodIdle(pod *ds.Pod) bool {
 	if nodeItem, e := p.Nodes[pod.NodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(pod.AppKey, pod.ModuleName)
 		if podItem, e := nodeItem.AppModules[key]; e {
-			return podItem.IsIdle
+			return podItem.IsPodIdle(pod)
 		}
 	}
 	return false
@@ -393,7 +350,7 @@ func (p *PodCache) CleanAndResetQueues() {
 			continue
 		}
 		for _, podItem := range nodeItem.AppModules {
-			podItem.IsIdle = true
+			podItem.SetAllPodsIdle()
 			podItem.Queue.Clean()
 		}
 	}
