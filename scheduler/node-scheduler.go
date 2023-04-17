@@ -38,6 +38,7 @@ func NewNodeScheduler(nodeKey string, app *ds.Application, moduleName string, po
 		Pods:        pods,
 		IsIdle:      true,
 		NodeKey:     nodeKey,
+		mutex: 		 &sync.Mutex{},
 	}
 	inst.Queue.Pods = pods
 	return inst
