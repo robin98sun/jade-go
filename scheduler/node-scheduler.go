@@ -79,6 +79,9 @@ func (n *NodeScheduler) SetPod(pod *ds.Pod, status NodeSchedulerPodStatus) {
 func (n *NodeScheduler) GetSchedulablePods() []*ds.Pod {
 	if n == nil {return nil}
 
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	
 	schedulablePods := []*ds.Pod{}
 	for podKey, status := range n.PodsStatus {
 		if status == NodeSchedulerPodStatusIdle {
