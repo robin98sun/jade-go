@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"math"
 	"sync"
 	"strings"
 	"uta.edu/aces/jade-go/histogram"
@@ -209,8 +208,9 @@ func (p *PodCache) GetOnePodForModule(nodeKey string, appKey string, moduleName 
 	if nodeItem, e := p.Nodes[nodeKey]; e {
 		key := p.GetKeyFromApplicationAndModule(appKey, moduleName)
 		if podItem, e := nodeItem.AppModules[key]; e{
-			if len(podItem.Pods) > 0 {
-				return podItem.Pods[0]
+			pods := podItem.GetSchedulablePods()
+			if len(pods) > 0 {
+				return pods[0]
 			}
 		}
 	}
@@ -252,21 +252,8 @@ func (p *PodCache) SetPodForApplication(nodeKey string, app *ds.Application, mod
 
 	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
 		nodeItem.AppModules[key] = NewNodeScheduler(nodeKey, app, moduleName, []*ds.Pod{pod})
-		nodeItem.AppModules[key].Queue.Pods = []*ds.Pod{pod}
 	} else {
-		pod_exist := false
-		for _, pod_inst := range nodeScheduler.Pods {
-			if pod_inst.GetKey() == pod.GetKey() {
-				pod_exist = true
-				break
-			}
-		}
-		if !pod_exist {
-			nodeScheduler.Pods = append(nodeScheduler.Pods, pod)
-			if len(nodeScheduler.Queue.Pods) == 0 {
-				nodeScheduler.Queue.Pods = []*ds.Pod{pod}
-			}
-		}
+		nodeScheduler.SetPod(pod, NodeSchedulerPodStatusIdle)
 	}
 
 	if alloc != nil {
@@ -296,15 +283,8 @@ func (p *PodCache) SetReplicaPerNode(nodeKey string, appKey string, moduleName s
 
 	if nodeScheduler, e := nodeItem.AppModules[key]; !e {
 		return 0
-	} else if len(nodeScheduler.Pods) == 0 {
-		return 0
 	} else {
-		if replicaCount == len(nodeScheduler.Queue.Pods) {
-			return replicaCount
-		} else {
-			nodeScheduler.Queue.Pods = nodeScheduler.Pods[0: int(math.Max(float64(replicaCount),0))]
-			return len(nodeScheduler.Queue.Pods)
-		}
+		return nodeScheduler.SetReplicaPerNode(replicaCount)
 	}
 	return 0
 
