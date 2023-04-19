@@ -114,6 +114,7 @@ func (j *JADE) TaskReceiver(w rest.ResponseWriter, r *rest.Request) {
 
 
 func (j *JADE) ClassifyDataPlaneTasks(tasklist map[string]*ds.TaskDispatchingItem) {
+	
 	collaborativeTasks := map[string]*ds.TaskDispatchingItem{}
 	aggregativeTasks := map[string]*ds.TaskDispatchingItem{}
 
