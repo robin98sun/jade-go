@@ -607,6 +607,7 @@ func (j *JADE) NewAggregatorEnqueuingMessage(taskItem *ds.TaskDispatchingItem, s
 		TaskKey:  taskItem.Task.GetKey(),
 		Subtasks: []string{},
 		ReportTo: []*jadesdk.Interface{},
+		SLO: taskItem.SLO,
 	}
 	reportTo := taskItem.GetReportToForModule(string(ds.AppModuleAggregator))
 	if reportTo != nil && reportTo.Pod != nil {
