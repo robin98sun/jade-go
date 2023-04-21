@@ -356,3 +356,19 @@ func (p *PodCache) GetPodUIDsAsPerQueue(appKey string, queueKey string) []string
 	}
 	return nil
 }
+
+func (p *PodCache) RemoveSubtasksFromQueue(subtasks_on_nodes []*ds.SubtaskOnNode) {
+	p.Lock()
+	defer p.Unlock()
+
+	for _, item := range subtasks_on_nodes {
+		nodeKey := item.Node.GetKey()
+		subtaskKey := item.Subtask.GetKey()
+		moduleName := item.Subtask.ModuleName
+		if nodeItem, e1 := p.Nodes[nodeKey]; e1 {
+			if nodeScheduler, e2 := nodeItem.AppModules[moduleName]; e2 && nodeScheduler != nil && nodeScheduler.Queue.GetLength() > 0 {
+				nodeScheduler.RemoveSubtask(subtaskKey)
+			}
+		}
+	}
+}

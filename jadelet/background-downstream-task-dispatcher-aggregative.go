@@ -91,7 +91,8 @@ func (j *JADE) dispatchSubtask(pod *ds.Pod) {
 func (j *JADE) checkTaskStatus(taskKey string, isConfirmingBudget bool, dispatchItemToConfirm *ds.TaskDispatchingItem) {
 	// j.Lock()
 	// defer j.Unlock()
-	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, ds.TaskStatusAccepted, time.Now(), j.log.Debug.Printf)  {
+	forceDone := false
+	if isConfirmingBudget || j.TaskCache.CheckTask(taskKey, ds.TaskStatusAccepted, time.Now(), forceDone, j.log.Debug.Printf)  {
 		if ! isConfirmingBudget {
 			j.log.Debug.Printf("[task dispatcher] the task{%v} is accepted", taskKey)
 		} else {

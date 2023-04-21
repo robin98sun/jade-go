@@ -187,4 +187,8 @@ func (n *NodeScheduler) SetPodIdle(pod *ds.Pod, idle bool, serviceRequestTime fl
 
 }
 
+func (n *NodeScheduler) RemoveSubtask(subtaskKey string) {
+	n.Queue.RemoveSubtask(subtaskKey)
+}
+
 

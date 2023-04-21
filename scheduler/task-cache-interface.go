@@ -244,6 +244,8 @@ func (c *TaskCache) GetResultOfTask(taskKey string, moduleName string) []*TaskRe
 	return result
 }
 
+
+
 func (c *TaskCache) allSubtasksHaveTheSameStatus(taskKey string, desiredStatus ds.TaskStatus, printf func(string, ...interface{})) (bool, bool) {
 	allSubtasksDone := false
 	allWorkersDone := false
@@ -321,7 +323,7 @@ func (c *TaskCache) GetDispatchingItem(taskKey string) (*ds.TaskDispatchingItem,
 	return nil, 0, 0, 0, 0
 }
 
-func (c *TaskCache) CheckTask(taskKey string, desiredStatus ds.TaskStatus, timestamp time.Time, printf func(string, ...interface{})) bool {
+func (c *TaskCache) CheckTask(taskKey string, desiredStatus ds.TaskStatus, timestamp time.Time, forceDone bool, printf func(string, ...interface{})) bool {
 	if c == nil {
 		return false
 	}
@@ -337,11 +339,15 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus ds.TaskStatus, times
 			printf("[task cache] task[%v] is already {%v}, stop checking subtasks", taskKey, taskItem.status)
 			return taskItem.status == desiredStatus
 		}
-		allSubtasksDone, allWorkersDone := c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf);
-		if allWorkersDone && desiredStatus == ds.TaskStatusDone {
-			taskItem.WorkerFinishTimestamp = time.Now()
+		allSubtasksDone := false
+		allWorkersDone := false
+		if ! forceDone {
+			allSubtasksDone, allWorkersDone = c.allSubtasksHaveTheSameStatus(taskKey, desiredStatus, printf);
+			if allWorkersDone && desiredStatus == ds.TaskStatusDone {
+				taskItem.WorkerFinishTimestamp = time.Now()
+			}
 		}
-		if allSubtasksDone {
+		if allSubtasksDone || forceDone {
 			if desiredStatus == ds.TaskStatusDone {
 				if taskItem.FinishTimestamp.IsZero() {
 					taskItem.FinishTimestamp = time.Now()
@@ -354,7 +360,7 @@ func (c *TaskCache) CheckTask(taskKey string, desiredStatus ds.TaskStatus, times
 					taskItem.AcceptTimestamp = timestamp
 				}
 			}
-			return allSubtasksDone
+			return true
 		}
 	} else {
 		printf("[task cache] ERROR: task[%v] is not in cache", taskKey)
@@ -602,7 +608,7 @@ func (c *TaskCache) GetSubtaskItem(taskKey string, subtaskKey string) *TaskCache
 	return nil
 }
 
-func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string) (map[string][]*TaskCacheSubtaskItem, []*ds.SubtaskOnNode) {
+func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string, nodeKey string, unfinishedOnly bool) (map[string][]*TaskCacheSubtaskItem, []*ds.SubtaskOnNode) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	
@@ -619,6 +625,9 @@ func (c *TaskCache) GetSubtasksPerNodeForTask(taskKey string, moduleName string,
 					continue
 				}
 				for _, subtaskItem := range moduleItem.subtasks {
+					if unfinishedOnly && subtaskItem.status == ds.TaskStatusDone {
+						continue
+					}
 					result[nodeKeyInCache] = append(result[nodeKeyInCache], subtaskItem)
 					subtasks_on_nodes = append(subtasks_on_nodes, &ds.SubtaskOnNode{
 						Node: dispatchedNode.Node,

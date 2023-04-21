@@ -35,6 +35,7 @@ type STQueue struct {
 	// HistogramInQueueTime *histogram.Histogram
 	HistogramCommunicationTime *histogram.Histogram
 	dequeueClock int64
+	RemovedSubtasks map[string]bool
 }
 
 func NewSTQueue(nodekey string) *STQueue {
@@ -53,6 +54,7 @@ func NewSTQueue(nodekey string) *STQueue {
 		HistogramAdjustedServiceTime: h_ad,
 		HistogramCommunicationTime:   h_co,
 		dequeueClock: 0,
+		RemovedSubtasks: make(map[string]bool),
 	}
 }
 
@@ -62,6 +64,23 @@ func (p *STQueue) Lock() {
 
 func (p *STQueue) Unlock() {
 	p.mutex.Unlock()
+}
+
+func (p *STQueue) GetLength() int {
+	p.Lock()
+	defer p.Unlock()
+	if p.ItemsInQueue == nil {
+		return 0
+	}
+	return len(p.ItemsInQueue)
+}
+
+func (p *STQueue) RemoveSubtask(subtaskKey string) {
+	p.Lock()
+	defer p.Unlock()
+
+	p.RemovedSubtasks[subtaskKey] = true
+
 }
 
 
@@ -352,7 +371,6 @@ func (q *STQueue) Enqueue(
 
 func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 	q.Lock()
-	defer q.Unlock()
 	var item *STQueueItem
 
 	targetQueue := STQueueTypeMain
@@ -395,6 +413,12 @@ func (q *STQueue) Dequeue(printf func(string, ...interface{})) *STQueueItem {
 				len(q.MainQueue) + len(q.ShadowQueue),
 			)
 		}
+		if _, e := q.RemovedSubtasks[item.SubtaskKey]; e {
+			delete(q.RemovedSubtasks, item.SubtaskKey)
+			q.Unlock()
+			return q.Dequeue(printf)
+		}
 	}
+	q.Unlock()
 	return item
 }

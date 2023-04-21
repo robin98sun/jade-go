@@ -46,11 +46,20 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 				}
 
 				// then dequeue or release the pod queue
-				pod := j.PodCache.GetPod(subtask.ResourceKey)
-				j.PodCache.SetPodIdle(pod, serviceRequestTime, communicationTime, queueingTime, budget)
+				if subtask.ModuleName == string(ds.AppModuleWorker) {
+					pod := j.PodCache.GetPod(subtask.ResourceKey)
+					j.PodCache.SetPodIdle(pod, serviceRequestTime, communicationTime, queueingTime, budget)
+				}
 				// forward aggregator subtask to upper tier if possible
-				if subtask.ModuleName == string(ds.AppModuleAggregator) && j.HasUpperNode() {
-					j.sdk.SendReportMessageToJadelet(subtask.TaskKey, j.Config.UpperNode.GetSDKNode(), msg)
+				forceDone := false
+				if subtask.ModuleName == string(ds.AppModuleAggregator) {
+					if msg.Status == string(ds.TaskStatusDone) {
+						forceDone = true
+						j.TaskCache.CheckTask(msg.TaskKey, ds.TaskStatusDone, timestampReceving, forceDone,  j.log.Debug.Printf)
+					}
+					if j.HasUpperNode() {
+						j.sdk.SendReportMessageToJadelet(subtask.TaskKey, j.Config.UpperNode.GetSDKNode(), msg)
+					}
 				}
 
 				postQueryPerfAnalysis := func() {
@@ -60,13 +69,22 @@ func (j *JADE) CollectAppMsg(w rest.ResponseWriter, r *rest.Request) {
 					j.PerfCache.EnqueueEnvMetrics(subtask.AppKey, subtask.NodeKey, metricsEnv)
 
 					// to see if the task is done
-					isTaskDone := j.TaskCache.CheckTask(msg.TaskKey, ds.TaskStatusDone, timestampReceving , j.log.Debug.Printf)
+					isTaskDone := forceDone
+					if !forceDone {
+						isTaskDone = j.TaskCache.CheckTask(msg.TaskKey, ds.TaskStatusDone, timestampReceving, forceDone, j.log.Debug.Printf)
+					} else {
+						unfinishedOnly := true
+						_, subtasks_on_nodes := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, string(ds.AppModuleWorker), "", unfinishedOnly)
+						if len(subtasks_on_nodes) > 0 {
+							j.PodCache.RemoveSubtasksFromQueue(subtasks_on_nodes)
+						}
+					}
 
 					if isTaskDone {
 						// the query (task) is done
 						j.log.Op.Printf("[app message collector] task[%v] is {%v}", msg.TaskKey, ds.TaskStatusDone)
 						dispatchItem, unloaded_tail_latency, queueing_budget, provision_overhead, aggregation_overhead := j.TaskCache.GetDispatchingItem(msg.TaskKey)
-						subtasks, subtasks_on_nodes := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "")
+						subtasks, subtasks_on_nodes := j.TaskCache.GetSubtasksPerNodeForTask(msg.TaskKey, "", "", false)
 
 						percentile := dispatchItem.GetPercentile()
 						adjusted_tail_latency := j.PodCache.CalcTailForNodes(subtasks_on_nodes, percentile, scheduler.STQueueHistogramTypeAdjustedServiceResponseTime)
