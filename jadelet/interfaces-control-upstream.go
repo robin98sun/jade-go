@@ -122,8 +122,11 @@ func (j *JADE) CollectProvisioning(w rest.ResponseWriter, r *rest.Request) {
 		j.TaskCache.CacheTaskForSubnode(feedback.TaskKey, j.GetNodeInControl(feedback.NodeKey), feedback.ModuleName, nil, feedback.Pod, nil, string(ds.AppModuleWorker), feedback.SubtaskKey, j.log.Debug.Printf)
 		taskItem := j.TaskCache.GetTask(feedback.TaskKey, true)
 
+		j.log.Op.Printf("[provisioning collector] retrieved task item: %v", taskItem)
+		
 		j.PodCache.SetPodForApplication(
-			feedback.NodeKey, taskItem.Task.Application,
+			feedback.NodeKey, 
+			taskItem.Task.Application,
 			feedback.ModuleName, 
 			feedback.Pod,
 			taskItem.Task.Requirements.Allocations[feedback.ModuleName],
